@@ -1,0 +1,37 @@
+workspace(name = "tapoc2")
+
+new_git_repository(
+  name = "libwebp",
+  remote = "https://github.com/webmproject/libwebp.git",
+  tag = "v0.4.3",
+  build_file = "libwebp.BUILD",
+)
+
+new_http_archive(
+  name = "gtest",
+  url = "https://googletest.googlecode.com/files/gtest-1.7.0.zip",
+  sha256 = "247ca18dd83f53deb1328be17e4b1be31514cedfc1e3424f672bf11fd7e0d60d",
+  build_file = "gtest.BUILD",
+  strip_prefix = "gtest-1.7.0",
+)
+
+new_git_repository(
+  name = "libpng",
+  remote = "https://github.com/winlibs/libpng.git",
+  tag = "libpng-1.6.18",
+  build_file = "libpng.BUILD",
+)
+
+#new_git_repository(
+#  name = "libjpeg_turbo",
+#  remote = "https://chromium.googlesource.com/chromium/deps/libjpeg_turbo.git",
+#  commit = "e4e75037f29745f1546b6ebf5cf532e841c04c2c",
+#  build_file = "libjpeg_turbo.BUILD",
+#)
+
+new_git_repository(
+  name = "giflib",
+  remote = "https://github.com/baranov1ch/giflib",
+  commit = "5de514c2b0b15724a38dbbebdb60878c5720f5e3",
+  build_file = "giflib.BUILD",
+)
