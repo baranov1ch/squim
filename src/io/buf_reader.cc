@@ -3,7 +3,8 @@
 
 namespace io {
 
-BufReader::BufReader(std::unique_ptr<BufferedSource> source) : source_(std::move(source)) {}
+BufReader::BufReader(std::unique_ptr<BufferedSource> source)
+    : source_(std::move(source)) {}
 
 BufReader::~BufReader() {}
 
