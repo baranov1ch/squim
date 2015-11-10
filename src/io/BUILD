@@ -1,0 +1,26 @@
+cc_library(
+  name = "io",
+  hdrs = [
+    "buf_reader.h",
+    "buffered_source.h",
+    "chunk.h",
+    "io_error.h",
+  ],
+  srcs = [
+    "buf_reader.cc",
+    "buffered_source.cc",
+    "chunk.cc",
+    "io_error.cc",
+  ],
+)
+
+cc_test(
+  name = "io_test",
+  srcs = [
+    "buf_reader_test.cc",
+    "buffered_source_test.cc",
+    "chunk_test.cc",
+  ],
+  copts = ["-Iexternal/gtest/gtest-1.7.0/include"],
+  deps = ["@gtest//:main"],
+)
