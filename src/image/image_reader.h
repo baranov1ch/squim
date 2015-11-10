@@ -7,6 +7,7 @@ namespace image {
 
 class ImageReader {
   MAKE_NONCOPYABLE(ImageReader);
+
  public:
   ImageReader(std::unique_ptr<ImageDecoder> decoder);
   ~ImageReader();

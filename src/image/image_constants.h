@@ -25,6 +25,7 @@ class Result {
   bool Progressed() const;
   bool Finished() const;
   bool Meta() const;
+
  private:
   ErrorCode code_;
 };

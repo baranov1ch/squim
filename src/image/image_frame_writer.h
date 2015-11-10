@@ -3,9 +3,8 @@
 
 namespace image {
 
-template <ColorScheme Scheme> class ImageFrameWriter {
-  
-};
+template <ColorScheme Scheme>
+class ImageFrameWriter {};
 
 }  // namespace image
 

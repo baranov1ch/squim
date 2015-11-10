@@ -7,7 +7,6 @@ namespace image {
 
 class ImageMetadata {
  public:
-  
 };
 
 }  // namespace image

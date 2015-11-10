@@ -8,6 +8,7 @@ namespace image {
 
 class ImageFrame {
   MAKE_NONCOPYABLE(ImageFrame);
+
  public:
   ImageFrame();
   ~ImageFrame();
@@ -19,7 +20,7 @@ class ImageFrame {
   bool has_alpha() const;
   size_t required_previous_frame_index() const;
 
- private: 
+ private:
   uint8_t* GetPixelData(uint32_t x, uint32_t y);
   void SetPixelData(uint32_t x, uint32_t y, uint8_t* data);
 
