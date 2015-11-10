@@ -22,10 +22,8 @@ IoError IoError::Error() {
   return IoError(IoErrorCode::kError);
 }
 
-IoError::IoError(IoErrorCode code) : code_(code), nread_(0u) {
-}
+IoError::IoError(IoErrorCode code) : code_(code), nread_(0u) {}
 
-IoError::IoError(uint64_t nread) : code_(IoErrorCode::kOk), nread_(nread) {
-}
+IoError::IoError(uint64_t nread) : code_(IoErrorCode::kOk), nread_(nread) {}
 
 }  // namespace io
