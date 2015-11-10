@@ -1,3 +1,11 @@
 #include "io/buffered_source.h"
 
-namespace io {}  // namespace io
+#include "io/chunk.h"
+
+namespace io {
+
+BufferedSource::BufferedSource() {}
+
+BufferedSource::~BufferedSource() {}
+
+}  // namespace io

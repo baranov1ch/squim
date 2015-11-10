@@ -4,13 +4,13 @@ cc_library(
     "buf_reader.h",
     "buffered_source.h",
     "chunk.h",
-    "io_error.h",
+    "io_result.h",
   ],
   srcs = [
     "buf_reader.cc",
     "buffered_source.cc",
     "chunk.cc",
-    "io_error.cc",
+    "io_result.cc",
   ],
 )
 

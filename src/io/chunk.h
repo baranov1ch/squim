@@ -16,8 +16,8 @@ class Chunk {
   uint64_t size() const;
 
  private:
-  uint64_t size_;
   uint8_t* data_;
+  uint64_t size_;
 };
 
 class StringChunk : public Chunk {

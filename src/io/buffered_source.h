@@ -6,8 +6,13 @@
 
 namespace io {
 
+class Chunk;
+
 class BufferedSource {
  public:
+  BufferedSource();
+  ~BufferedSource();
+
   // Checks if there are some data.
   bool HasSome() const;
 

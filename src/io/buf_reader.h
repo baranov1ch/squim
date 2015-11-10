@@ -1,7 +1,14 @@
 #ifndef IO_IO_BUF_READER_H_
 #define IO_IO_BUF_READER_H_
 
+#include <memory>
+#include <stdint.h>
+
+#include "io/io_result.h"
+
 namespace io {
+
+class BufferedSource;
 
 // Reads data from the underlying |source_|. Tries not to do any copies.
 class BufReader {
