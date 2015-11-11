@@ -12,15 +12,20 @@ cc_library(
     "chunk.cc",
     "io_result.cc",
   ],
+  deps = ["//base:base"]
 )
 
 cc_test(
   name = "io_test",
+  timeout = "short",
   srcs = [
     "buf_reader_test.cc",
     "buffered_source_test.cc",
     "chunk_test.cc",
   ],
   copts = ["-Iexternal/gtest/gtest-1.7.0/include"],
-  deps = ["@gtest//:main"],
+  deps = [
+    ":io",
+    "@gtest//:main",
+  ],
 )

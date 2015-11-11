@@ -1,9 +1,24 @@
 #include "gtest/gtest.h"
 
+#include <memory>
+
+#include "io/chunk.h"
+
 namespace io {
 
-TEST(FactorialTest2, Negative) {
-  EXPECT_EQ(1, 1);
+TEST(StringChunkTest, CorrectAssignment) {
+  std::unique_ptr<Chunk> chunk(new StringChunk("test"));
+  EXPECT_EQ(4u, chunk->size());
+  EXPECT_EQ("test", std::string(chunk->char_data(), chunk->size()));
+}
+
+TEST(RawChunkTest, CorrectAssignment) {
+  const char kData[] = "test";
+  std::unique_ptr<uint8_t[]> data(new uint8_t[4]);
+  memcpy(data.get(), kData, 4);
+  std::unique_ptr<Chunk> chunk(new RawChunk(std::move(data), 4));
+  EXPECT_EQ(4u, chunk->size());
+  EXPECT_EQ("test", std::string(chunk->char_data(), chunk->size()));
 }
 
 }  // namespace io
