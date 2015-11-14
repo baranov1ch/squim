@@ -7,6 +7,13 @@ new_git_repository(
   build_file = "googletest.BUILD",
 )
 
+#new_git_repository(
+#  name = "gflags",
+#  remote = "https://github.com/gflags/gflags.git",
+#  tag = "v2.1.2",
+#  build_file = "gflags.BUILD",
+#)
+
 new_git_repository(
   name = "libwebp",
   remote = "https://github.com/webmproject/libwebp.git",
@@ -30,7 +37,7 @@ new_git_repository(
 
 new_git_repository(
   name = "giflib",
-  remote = "https://github.com/baranov1ch/giflib",
+  remote = "https://github.com/baranov1ch/giflib.git",
   commit = "5de514c2b0b15724a38dbbebdb60878c5720f5e3",
   build_file = "giflib.BUILD",
 )

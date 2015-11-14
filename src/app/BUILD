@@ -10,6 +10,7 @@ cc_binary(
     "@libpng//:libpng",
     "@libwebp//:libwebp",
     "@libwebp//:libwebp_enc_mux",
+    "//third_party/gflags:gflags"
   ],
 )
 

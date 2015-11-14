@@ -1,0 +1,1 @@
+# TODO: when https://github.com/bazelbuild/bazel/issues/429 will be fixed
