@@ -80,6 +80,9 @@ void BufferedSource::SendEof() {
 }
 
 uint64_t BufferedSource::UnreadN(uint64_t n) {
+  if (n == 0 || size() == 0)
+    return 0;
+
   if (n >= total_offset_) {
     // If more than overall size is requested, short-circuiting to just
     // resetting all offsets to zero and setting first chunk active.

@@ -12,7 +12,8 @@ cc_library(
     "chunk.cc",
     "io_result.cc",
   ],
-  deps = ["//base:base"]
+  deps = ["//base:base"],
+  visibility = ["//visibility:public"]
 )
 
 cc_test(
@@ -23,9 +24,9 @@ cc_test(
     "buffered_source_test.cc",
     "chunk_test.cc",
   ],
-  copts = ["-Iexternal/gtest/gtest-1.7.0/include"],
+  copts = ["-Iexternal/googletest/googletest/include"],
   deps = [
     ":io",
-    "@gtest//:main",
+    "@googletest//:googletest",
   ],
 )

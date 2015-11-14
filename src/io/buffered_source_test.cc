@@ -1,8 +1,9 @@
-#include "gtest/gtest.h"
+#include "io/buffered_source.h"
 
 #include "base/make_unique.h"
-#include "io/buffered_source.h"
 #include "io/chunk.h"
+
+#include "gtest/gtest.h"
 
 namespace io {
 
@@ -186,6 +187,7 @@ TEST_F(BufferedSourceTest, ShouldReturnEOFOnlyWhenEmptyAndReceived) {
 }
 
 TEST_F(BufferedSourceTest, Unreading) {
+  EXPECT_EQ(0, testee_.UnreadN(3));
   testee_.AddChunk(base::make_unique<StringChunk>("test1"));
   testee_.AddChunk(base::make_unique<StringChunk>("test2"));
   uint8_t* out;

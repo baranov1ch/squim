@@ -16,6 +16,12 @@ cc_binary(
 cc_test(
   name = "my_test",
   srcs = ["my_test.cc"],
-  copts = ["-Iexternal/gtest/gtest-1.7.0/include"],
-  deps = ["@gtest//:main"],
+  copts = [
+    "-Iexternal/googletest/googletest/include",
+    "-Iexternal/googletest/googlemock/include",
+  ],
+  deps = [
+    "@googletest//:googletest",
+    "@googletest//:googlemock"
+  ],
 )

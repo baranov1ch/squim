@@ -13,8 +13,8 @@ IoResult IoResult::Read(uint64_t nread) {
 }
 
 // static
-IoResult IoResult::EoF() {
-  return IoResult(IoResultCode::kEOF);
+IoResult IoResult::Eof() {
+  return IoResult(IoResultCode::kEof);
 }
 
 // static

@@ -1,3 +1,4 @@
+# TODO: use self-built libjpeg.
 cc_library(
   name = "libjpeg_turbo",
   srcs = [],

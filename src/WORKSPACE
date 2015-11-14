@@ -1,18 +1,17 @@
 workspace(name = "tapoc2")
 
 new_git_repository(
+  name = "googletest",
+  remote = "https://github.com/google/googletest.git",
+  commit = "71a26ac68b28c61686b8941730a6b2577912e239",
+  build_file = "googletest.BUILD",
+)
+
+new_git_repository(
   name = "libwebp",
   remote = "https://github.com/webmproject/libwebp.git",
   tag = "v0.4.3",
   build_file = "libwebp.BUILD",
-)
-
-new_http_archive(
-  name = "gtest",
-  url = "https://googletest.googlecode.com/files/gtest-1.7.0.zip",
-  sha256 = "247ca18dd83f53deb1328be17e4b1be31514cedfc1e3424f672bf11fd7e0d60d",
-  build_file = "gtest.BUILD",
-  strip_prefix = "gtest-1.7.0",
 )
 
 new_git_repository(

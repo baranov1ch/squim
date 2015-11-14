@@ -1,8 +1,8 @@
-#include "gtest/gtest.h"
+#include "io/chunk.h"
 
 #include <memory>
 
-#include "io/chunk.h"
+#include "gtest/gtest.h"
 
 namespace io {
 

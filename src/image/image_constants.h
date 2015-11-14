@@ -12,6 +12,14 @@ enum class ColorScheme {
   kCMYK,
 };
 
+enum class ImageType {
+  kJpeg,
+  kPng,
+  kGif,
+  kWebP,
+  kUnknown,
+};
+
 enum class ErrorCode {
   kOk,
   kDecodeError,

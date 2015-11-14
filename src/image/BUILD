@@ -1,6 +1,27 @@
 cc_library(
   name = "image",
   hdrs = [
-    "image_reader.h"
+    "image_constants.h",
+    "image_optimizer.h",
+  ],
+  srcs = [
+    "image_optimizer.cc"
+  ],
+  deps = [
+    "//base:base",
+    "//io:io",
+  ]
+)
+
+cc_test(
+  name = "image_test",
+  timeout = "short",
+  srcs = [
+    "image_optimizer_test.cc",
+  ],
+  copts = ["-Iexternal/googletest/googletest/include"],
+  deps = [
+    ":image",
+    "@googletest//:googletest",
   ],
 )
