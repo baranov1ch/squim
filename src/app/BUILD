@@ -6,6 +6,7 @@ cc_binary(
   includes = [
     "../third_party/glog/exported/src",
     "../third_party/gflags/exported/include",
+    "../google/grpc/include",
   ],
   copts = [
     "-Iexternal/libwebp/src",
@@ -16,8 +17,10 @@ cc_binary(
     "@libpng//:libpng",
     "@libwebp//:libwebp",
     "@libwebp//:libwebp_enc_mux",
+    "//google/grpc:grpc++",
     "//third_party/gflags:gflags",
     "//third_party/glog:glog",
+    "//proto:optimizer_cc",
   ],
 )
 

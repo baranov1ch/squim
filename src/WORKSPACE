@@ -7,6 +7,12 @@ new_git_repository(
   build_file = "googletest.BUILD",
 )
 
+#git_repository(
+#  name = "protobuf",
+#  remote = "https://github.com/google/protobuf.git",
+#  tag = "v3.0.0-beta-1-bzl-fix",
+#)
+
 #new_git_repository(
 #  name = "gflags",
 #  remote = "https://github.com/gflags/gflags.git",
@@ -26,6 +32,13 @@ new_git_repository(
   remote = "https://github.com/winlibs/libpng.git",
   tag = "libpng-1.6.18",
   build_file = "libpng.BUILD",
+)
+
+new_git_repository(
+  name = "openssl",
+  remote = "https://github.com/openssl/openssl.git",
+  commit = "f236ef27bd2ca99b3367554aa3e2fc9ca345deb5",
+  build_file = "openssl.BUILD",
 )
 
 #new_git_repository(

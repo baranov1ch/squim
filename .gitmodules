@@ -4,3 +4,9 @@
 [submodule "src/third_party/glog/exported"]
 	path = src/third_party/glog/exported
 	url = https://github.com/google/glog.git
+[submodule "src/google/protobuf"]
+	path = src/google/protobuf
+	url = https://github.com/google/protobuf.git
+[submodule "src/google/grpc"]
+	path = src/google/grpc
+	url = https://github.com/grpc/grpc.git
