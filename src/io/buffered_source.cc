@@ -2,8 +2,8 @@
 
 #include <cstring>
 
-#include "base/logging.h"
 #include "base/make_unique.h"
+#include "glog/logging.h"
 #include "io/chunk.h"
 
 namespace io {
@@ -19,8 +19,8 @@ bool BufferedSource::HaveSome() const {
 void BufferedSource::AddChunk(std::unique_ptr<Chunk> chunk) {
   if (chunks_.empty()) {
     CHECK(current_chunk_ == chunks_.end());
-    CHECK(total_offset_ == 0);
-    CHECK(offset_in_chunk_ == 0);
+    CHECK_EQ(0, total_offset_);
+    CHECK_EQ(0, offset_in_chunk_);
   }
 
   if (eof_received_ || chunk->size() == 0)
@@ -102,7 +102,7 @@ uint64_t BufferedSource::UnreadN(uint64_t n) {
     // set offset in it.
 
     if (current_chunk_ == chunks_.end()) {
-      CHECK(offset_in_chunk_ == 0);
+      CHECK_EQ(0, offset_in_chunk_);
     }
 
     // First skip the active chunk.
@@ -118,7 +118,7 @@ uint64_t BufferedSource::UnreadN(uint64_t n) {
         // to the next one.
         unread_bytes += chunk_size;
         total_offset_ -= chunk_size;
-        CHECK(offset_in_chunk_ == 0);
+        CHECK_EQ(0, offset_in_chunk_);
         n -= chunk_size;
       } else {
         // The chunk we should stop at. Find appropriate offset in it.
@@ -147,7 +147,7 @@ uint64_t BufferedSource::ReadN(uint8_t** out, uint64_t n) {
   if (n <= chunk->size() - offset_in_chunk_) {
     // Short circuit - everything fits one chunk.
     auto nread = ReadAtMostN(out, n);
-    CHECK(nread == n);
+    CHECK_EQ(n, nread);
     return nread;
   }
 
@@ -181,7 +181,7 @@ uint64_t BufferedSource::ReadN(uint8_t** out, uint64_t n) {
   current_chunk_ = chunks_.insert(where, std::move(merged_chunk));
 
   auto nread = ReadAtMostN(out, n);
-  CHECK(nread == n);
+  CHECK_EQ(n, nread);
   return nread;
 }
 

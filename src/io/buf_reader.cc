@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "base/logging.h"
+#include "glog/logging.h"
 #include "io/buffered_source.h"
 
 namespace io {
@@ -69,7 +69,7 @@ IoResult BufReader::ReadNInto(uint8_t* out, uint64_t n) {
 IoResult BufReader::PeekNInto(uint8_t* out, uint64_t n) {
   auto result = ReadNInto(out, n);
   if (result.ok()) {
-    CHECK(n == result.nread());
+    CHECK_EQ(n, result.nread());
     UnreadN(n);
   }
   return result;

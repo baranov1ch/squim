@@ -21,6 +21,7 @@ class GreeterServiceImpl final : public optimizer::Greeter::Service {
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
+  google::InstallFailureSignalHandler();
   LOG(INFO) << "Hello, World! " << FLAGS_do_nothing;
   std::string server_address("0.0.0.0:50051");
   GreeterServiceImpl service;

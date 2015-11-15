@@ -12,7 +12,10 @@ cc_library(
     "chunk.cc",
     "io_result.cc",
   ],
-  deps = ["//base:base"],
+  deps = [
+    "//base:base",
+    "//third_party/glog:glog",
+  ],
   visibility = ["//visibility:public"]
 )
 
