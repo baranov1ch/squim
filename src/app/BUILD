@@ -1,7 +1,7 @@
 cc_binary(
-  name = "main",
+  name = "server",
   srcs = [
-    "main.cc",
+    "server.cc",
   ],
   includes = [
     "../third_party/glog/exported/src",
@@ -17,6 +17,24 @@ cc_binary(
     "@libpng//:libpng",
     "@libwebp//:libwebp",
     "@libwebp//:libwebp_enc_mux",
+    "//google/grpc:grpc++",
+    "//third_party/gflags:gflags",
+    "//third_party/glog:glog",
+    "//proto:optimizer_cc",
+  ],
+)
+
+cc_binary(
+  name = "client",
+  srcs = [
+    "client.cc",
+  ],
+  includes = [
+    "../third_party/glog/exported/src",
+    "../third_party/gflags/exported/include",
+    "../google/grpc/include",
+  ],
+  deps = [
     "//google/grpc:grpc++",
     "//third_party/gflags:gflags",
     "//third_party/glog:glog",
