@@ -3,14 +3,21 @@ cc_binary(
   srcs = [
     "main.cc",
   ],
-  copts = ["-Iexternal/libwebp/src"],
+  includes = [
+    "../third_party/glog/exported/src",
+    "../third_party/gflags/exported/include",
+  ],
+  copts = [
+    "-Iexternal/libwebp/src",
+  ],
   deps = [
     "@giflib//:dgiflib",
     "@giflib//:egiflib",
     "@libpng//:libpng",
     "@libwebp//:libwebp",
     "@libwebp//:libwebp_enc_mux",
-    "//third_party/gflags:gflags"
+    "//third_party/gflags:gflags",
+    "//third_party/glog:glog",
   ],
 )
 
