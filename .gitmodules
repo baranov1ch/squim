@@ -1,3 +1,6 @@
 [submodule "src/third_party/gflags/exported"]
 	path = src/third_party/gflags/exported
 	url = https://github.com/gflags/gflags.git
+[submodule "src/third_party/glog/exported"]
+	path = src/third_party/glog/exported
+	url = https://github.com/google/glog.git
