@@ -1,4 +1,6 @@
+#include <chrono>
 #include <memory>
+#include <random>
 #include <thread>
 
 #include "glog/logging.h"
@@ -28,6 +30,9 @@ class OptimizerClient {
         stream(stub_->OptimizeImage(&context));
 
     std::thread writer([stream]() {
+      auto seed = std::chrono::system_clock::now().time_since_epoch().count();
+      std::default_random_engine generator(seed);
+      std::uniform_int_distribution<int> delay_distribution(500, 1500);
       std::vector<tapoc::ImageRequestPart> parts{
           MakeImageRequestPart("First message"),
           MakeImageRequestPart("Second message"),
@@ -36,6 +41,8 @@ class OptimizerClient {
       for (const auto& part : parts) {
         LOG(INFO) << "Sending message " << part.name();
         stream->Write(part);
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(delay_distribution(generator)));
       }
       stream->WritesDone();
     });
@@ -58,7 +65,6 @@ class OptimizerClient {
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
-  LOG(INFO) << "Hello, World from client ";
   OptimizerClient optimizer_client(
       grpc::CreateChannel("localhost:50051", grpc::InsecureCredentials()));
   optimizer_client.OptimizeImage();
