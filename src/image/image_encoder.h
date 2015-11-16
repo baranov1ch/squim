@@ -1,7 +1,11 @@
 #ifndef IMAGE_IMAGE_ENCODER_H_
 #define IMAGE_IMAGE_ENCODER_H_
 
+#include "image/image_constants.h"
+
 namespace image {
+
+class ImageFrame;
 
 class ImageEncoder {
  public:

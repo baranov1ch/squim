@@ -1,52 +1,65 @@
 #include <memory>
+#include <thread>
 
 #include "glog/logging.h"
 #include "gflags/gflags.h"
 #include "grpc++/grpc++.h"
-#include "proto/optimizer.grpc.pb.h"
-#include "proto/optimizer.pb.h"
+#include "proto/image_optimizer.grpc.pb.h"
+#include "proto/image_optimizer.pb.h"
 
-class GreeterClient {
+tapoc::ImageRequestPart MakeImageRequestPart(const std::string& name) {
+  tapoc::ImageRequestPart p;
+  p.set_name(name);
+  return p;
+}
+
+class OptimizerClient {
  public:
-  GreeterClient(std::shared_ptr<grpc::Channel> channel)
-      : stub_(optimizer::Greeter::NewStub(channel)) {}
+  OptimizerClient(std::shared_ptr<grpc::Channel> channel)
+      : stub_(tapoc::ImageOptimizer::NewStub(channel)) {}
 
   // Assambles the client's payload, sends it and presents the response back
   // from the server.
-  std::string SayHello(const std::string& user) {
-    // Data we are sending to the server.
-    optimizer::HelloRequest request;
-    request.set_name(user);
-
-    // Container for the data we expect from the server.
-    optimizer::HelloReply reply;
-
-    // Context for the client. It could be used to convey extra information to
-    // the server and/or tweak certain RPC behaviors.
+  void OptimizeImage() {
     grpc::ClientContext context;
 
-    // The actual RPC.
-    grpc::Status status = stub_->SayHello(&context, request, &reply);
+    std::shared_ptr<grpc::ClientReaderWriter<tapoc::ImageRequestPart, tapoc::ImageResponsePart>> stream(
+        stub_->OptimizeImage(&context));
 
-    // Act upon its status.
-    if (status.ok()) {
-      return reply.message();
-    } else {
-      return "RPC failed";
+    std::thread writer([stream]() {
+      std::vector<tapoc::ImageRequestPart> parts{
+        MakeImageRequestPart("First message"),
+        MakeImageRequestPart("Second message"),
+        MakeImageRequestPart("Third message"),
+        MakeImageRequestPart("Fourth message")};
+      for (const auto& part : parts) {
+        LOG(INFO) << "Sending message " << part.name();
+        stream->Write(part);
+      }
+      stream->WritesDone();
+    });
+
+    tapoc::ImageResponsePart response_part;
+    while (stream->Read(&response_part)) {
+      LOG(INFO) << "Got message " << response_part.message();
+    }
+    writer.join();
+    auto status = stream->Finish();
+    if (!status.ok()) {
+      LOG(ERROR) << "ImageOptimizer rpc failed.";
     }
   }
 
  private:
-  std::unique_ptr<optimizer::Greeter::Stub> stub_;
+  std::unique_ptr<tapoc::ImageOptimizer::Stub> stub_;
 };
 
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   LOG(INFO) << "Hello, World from client ";
-  GreeterClient greeter(
+  OptimizerClient optimizer_client(
       grpc::CreateChannel("localhost:50051", grpc::InsecureCredentials()));
-  std::string user("world");
-  std::string reply = greeter.SayHello(user);
-  LOG(INFO) << "Greeter received: " << reply;
+  optimizer_client.OptimizeImage();
+  return 0;
 }

@@ -3,6 +3,7 @@ cc_library(
   hdrs = [
     "image_constants.h",
     "image_optimizer.h",
+    "optimization_strategy.h",
   ],
   srcs = [
     "image_optimizer.cc"
@@ -10,7 +11,8 @@ cc_library(
   deps = [
     "//base:base",
     "//io:io",
-  ]
+  ],
+  visibility = ["//visibility:public"]
 )
 
 cc_test(

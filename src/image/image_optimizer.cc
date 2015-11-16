@@ -2,6 +2,12 @@
 
 #include <cstring>
 
+#include "image/image_decoder.h"
+#include "image/image_encoder.h"
+#include "image/optimization_strategy.h"
+#include "io/buf_reader.h"
+#include "io/writer.h"
+
 namespace image {
 
 namespace {
@@ -42,5 +48,15 @@ ImageType ImageOptimizer::ChooseImageType(const uint8_t signature[kLongestSignat
 
   return ImageType::kUnknown;
 }
+
+ImageOptimizer::ImageOptimizer(std::unique_ptr<OptimizationStrategy> strategy,
+                               std::unique_ptr<io::BufReader> source,
+                               std::unique_ptr<io::Writer> dest)
+    : strategy_(std::move(strategy)),
+      source_(std::move(source)),
+      dest_(std::move(dest)) {
+}
+
+ImageOptimizer::~ImageOptimizer() {}
 
 }  // namespace image

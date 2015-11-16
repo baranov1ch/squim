@@ -5,6 +5,7 @@ cc_library(
     "buffered_source.h",
     "chunk.h",
     "io_result.h",
+    "writer.h",
   ],
   srcs = [
     "buf_reader.cc",

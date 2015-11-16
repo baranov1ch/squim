@@ -18,9 +18,11 @@ cc_binary(
     "@libwebp//:libwebp",
     "@libwebp//:libwebp_enc_mux",
     "//google/grpc:grpc++",
+    "//image:image",
+    "//io:io",
+    "//proto:image_optimizer_cc",
     "//third_party/gflags:gflags",
     "//third_party/glog:glog",
-    "//proto:optimizer_cc",
   ],
 )
 
@@ -38,7 +40,7 @@ cc_binary(
     "//google/grpc:grpc++",
     "//third_party/gflags:gflags",
     "//third_party/glog:glog",
-    "//proto:optimizer_cc",
+    "//proto:image_optimizer_cc",
   ],
 )
 

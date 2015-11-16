@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package tapoc;
+
+service ImageOptimizer {
+  rpc OptimizeImage (stream ImageRequestPart) returns (stream ImageResponsePart) {}
+}
+
+message ImageRequestPart {
+  string name = 1;
+}
+
+message ImageResponsePart {
+  string message = 1;
+}

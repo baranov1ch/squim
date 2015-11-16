@@ -1,7 +1,12 @@
 #ifndef IMAGE_IMAGE_DECODER_H_
 #define IMAGE_IMAGE_DECODER_H_
 
+#include "image/image_constants.h"
+
 namespace image {
+
+class ImageFrame;
+class ImageMetadata;
 
 class ImageDecoder {
  public:
