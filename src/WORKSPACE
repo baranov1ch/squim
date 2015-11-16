@@ -66,13 +66,6 @@ bind(
 )
 
 new_git_repository(
-  name = "googletest",
-  remote = "https://github.com/google/googletest.git",
-  commit = "71a26ac68b28c61686b8941730a6b2577912e239",
-  build_file = "googletest.BUILD",
-)
-
-new_git_repository(
   name = "libwebp",
   remote = "https://github.com/webmproject/libwebp.git",
   tag = "v0.4.3",
@@ -86,23 +79,9 @@ new_git_repository(
   build_file = "libpng.BUILD",
 )
 
-new_git_repository(
-  name = "openssl",
-  remote = "https://github.com/openssl/openssl.git",
-  commit = "f236ef27bd2ca99b3367554aa3e2fc9ca345deb5",
-  build_file = "openssl.BUILD",
-)
-
 #new_git_repository(
 #  name = "libjpeg_turbo",
 #  remote = "https://chromium.googlesource.com/chromium/deps/libjpeg_turbo.git",
 #  commit = "e4e75037f29745f1546b6ebf5cf532e841c04c2c",
 #  build_file = "libjpeg_turbo.BUILD",
 #)
-
-new_git_repository(
-  name = "giflib",
-  remote = "https://github.com/baranov1ch/giflib.git",
-  commit = "5de514c2b0b15724a38dbbebdb60878c5720f5e3",
-  build_file = "giflib.BUILD",
-)

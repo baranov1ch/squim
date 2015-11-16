@@ -141,7 +141,7 @@ cc_library(
     "-Wno-sign-compare",
   ],
   deps = [
-    "//third_party/gflags:gflags",
+    "//google/gflags:gflags",
   ],
   visibility = ["//visibility:public"]
 )

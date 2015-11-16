@@ -25,8 +25,6 @@ cc_binary(
     "-Iexternal/libwebp/src",
   ],
   deps = [
-    "@giflib//:dgiflib",
-    "@giflib//:egiflib",
     "@libpng//:libpng",
     "@libwebp//:libwebp",
     "@libwebp//:libwebp_enc_mux",

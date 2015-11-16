@@ -22,9 +22,8 @@ cc_test(
   srcs = [
     "image_optimizer_test.cc",
   ],
-  copts = ["-Iexternal/googletest/googletest/include"],
   deps = [
+    "//external:gtest",
     ":image",
-    "@googletest//:googletest",
   ],
 )

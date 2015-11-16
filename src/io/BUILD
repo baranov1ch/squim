@@ -28,9 +28,8 @@ cc_test(
     "buffered_source_test.cc",
     "chunk_test.cc",
   ],
-  copts = ["-Iexternal/googletest/googletest/include"],
   deps = [
+    "//external:gtest",
     ":io",
-    "@googletest//:googletest",
   ],
 )
