@@ -10,7 +10,10 @@
 DEFINE_bool(do_nothing, true, "If true, does nothing");
 
 class ImageOptimizerServiceImpl final : public tapoc::ImageOptimizer::Service {
-  grpc::Status OptimizeImage(grpc::ServerContext* context, grpc::ServerReaderWriter<tapoc::ImageResponsePart, tapoc::ImageRequestPart>* stream) override {
+  grpc::Status OptimizeImage(
+      grpc::ServerContext* context,
+      grpc::ServerReaderWriter<tapoc::ImageResponsePart,
+                               tapoc::ImageRequestPart>* stream) override {
     tapoc::ImageRequestPart request_part;
     while (stream->Read(&request_part)) {
       tapoc::ImageResponsePart response_part;
@@ -37,5 +40,5 @@ int main(int argc, char** argv) {
   auto success = WebPEncode(nullptr, nullptr);
   if (!success)
     return -1;
-	return 0;
+  return 0;
 }

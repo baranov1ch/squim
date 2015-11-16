@@ -25,14 +25,17 @@ bool MatchesGIFSignature(const uint8_t* contents) {
 }
 
 bool MatchesWebPSignature(const uint8_t* contents) {
-  return !std::memcmp(contents, "RIFF", 4) && !memcmp(contents + 8, "WEBPVP", 6);
+  return !std::memcmp(contents, "RIFF", 4) &&
+         !memcmp(contents + 8, "WEBPVP", 6);
 }
 
 }  // namespace
 
 // static
-ImageType ImageOptimizer::ChooseImageType(const uint8_t signature[kLongestSignatureMatch]) {
-  static_assert(kLongestSignatureMatch == 14, "longest signature must be 14 byte long");
+ImageType ImageOptimizer::ChooseImageType(
+    const uint8_t signature[kLongestSignatureMatch]) {
+  static_assert(kLongestSignatureMatch == 14,
+                "longest signature must be 14 byte long");
 
   if (MatchesJPEGSignature(signature))
     return ImageType::kJpeg;
@@ -54,8 +57,7 @@ ImageOptimizer::ImageOptimizer(std::unique_ptr<OptimizationStrategy> strategy,
                                std::unique_ptr<io::Writer> dest)
     : strategy_(std::move(strategy)),
       source_(std::move(source)),
-      dest_(std::move(dest)) {
-}
+      dest_(std::move(dest)) {}
 
 ImageOptimizer::~ImageOptimizer() {}
 

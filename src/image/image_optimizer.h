@@ -30,7 +30,8 @@ class ImageOptimizer {
     kNone,
   };
 
-  static ImageType ChooseImageType(const uint8_t signature[kLongestSignatureMatch]);
+  static ImageType ChooseImageType(
+      const uint8_t signature[kLongestSignatureMatch]);
 
   ImageOptimizer(std::unique_ptr<OptimizationStrategy> strategy,
                  std::unique_ptr<io::BufReader> source,

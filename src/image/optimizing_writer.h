@@ -20,7 +20,7 @@ for (const auto& p : i) {
     grayscale = false;
   }
 
-  if (!opaque && ! grayscale)
+  if (!opaque && !grayscale)
     break;
 }
 
@@ -40,8 +40,7 @@ enum class State {
 void OptimizeImage(ReaderWriterStream* stream) {
   Request req(stream);
   req.DoLoop();
-  DoLoop(stream)
-  OptimizeReq req;
+  DoLoop(stream) OptimizeReq req;
   stream->Read(&req);
   if (!req.has_meta()) {
     stream->Write(ToProto(INVALID_MESSAGE));
@@ -66,7 +65,6 @@ void OptimizeImage(ReaderWriterStream* stream) {
       return;
     }
     in.Add(res.bytes());
-
 
     auto result = optimizer.Process();
     if (result.has_something()) {

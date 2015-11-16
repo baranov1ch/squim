@@ -23,15 +23,16 @@ class OptimizerClient {
   void OptimizeImage() {
     grpc::ClientContext context;
 
-    std::shared_ptr<grpc::ClientReaderWriter<tapoc::ImageRequestPart, tapoc::ImageResponsePart>> stream(
-        stub_->OptimizeImage(&context));
+    std::shared_ptr<grpc::ClientReaderWriter<tapoc::ImageRequestPart,
+                                             tapoc::ImageResponsePart>>
+        stream(stub_->OptimizeImage(&context));
 
     std::thread writer([stream]() {
       std::vector<tapoc::ImageRequestPart> parts{
-        MakeImageRequestPart("First message"),
-        MakeImageRequestPart("Second message"),
-        MakeImageRequestPart("Third message"),
-        MakeImageRequestPart("Fourth message")};
+          MakeImageRequestPart("First message"),
+          MakeImageRequestPart("Second message"),
+          MakeImageRequestPart("Third message"),
+          MakeImageRequestPart("Fourth message")};
       for (const auto& part : parts) {
         LOG(INFO) << "Sending message " << part.name();
         stream->Write(part);
