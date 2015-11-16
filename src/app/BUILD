@@ -1,3 +1,24 @@
+cc_library(
+  name = "image_optimizer_service",
+  includes = [
+    "../third_party/glog/exported/src",
+  ],
+  hdrs = [
+    "image_optimizer_service.h",
+  ],
+  srcs = [
+    "image_optimizer_service.cc"
+  ],
+  deps = [
+    "//external:grpc++",
+    "//image:image",
+    "//io:io",
+    "//proto:image_optimizer_cc",
+    "//third_party/glog:glog",
+  ],
+  visibility = ["//visibility:public"]
+)
+
 cc_binary(
   name = "server",
   srcs = [
@@ -6,7 +27,6 @@ cc_binary(
   includes = [
     "../third_party/glog/exported/src",
     "../third_party/gflags/exported/include",
-    "../google/grpc/include",
   ],
   copts = [
     "-Iexternal/libwebp/src",
@@ -17,12 +37,8 @@ cc_binary(
     "@libpng//:libpng",
     "@libwebp//:libwebp",
     "@libwebp//:libwebp_enc_mux",
-    "//google/grpc:grpc++",
-    "//image:image",
-    "//io:io",
-    "//proto:image_optimizer_cc",
     "//third_party/gflags:gflags",
-    "//third_party/glog:glog",
+    ":image_optimizer_service",
   ],
 )
 
@@ -34,13 +50,26 @@ cc_binary(
   includes = [
     "../third_party/glog/exported/src",
     "../third_party/gflags/exported/include",
-    "../google/grpc/include",
   ],
   deps = [
-    "//google/grpc:grpc++",
+    "//external:grpc++",
     "//third_party/gflags:gflags",
     "//third_party/glog:glog",
     "//proto:image_optimizer_cc",
+  ],
+)
+
+cc_test(
+  name = "end_to_end_test",
+  includes = [
+    "../external/googletest/googletest/include",
+  ],
+  srcs = [
+    "optimizer_end_to_end_test.cc"
+  ],
+  deps = [
+    "@googletest//:googletest",
+    ":image_optimizer_service",
   ],
 )
 
@@ -53,6 +82,6 @@ cc_test(
   ],
   deps = [
     "@googletest//:googletest",
-    "@googletest//:googlemock"
+    "@googletest//:googlemock",
   ],
 )

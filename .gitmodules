@@ -13,6 +13,6 @@
 [submodule "src/google/boringssl/src"]
 	path = src/google/boringssl/src
 	url = https://boringssl.googlesource.com/boringssl
-[submodule "src/third_party/zlib/exported"]
-	path = src/third_party/zlib/exported
+[submodule "src/third_party/zlib/upstream"]
+	path = src/third_party/zlib/upstream
 	url = https://github.com/madler/zlib.git
