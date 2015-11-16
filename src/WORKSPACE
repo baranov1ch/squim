@@ -65,18 +65,16 @@ bind(
   actual = "//google/googletest:googlemock"
 )
 
-new_git_repository(
+# WebP
+bind(
   name = "libwebp",
-  remote = "https://github.com/webmproject/libwebp.git",
-  tag = "v0.4.3",
-  build_file = "libwebp.BUILD",
+  actual = "//google/libwebp:libwebp"
 )
 
-new_git_repository(
+# Libpng
+bind(
   name = "libpng",
-  remote = "https://github.com/winlibs/libpng.git",
-  tag = "libpng-1.6.18",
-  build_file = "libpng.BUILD",
+  actual = "//third_party/libpng:libpng"
 )
 
 #new_git_repository(

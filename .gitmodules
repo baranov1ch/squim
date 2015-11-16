@@ -19,3 +19,9 @@
 [submodule "src/google/googletest/upstream"]
 	path = src/google/googletest/upstream
 	url = https://github.com/google/googletest.git
+[submodule "src/google/libwebp/upstream"]
+	path = src/google/libwebp/upstream
+	url = https://github.com/webmproject/libwebp.git
+[submodule "src/third_party/libpng/upstream"]
+	path = src/third_party/libpng/upstream
+	url = https://github.com/winlibs/libpng.git

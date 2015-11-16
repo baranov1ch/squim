@@ -25,10 +25,9 @@ cc_binary(
     "-Iexternal/libwebp/src",
   ],
   deps = [
-    "@libpng//:libpng",
-    "@libwebp//:libwebp",
-    "@libwebp//:libwebp_enc_mux",
     "//external:gflags",
+    "//external:libwebp",
+    "//external:libpng",
     ":image_optimizer_service",
   ],
 )

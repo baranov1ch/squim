@@ -1,0 +1,40 @@
+licenses(["notice"])
+
+genrule(
+  name = "copy_pnglibconf_h",
+  srcs = ["upstream/scripts/pnglibconf.h.prebuilt"],
+  outs = ["upstream/pnglibconf.h"],
+  cmd = "cp $< $@",
+)
+
+cc_library(
+  name = "libpng",
+  includes = ["upstream"],
+  hdrs = [
+    "upstream/pngconf.h",
+    "upstream/pngdebug.h",
+    "upstream/png.h",
+    "upstream/pnginfo.h",
+    "upstream/pngpriv.h",
+    "upstream/pngstruct.h",
+    ":upstream/pnglibconf.h",
+  ],
+  srcs = [
+    "upstream/png.c",
+    "upstream/pngerror.c",
+    "upstream/pngget.c",
+    "upstream/pngmem.c",
+    "upstream/pngpread.c",
+    "upstream/pngread.c",
+    "upstream/pngrio.c",
+    "upstream/pngrtran.c",
+    "upstream/pngrutil.c",
+    "upstream/pngset.c",
+    "upstream/pngtrans.c",
+    "upstream/pngwio.c",
+    "upstream/pngwrite.c",
+    "upstream/pngwtran.c",
+    "upstream/pngwutil.c",
+  ],
+  visibility = ["//visibility:public"]
+)
