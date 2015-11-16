@@ -41,11 +41,11 @@ _genproto_attrs = {
     ),
     "has_services": attr.bool(),
     "_protoc": attr.label(
-        default = Label("//google/protobuf:protoc"),
+        default = Label("//external:protoc"),
         executable = True,
     ),
     "_protoc_grpc_plugin_cpp":  attr.label(
-      default = Label("//google/grpc:grpc_cpp_plugin"),
+      default = Label("//external:grpc_cpp_plugin"),
       executable = True,
     ),
     "gen_cc": attr.bool(),
@@ -82,9 +82,9 @@ def proto_library(name, src=None, deps=[], visibility=None,
                        deps=deps,
                        has_services=has_services)
 
-  cc_deps = ["//google/protobuf:protobuf"]
+  cc_deps = ["//external:protobuf_clib"]
   if has_services:
-    cc_deps += ["//google/grpc:grpc++"]
+    cc_deps += ["//external:grpc++"]
   for dep in deps:
     cc_deps += [dep + "_cc"]
   native.cc_library(

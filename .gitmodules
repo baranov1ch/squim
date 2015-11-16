@@ -10,3 +10,9 @@
 [submodule "src/google/grpc"]
 	path = src/google/grpc
 	url = https://github.com/grpc/grpc.git
+[submodule "src/google/boringssl/src"]
+	path = src/google/boringssl/src
+	url = https://boringssl.googlesource.com/boringssl
+[submodule "src/third_party/zlib/exported"]
+	path = src/third_party/zlib/exported
+	url = https://github.com/madler/zlib.git
