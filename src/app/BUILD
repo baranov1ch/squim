@@ -26,8 +26,6 @@ cc_binary(
   ],
   deps = [
     "//external:gflags",
-    "//external:libwebp",
-    "//external:libpng",
     ":image_optimizer_service",
   ],
 )

@@ -11,6 +11,9 @@ cc_library(
   deps = [
     "//base:base",
     "//external:glog",
+    "//external:libjpeg",
+    "//external:libpng",
+    "//external:libwebp",
     "//io:io",
   ],
   visibility = ["//visibility:public"]

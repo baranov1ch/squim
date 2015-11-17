@@ -8,7 +8,7 @@ genrule(
 )
 
 cc_library(
-  name = "libpng",
+  name = "png",
   includes = ["upstream"],
   hdrs = [
     "upstream/pngconf.h",

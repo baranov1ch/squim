@@ -2,7 +2,7 @@ workspace(name = "tapoc2")
 
 bind(
   name = "zlib",
-  actual = "//third_party/zlib",
+  actual = "//third_party/zlib:z",
 )
 
 bind(
@@ -74,12 +74,11 @@ bind(
 # Libpng
 bind(
   name = "libpng",
-  actual = "//third_party/libpng:libpng"
+  actual = "//third_party/libpng:png"
 )
 
-#new_git_repository(
-#  name = "libjpeg_turbo",
-#  remote = "https://chromium.googlesource.com/chromium/deps/libjpeg_turbo.git",
-#  commit = "e4e75037f29745f1546b6ebf5cf532e841c04c2c",
-#  build_file = "libjpeg_turbo.BUILD",
-#)
+# Libjpeg-turbo
+bind(
+  name = "libjpeg",
+  actual = "//third_party/libjpeg_turbo:jpeg_turbo"
+)
