@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+base_dir=$(dirname "$0")
+
+PYTHONDONTWRITEBYTECODE=1 exec python "$base_dir/src/tools/clang/clang_format.py" "$@"
