@@ -57,7 +57,7 @@
 /* #undef RIGHT_SHIFT_IS_UNSIGNED */
 
 /* Use accelerated SIMD routines. */
-/* #undef WITH_SIMD */
+#define WITH_SIMD 1
 
 /* Define to 1 if type `char' is unsigned and you are not using gcc.  */
 #ifndef __CHAR_UNSIGNED__

@@ -1,10 +1,53 @@
-# TODO: simd support
+load("/tools/build_rules/yasm_compile", "many_yasm")
 
 licenses(["notice"])
+
+many_yasm(
+  name = "simd",
+  defines = [
+    "-DRGBX_FILLER_0XFF",
+    "-DSTRICT_MEMORY_ACCESS",
+  ],
+  includes = [
+    ".",
+    "upstream/simd",
+  ],
+  srcs = [
+    "upstream/simd/jccolor-sse2-64.asm",
+    "upstream/simd/jcgray-sse2-64.asm",
+    "upstream/simd/jcsample-sse2-64.asm",
+    "upstream/simd/jdcolor-sse2-64.asm",
+    "upstream/simd/jdmerge-sse2-64.asm",
+    "upstream/simd/jdsample-sse2-64.asm",
+    "upstream/simd/jfdctflt-sse-64.asm",
+    "upstream/simd/jfdctfst-sse2-64.asm",
+    "upstream/simd/jfdctint-sse2-64.asm",
+    "upstream/simd/jidctflt-sse2-64.asm",
+    "upstream/simd/jidctfst-sse2-64.asm",
+    "upstream/simd/jidctint-sse2-64.asm",
+    "upstream/simd/jidctred-sse2-64.asm",
+    "upstream/simd/jquantf-sse2-64.asm",
+    "upstream/simd/jquanti-sse2-64.asm",
+  ],
+  deps = [
+    "upstream/simd/jccolext-sse2-64.asm",
+    "upstream/simd/jcgryext-sse2-64.asm",
+    "upstream/simd/jcolsamp.inc",
+    "upstream/simd/jdcolext-sse2-64.asm",
+    "upstream/simd/jdct.inc",
+    "upstream/simd/jdmrgext-sse2-64.asm",
+    "upstream/simd/jsimdext.inc",
+    "jsimdcfg.inc",
+  ],
+  visibility = ["//visibility:public"],
+)
 
 cc_library(
   name = "jpeg_turbo",
   includes = ["."],
+  hdrs = [
+    "upstream/jpeglib.h"
+  ],
   srcs = [
     "upstream/jaricom.c",
     "upstream/jcapimin.c",
@@ -67,9 +110,10 @@ cc_library(
     "upstream/jquant2.c",
     "upstream/jsimddct.h",
     "upstream/jsimd.h",
-    "upstream/jsimd_none.c",
+    "upstream/simd/jsimd_x86_64.c",
     "upstream/jutils.c",
     "upstream/jversion.h",
   ],
-  visibility = ["//visibility:public"]
+  deps = [":simd"],
+  visibility = ["//visibility:public"],
 )

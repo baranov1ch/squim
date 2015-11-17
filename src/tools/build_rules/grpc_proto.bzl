@@ -64,10 +64,10 @@ def _genproto_outputs(attrs):
   return outputs
 
 genproto = rule(
-    _genproto_impl,
-    attrs = _genproto_attrs,
-    output_to_genfiles = True,
-    outputs = _genproto_outputs,
+  _genproto_impl,
+  attrs = _genproto_attrs,
+  output_to_genfiles = True,
+  outputs = _genproto_outputs,
 )
 
 def proto_library(name, src=None, deps=[], visibility=None,
