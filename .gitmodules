@@ -25,12 +25,6 @@
 [submodule "src/third_party/libpng/upstream"]
 	path = src/third_party/libpng/upstream
 	url = https://github.com/winlibs/libpng.git
-[submodule "src/third_party/libjpeg-turbo/upstream"]
-	path = src/third_party/libjpeg-turbo/upstream
-	url = https://github.com/libjpeg-turbo/libjpeg-turbo.git
-[submodule "src/third_party/third_party/libjpeg_turbo/upstream"]
-	path = src/third_party/third_party/libjpeg_turbo/upstream
-	url = https://github.com/libjpeg-turbo/libjpeg-turbo.git
 [submodule "src/third_party/libjpeg_turbo/upstream"]
 	path = src/third_party/libjpeg_turbo/upstream
 	url = https://github.com/libjpeg-turbo/libjpeg-turbo.git
