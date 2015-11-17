@@ -9,7 +9,7 @@ namespace io {
 TEST(StringChunkTest, CorrectAssignment) {
   std::unique_ptr<Chunk> chunk(new StringChunk("test"));
   EXPECT_EQ(4u, chunk->size());
-  EXPECT_EQ("test", std::string(chunk->char_data(), chunk->size()));
+  EXPECT_EQ("test", chunk->ToString());
 }
 
 TEST(RawChunkTest, CorrectAssignment) {
@@ -18,7 +18,7 @@ TEST(RawChunkTest, CorrectAssignment) {
   memcpy(data.get(), kData, 4);
   std::unique_ptr<Chunk> chunk(new RawChunk(std::move(data), 4));
   EXPECT_EQ(4u, chunk->size());
-  EXPECT_EQ("test", std::string(chunk->char_data(), chunk->size()));
+  EXPECT_EQ("test", chunk->ToString());
 }
 
 }  // namespace io

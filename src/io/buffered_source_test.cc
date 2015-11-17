@@ -1,6 +1,7 @@
 #include "io/buffered_source.h"
 
-#include "base/make_unique.h"
+#include "base/memory/make_unique.h"
+#include "base/strings/string_util.h"
 #include "io/chunk.h"
 
 #include "gtest/gtest.h"
@@ -8,11 +9,6 @@
 namespace io {
 
 namespace {
-
-std::string StringFromBytes(uint8_t* bytes, uint64_t len) {
-  auto* chars = reinterpret_cast<const char*>(bytes);
-  return std::string(chars, len);
-}
 
 struct ReadCase {
   const char* data;
@@ -46,7 +42,7 @@ class BufferedSourceTest : public ::testing::Test {
       offset += expected_len;
       EXPECT_EQ(expected_len, static_cast<size_t>(nread));
       EXPECT_EQ(offset, testee_.offset());
-      EXPECT_EQ(cs.data, StringFromBytes(out, nread));
+      EXPECT_EQ(cs.data, base::StringFromBytes(out, nread));
       EXPECT_EQ(cs.have_some, testee_.HaveSome());
     }
   }
@@ -74,7 +70,7 @@ class BufferedSourceTest : public ::testing::Test {
       offset += expected_len;
       EXPECT_EQ(expected_len, static_cast<size_t>(nread));
       EXPECT_EQ(offset, testee_.offset());
-      EXPECT_EQ(r.data, StringFromBytes(out, nread));
+      EXPECT_EQ(r.data, base::StringFromBytes(out, nread));
       EXPECT_EQ(r.have_some, testee_.HaveSome());
     }
   }
@@ -196,13 +192,13 @@ TEST_F(BufferedSourceTest, Unreading) {
   EXPECT_FALSE(testee_.HaveSome());
   EXPECT_EQ(3, testee_.UnreadN(3));
   EXPECT_EQ(3, testee_.ReadSome(&out));
-  EXPECT_EQ("st2", StringFromBytes(out, 3));
+  EXPECT_EQ("st2", base::StringFromBytes(out, 3));
   EXPECT_EQ(1, testee_.UnreadN(1));
   EXPECT_EQ(6, testee_.UnreadN(6));
   EXPECT_EQ(2, testee_.ReadSome(&out));
-  EXPECT_EQ("t1", StringFromBytes(out, 2));
+  EXPECT_EQ("t1", base::StringFromBytes(out, 2));
   EXPECT_EQ(5, testee_.ReadSome(&out));
-  EXPECT_EQ("test2", StringFromBytes(out, 5));
+  EXPECT_EQ("test2", base::StringFromBytes(out, 5));
 }
 
 TEST_F(BufferedSourceTest, ReadWithMerge) {
@@ -212,20 +208,20 @@ TEST_F(BufferedSourceTest, ReadWithMerge) {
   ASSERT_TRUE(testee_.HaveN(7));
   uint8_t* out;
   EXPECT_EQ(7, testee_.ReadN(&out, 7));
-  EXPECT_EQ("test1te", StringFromBytes(out, 7));
+  EXPECT_EQ("test1te", base::StringFromBytes(out, 7));
   ASSERT_FALSE(testee_.HaveN(9));
   ASSERT_TRUE(testee_.HaveN(8));
   EXPECT_EQ(2, testee_.ReadN(&out, 2));
-  EXPECT_EQ("st", StringFromBytes(out, 2));
+  EXPECT_EQ("st", base::StringFromBytes(out, 2));
   EXPECT_EQ(3, testee_.ReadN(&out, 3));
-  EXPECT_EQ("2te", StringFromBytes(out, 3));
+  EXPECT_EQ("2te", base::StringFromBytes(out, 3));
   ASSERT_FALSE(testee_.HaveN(4));
   ASSERT_TRUE(testee_.HaveN(3));
   EXPECT_EQ(12, testee_.UnreadN(12));
 
   // After all that, all chunks should be merged into one.
   EXPECT_EQ(15, testee_.ReadSome(&out));
-  EXPECT_EQ("test1test2test3", StringFromBytes(out, 15));
+  EXPECT_EQ("test1test2test3", base::StringFromBytes(out, 15));
 }
 
 TEST_F(BufferedSourceTest, Freeing) {

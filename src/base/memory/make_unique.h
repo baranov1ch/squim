@@ -1,5 +1,5 @@
-#ifndef BASE_MAKE_UNIQUE_H_
-#define BASE_MAKE_UNIQUE_H_
+#ifndef BASE_MEMORY_MAKE_UNIQUE_H_
+#define BASE_MEMORY_MAKE_UNIQUE_H_
 
 #include <memory>
 
@@ -12,4 +12,4 @@ inline std::unique_ptr<T> make_unique(Args&&... args) {
 
 }  // namespace base
 
-#endif  // BASE_MAKE_UNIQUE_H_
+#endif  // BASE_MEMORY_MAKE_UNIQUE_H_

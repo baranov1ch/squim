@@ -4,8 +4,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <ostream>
 
 #include "image/image_constants.h"
+#include "image/result.h"
 
 namespace io {
 class BufReader;
@@ -46,6 +48,10 @@ class ImageOptimizer {
   State state() const { return state_; }
 
  private:
+  friend std::ostream& operator<<(std::ostream& os,
+                                  ImageOptimizer::State state);
+  static const char* StateToString(State state);
+
   State state_ = State::kNone;
 
   std::unique_ptr<OptimizationStrategy> strategy_;
@@ -54,6 +60,8 @@ class ImageOptimizer {
   std::unique_ptr<io::BufReader> source_;
   std::unique_ptr<io::Writer> dest_;
 };
+
+std::ostream& operator<<(std::ostream& os, ImageOptimizer::State state);
 
 }  // namespace image
 

@@ -2,6 +2,7 @@
 
 #include <cstring>
 
+#include "glog/logging.h"
 #include "image/image_decoder.h"
 #include "image/image_encoder.h"
 #include "image/optimization_strategy.h"
@@ -60,5 +61,44 @@ ImageOptimizer::ImageOptimizer(std::unique_ptr<OptimizationStrategy> strategy,
       dest_(std::move(dest)) {}
 
 ImageOptimizer::~ImageOptimizer() {}
+
+Result ImageOptimizer::Init() {
+  CHECK_EQ(State::kInit, state_);
+  CHECK(strategy_);
+  auto result = strategy_->ShouldEvenBother();
+  if (!result) {
+    state_ = State::kNone;
+    return Result::Ok();
+    // return Result::Finish(result.code(), result.message());
+  }
+
+  state_ = State::kReadingFormat;
+  return Result::Ok();
+}
+
+Result ImageOptimizer::ReadImageFormat() {
+  CHECK_EQ(State::kReadingFormat, state_);
+  CHECK(source_);
+  uint8_t signature[kLongestSignatureMatch];
+  auto io_result = source_->PeekNInto(signature, kLongestSignatureMatch);
+  if (io_result.pending())
+    return Result::Ok();
+  // return Result::Pending();
+
+  if (io_result.error() || io_result.eof()) {
+    state_ = State::kNone;
+    return Result::Ok();
+    // return Result::IOError(io_result.eof());
+  }
+
+  CHECK_EQ(kLongestSignatureMatch, io_result.nread());
+  auto image_type = ChooseImageType(signature);
+  if (image_type == ImageType::kUnknown) {
+    state_ = State::kNone;
+    return Result::Ok();
+    // return Result::Error(kUnsupportedFormat, std::string());
+  }
+  return Result::Ok();
+}
 
 }  // namespace image

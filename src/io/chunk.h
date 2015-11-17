@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 
+#include "base/strings/string_piece.h"
+
 namespace io {
 
 // Abstract chunk of data.
@@ -13,9 +15,10 @@ class Chunk {
   virtual ~Chunk() {}
 
   const uint8_t* data() const { return data_; }
-  const char* char_data() const { return reinterpret_cast<const char*>(data_); }
   uint8_t* data() { return data_; }
   uint64_t size() const { return size_; }
+
+  base::StringPiece ToString() const;
 
  private:
   uint8_t* data_;

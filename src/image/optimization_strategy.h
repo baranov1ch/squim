@@ -5,6 +5,8 @@ namespace image {
 
 class OptimizationStrategy {
  public:
+  virtual bool ShouldEvenBother() = 0;
+
   virtual ~OptimizationStrategy() {}
 };
 
