@@ -1,8 +1,8 @@
-load("/tools/build_rules/yasm_compile", "many_yasm")
+load("/tools/build_rules/yasm", "yasm_library")
 
 licenses(["notice"])
 
-many_yasm(
+yasm_library(
   name = "simd",
   defines = [
     "-DRGBX_FILLER_0XFF",

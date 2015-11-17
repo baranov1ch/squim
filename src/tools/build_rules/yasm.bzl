@@ -42,7 +42,7 @@ yasm_compile = rule(
   }
 )
 
-def many_yasm(name, arch=None, srcs=None, deps=[], includes=[], defines=[], visibility=None):
+def yasm_library(name, arch=None, srcs=None, deps=[], includes=[], defines=[], visibility=None):
   yasm_objs = []
   for src in srcs:
     yasm_objs += [yasm_compile(name = src[:-4],
