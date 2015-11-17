@@ -30,6 +30,7 @@ cc_test(
   ],
   deps = [
     "//external:gtest",
+    "//test:test_main",
     ":io",
   ],
 )

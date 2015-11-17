@@ -4,9 +4,11 @@ cc_library(
     "image_constants.h",
     "image_optimizer.h",
     "optimization_strategy.h",
+    "result.h",
   ],
   srcs = [
-    "image_optimizer.cc"
+    "image_optimizer.cc",
+    "result.cc",
   ],
   deps = [
     "//base:base",
@@ -27,6 +29,7 @@ cc_test(
   ],
   deps = [
     "//external:gtest",
+    "//test:test_main",
     ":image",
   ],
 )

@@ -101,4 +101,8 @@ Result ImageOptimizer::ReadImageFormat() {
   return Result::Ok();
 }
 
+std::ostream& operator<<(std::ostream& os, ImageOptimizer::State state) {
+  return os;
+}
+
 }  // namespace image

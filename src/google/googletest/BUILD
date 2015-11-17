@@ -6,7 +6,10 @@ cc_library(
   ],
   srcs = glob(
     ["upstream/googletest/src/*.cc"],
-    exclude = ["upstream/googletest/src/gtest-all.cc"]
+    exclude = [
+      "upstream/googletest/src/gtest-all.cc",
+      "upstream/googletest/src/gtest_main.cc",
+    ]
   ),
   hdrs = glob(["upstream/googletest/include/**/*.h"]),
   linkopts = ["-pthread"],

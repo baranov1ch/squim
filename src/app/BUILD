@@ -50,6 +50,7 @@ cc_test(
   ],
   deps = [
     "//external:gtest",
+    "//test:test_main",
     ":image_optimizer_service",
   ],
 )
@@ -62,5 +63,6 @@ cc_test(
   deps = [
     "//external:gmock",
     "//external:gtest",
+    "//test:test_main",
   ],
 )

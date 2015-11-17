@@ -22,7 +22,8 @@ cc_test(
     "strings/string_piece_test.cc"
   ],
   deps = [
-    ":base",
     "//external:gtest",
+    "//test:test_main",
+    ":base",
   ],
 )

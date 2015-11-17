@@ -24,12 +24,6 @@ const char kServerAddress[] = "0.0.0.0:50051";
 }
 
 class OptimizerEndToEndTest : public testing::Test {
- public:
-  OptimizerEndToEndTest() {
-    google::InitGoogleLogging("test");
-    google::InstallFailureSignalHandler();
-  }
-
  protected:
   void TearDown() override { StopServerIfNecessary(); }
 
