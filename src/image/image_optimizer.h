@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <ostream>
 
@@ -16,8 +17,9 @@ class Writer;
 
 namespace image {
 
-class ImageDecoder;
-class ImageEncoder;
+class ImageReader;
+class ImageWriter;
+class ImageReaderWriterFactory;
 class OptimizationStrategy;
 
 class ImageOptimizer {
@@ -32,31 +34,43 @@ class ImageOptimizer {
     kNone,
   };
 
+  using ImageTypeSelector = std::function<Result(io::BufReader*, ImageType*)>;
+
   static ImageType ChooseImageType(
       const uint8_t signature[kLongestSignatureMatch]);
 
-  ImageOptimizer(std::unique_ptr<OptimizationStrategy> strategy,
+  static Result DefaultImageTypeSelector(io::BufReader* reader,
+                                         ImageType* image_type);
+
+  ImageOptimizer(ImageTypeSelector input_type_selector,
+                 std::unique_ptr<OptimizationStrategy> strategy,
+                 std::unique_ptr<ImageReaderWriterFactory> factory,
                  std::unique_ptr<io::BufReader> source,
                  std::unique_ptr<io::Writer> dest);
   ~ImageOptimizer();
 
-  Result Init();
-  Result ReadImageFormat();
-  Result ReadImageInfo();
-  Result Optimize();
-
-  State state() const { return state_; }
+  Result Process();
+  bool Finished() const;
 
  private:
+  Result DoLoop(Result result);
+
+  Result DoInit();
+  Result DoReadImageFormat();
+  Result DoReadImageInfo();
+  Result DoOptimize();
+
   friend std::ostream& operator<<(std::ostream& os,
                                   ImageOptimizer::State state);
   static const char* StateToString(State state);
 
-  State state_ = State::kNone;
+  State state_ = State::kInit;
 
+  ImageTypeSelector input_type_selector_;
   std::unique_ptr<OptimizationStrategy> strategy_;
-  std::unique_ptr<ImageDecoder> input_;
-  std::unique_ptr<ImageEncoder> output_;
+  std::unique_ptr<ImageReaderWriterFactory> factory_;
+  std::unique_ptr<ImageReader> reader_;
+  std::unique_ptr<ImageWriter> writer_;
   std::unique_ptr<io::BufReader> source_;
   std::unique_ptr<io::Writer> dest_;
 };

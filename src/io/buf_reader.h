@@ -24,26 +24,36 @@ class BufReader {
   // Sets |out| to continuous piece of data of the size |n| or less.
   // Advances the offset for returned IoResult::nread() bytes.
   // Do not copies any data, just returns a pointer.
-  IoResult ReadAtMostN(uint8_t** out, uint64_t n);
+  IoResult ReadAtMostN(uint8_t** out, size_t n);
 
   // Sets |out| to continuous piece of data of the size |n|.
   // Advances the offset for returned IoResult::nread() bytes.
   // NOTE: If |source_| does not have enough continuous data, some of the chunks
   // will be merged, so data copies may occur during this call.
   // Returns error if |source_| ended (got EOF) earlier.
-  IoResult ReadN(uint8_t** out, uint64_t n);
+  IoResult ReadN(uint8_t** out, size_t n);
 
   // Copies into |out| piece of data of the size |n|.
   // Advances the offset for returned IoResult::nread() bytes (which is |n|).
   // Returns error if |source_| ended (got EOF) earlier.
-  IoResult ReadNInto(uint8_t* out, uint64_t n);
+  IoResult ReadNInto(uint8_t* out, size_t n);
+
+  template <size_t N>
+  IoResult ReadNInto(uint8_t(&out)[N]) {
+    return ReadNInto(out, N);
+  }
 
   // Copies into |out| piece of data of the size |n|.
-  // Do not advance the offset.
-  IoResult PeekNInto(uint8_t* out, uint64_t n);
+  // Does not advance the offset.
+  IoResult PeekNInto(uint8_t* out, size_t n);
+
+  template <size_t N>
+  IoResult PeekNInto(uint8_t(&out)[N]) {
+    return PeekNInto(out, N);
+  }
 
   // Unreads n bytes from the buffer. Returns the number of bytes unread.
-  uint64_t UnreadN(uint64_t n);
+  size_t UnreadN(size_t n);
 
   BufferedSource* source() { return source_.get(); }
 

@@ -1,10 +1,12 @@
 workspace(name = "tapoc2")
 
+# Zlib
 bind(
   name = "zlib",
   actual = "//third_party/zlib:z",
 )
 
+# Boringssl FTW!
 bind(
   name = "libssl",
   actual = "//google/boringssl:ssl",

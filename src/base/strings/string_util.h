@@ -11,6 +11,11 @@ base::StringPiece StringFromBytes(const uint8_t* bytes, uint64_t len) {
   return base::StringPiece(reinterpret_cast<const char*>(bytes), len);
 }
 
+template <size_t N>
+base::StringPiece StringFromBytes(const uint8_t(&bytes)[N]) {
+  return StringFromBytes(bytes, N);
+}
+
 }  // namespace base
 
 #endif  // BASE_STRINGS_STRING_UTIL_H_

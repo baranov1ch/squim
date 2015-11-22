@@ -2,6 +2,7 @@ cc_library(
   name = "image",
   hdrs = [
     "image_constants.h",
+    "image_frame.h",
     "image_optimizer.h",
     "optimization_strategy.h",
     "result.h",
@@ -28,6 +29,7 @@ cc_test(
     "image_optimizer_test.cc",
   ],
   deps = [
+    "//external:gmock",
     "//external:gtest",
     "//test:test_main",
     ":image",

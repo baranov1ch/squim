@@ -4,6 +4,7 @@ cc_library(
   srcs = ["test_main.cc"],
   deps = [
     "//external:glog",
+    "//external:gmock",
     "//external:gtest",
   ],
   visibility = ["//visibility:public"],

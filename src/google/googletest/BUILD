@@ -26,7 +26,10 @@ cc_library(
   ],
   srcs = glob(
     ["upstream/googlemock/src/*.cc"],
-    exclude = ["upstream/googlemock/src/gmock-all.cc"]
+    exclude = [
+      "upstream/googlemock/src/gmock-all.cc",
+      "upstream/googlemock/src/gmock_main.cc",
+    ]
   ),
   hdrs = glob(["upstream/googlemock/include/**/*.h"]),
   linkopts = ["-pthread"],

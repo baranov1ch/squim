@@ -8,7 +8,7 @@ IoResult IoResult::Pending() {
 }
 
 // static
-IoResult IoResult::Read(uint64_t nread) {
+IoResult IoResult::Read(size_t nread) {
   return IoResult(nread);
 }
 
@@ -24,6 +24,6 @@ IoResult IoResult::Error() {
 
 IoResult::IoResult(IoResultCode code) : code_(code), nread_(0u) {}
 
-IoResult::IoResult(uint64_t nread) : code_(IoResultCode::kOk), nread_(nread) {}
+IoResult::IoResult(size_t nread) : code_(IoResultCode::kOk), nread_(nread) {}
 
 }  // namespace io

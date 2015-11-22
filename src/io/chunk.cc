@@ -4,7 +4,7 @@
 
 namespace io {
 
-Chunk::Chunk(const uint8_t* data, uint64_t size)
+Chunk::Chunk(const uint8_t* data, size_t size)
     : data_(const_cast<uint8_t*>(data)), size_(size) {}
 
 base::StringPiece Chunk::ToString() const {
@@ -17,7 +17,7 @@ StringChunk::StringChunk(std::string data)
 
 StringChunk::~StringChunk() {}
 
-RawChunk::RawChunk(std::unique_ptr<uint8_t[]> data, uint64_t size)
+RawChunk::RawChunk(std::unique_ptr<uint8_t[]> data, size_t size)
     : Chunk(data.get(), size), data_(std::move(data)) {}
 
 RawChunk::~RawChunk() {}

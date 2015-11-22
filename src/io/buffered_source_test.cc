@@ -26,14 +26,14 @@ class BufferedSourceTest : public ::testing::Test {
  protected:
   template <size_t N>
   void RunFullCases(const ReadCase(&cases)[N]) {
-    uint64_t expected_size = 0;
+    size_t expected_size = 0;
     for (auto cs : cases) {
       expected_size += strlen(cs.data);
       testee_.AddChunk(base::make_unique<StringChunk>(cs.data));
     }
     EXPECT_EQ(expected_size, testee_.size());
 
-    uint64_t offset = 0;
+    size_t offset = 0;
     for (const auto& cs : cases) {
       ASSERT_TRUE(testee_.HaveSome());
       uint8_t* out;
@@ -49,18 +49,18 @@ class BufferedSourceTest : public ::testing::Test {
 
   template <size_t M, size_t N>
   void ReadPartial(const char*(&chunks)[M], const PartialReadCase(&reads)[N]) {
-    uint64_t expected_size = 0;
+    size_t expected_size = 0;
     for (auto chunk : chunks) {
       expected_size += strlen(chunk);
       testee_.AddChunk(base::make_unique<StringChunk>(chunk));
     }
     EXPECT_EQ(expected_size, testee_.size());
 
-    uint64_t offset = 0;
+    size_t offset = 0;
     for (const auto& r : reads) {
       ASSERT_TRUE(testee_.HaveSome());
       uint8_t* out;
-      uint64_t nread;
+      size_t nread;
       if (r.n >= 0) {
         nread = testee_.ReadAtMostN(&out, r.n);
       } else {

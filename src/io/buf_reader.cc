@@ -23,7 +23,7 @@ IoResult BufReader::ReadSome(uint8_t** out) {
   return IoResult::Read(nread);
 }
 
-IoResult BufReader::ReadAtMostN(uint8_t** out, uint64_t n) {
+IoResult BufReader::ReadAtMostN(uint8_t** out, size_t n) {
   if (source_->EofReached())
     return IoResult::Eof();
 
@@ -34,7 +34,7 @@ IoResult BufReader::ReadAtMostN(uint8_t** out, uint64_t n) {
   return IoResult::Read(nread);
 }
 
-IoResult BufReader::ReadN(uint8_t** out, uint64_t n) {
+IoResult BufReader::ReadN(uint8_t** out, size_t n) {
   if (source_->EofReached())
     return IoResult::Eof();
 
@@ -45,7 +45,7 @@ IoResult BufReader::ReadN(uint8_t** out, uint64_t n) {
   return IoResult::Read(nread);
 }
 
-IoResult BufReader::ReadNInto(uint8_t* out, uint64_t n) {
+IoResult BufReader::ReadNInto(uint8_t* out, size_t n) {
   CHECK(out);
 
   if (source_->EofReached())
@@ -54,8 +54,8 @@ IoResult BufReader::ReadNInto(uint8_t* out, uint64_t n) {
   if (!source_->HaveN(n))
     return IoResult::Pending();
 
-  uint64_t offset = 0;
-  uint64_t left = n;
+  size_t offset = 0;
+  size_t left = n;
   while (left > 0) {
     uint8_t* tmp;
     auto nread = source_->ReadAtMostN(&tmp, left);
@@ -66,7 +66,7 @@ IoResult BufReader::ReadNInto(uint8_t* out, uint64_t n) {
   return IoResult::Read(n);
 }
 
-IoResult BufReader::PeekNInto(uint8_t* out, uint64_t n) {
+IoResult BufReader::PeekNInto(uint8_t* out, size_t n) {
   auto result = ReadNInto(out, n);
   if (result.ok()) {
     CHECK_EQ(n, result.nread());
@@ -75,7 +75,7 @@ IoResult BufReader::PeekNInto(uint8_t* out, uint64_t n) {
   return result;
 }
 
-uint64_t BufReader::UnreadN(uint64_t n) {
+size_t BufReader::UnreadN(size_t n) {
   return source_->UnreadN(n);
 }
 

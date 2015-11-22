@@ -4,7 +4,6 @@
 
 #include "base/memory/make_unique.h"
 #include "glog/logging.h"
-#include "io/chunk.h"
 
 namespace io {
 
@@ -16,7 +15,7 @@ bool BufferedSource::HaveSome() const {
   return current_chunk_ != chunks_.end();
 }
 
-void BufferedSource::AddChunk(std::unique_ptr<Chunk> chunk) {
+void BufferedSource::AddChunk(ChunkPtr chunk) {
   if (chunks_.empty()) {
     CHECK(current_chunk_ == chunks_.end());
     CHECK_EQ(0, total_offset_);
@@ -32,7 +31,7 @@ void BufferedSource::AddChunk(std::unique_ptr<Chunk> chunk) {
     current_chunk_ = std::prev(chunks_.end());
 }
 
-uint64_t BufferedSource::ReadSome(uint8_t** out) {
+size_t BufferedSource::ReadSome(uint8_t** out) {
   if (!out)
     return 0;
 
@@ -47,7 +46,7 @@ uint64_t BufferedSource::ReadSome(uint8_t** out) {
   return nread;
 }
 
-uint64_t BufferedSource::ReadAtMostN(uint8_t** out, uint64_t desired) {
+size_t BufferedSource::ReadAtMostN(uint8_t** out, size_t desired) {
   if (!out || desired == 0)
     return 0;
 
@@ -67,7 +66,7 @@ uint64_t BufferedSource::ReadAtMostN(uint8_t** out, uint64_t desired) {
   }
 }
 
-bool BufferedSource::HaveN(uint64_t n) {
+bool BufferedSource::HaveN(size_t n) {
   return total_size_ - total_offset_ >= n;
 }
 
@@ -79,7 +78,7 @@ void BufferedSource::SendEof() {
   eof_received_ = true;
 }
 
-uint64_t BufferedSource::UnreadN(uint64_t n) {
+size_t BufferedSource::UnreadN(size_t n) {
   if (n == 0 || size() == 0)
     return 0;
 
@@ -106,7 +105,7 @@ uint64_t BufferedSource::UnreadN(uint64_t n) {
     }
 
     // First skip the active chunk.
-    uint64_t unread_bytes = offset_in_chunk_;
+    size_t unread_bytes = offset_in_chunk_;
     total_offset_ -= offset_in_chunk_;
     n -= offset_in_chunk_;
     offset_in_chunk_ = 0;
@@ -137,7 +136,7 @@ uint64_t BufferedSource::UnreadN(uint64_t n) {
   return 0;
 }
 
-uint64_t BufferedSource::ReadN(uint8_t** out, uint64_t n) {
+size_t BufferedSource::ReadN(uint8_t** out, size_t n) {
   if (!out || n == 0)
     return 0;
 
@@ -152,7 +151,7 @@ uint64_t BufferedSource::ReadN(uint8_t** out, uint64_t n) {
   }
 
   // Hard case: define chunks we need to merge.
-  uint64_t stored_size = 0;
+  size_t stored_size = 0;
   auto start = current_chunk_;
   auto end = current_chunk_;
   do {
@@ -166,7 +165,7 @@ uint64_t BufferedSource::ReadN(uint8_t** out, uint64_t n) {
       base::make_unique<RawChunk>(std::move(new_chunk), stored_size);
 
   // Copy data.
-  uint64_t offset = 0;
+  size_t offset = 0;
   uint8_t* dst = merged_chunk->data();
   for (auto it = start; it != end; ++it) {
     const auto& to_copy = *it;
@@ -185,14 +184,14 @@ uint64_t BufferedSource::ReadN(uint8_t** out, uint64_t n) {
   return nread;
 }
 
-uint64_t BufferedSource::FreeAtMostNBytes(uint64_t n) {
+size_t BufferedSource::FreeAtMostNBytes(size_t n) {
   if (current_chunk_ == chunks_.begin())
     return 0;
 
   auto start = chunks_.begin();
   auto end = start;
-  uint64_t accumulated = 0;
-  uint64_t accumulated_next = 0;
+  size_t accumulated = 0;
+  size_t accumulated_next = 0;
   for (auto it = start; it != current_chunk_; ++it) {
     const auto& chunk = *it;
     accumulated_next += chunk->size();
@@ -211,7 +210,7 @@ uint64_t BufferedSource::FreeAtMostNBytes(uint64_t n) {
   return accumulated;
 }
 
-uint64_t BufferedSource::FreeAsMuchAsPossible() {
+size_t BufferedSource::FreeAsMuchAsPossible() {
   return FreeAtMostNBytes(size());
 }
 

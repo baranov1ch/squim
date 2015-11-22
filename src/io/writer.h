@@ -1,6 +1,8 @@
 #ifndef IO_WRITER_H_
 #define IO_WRITER_H_
 
+#include "io/io_result.h"
+
 namespace io {
 
 class Chunk;
