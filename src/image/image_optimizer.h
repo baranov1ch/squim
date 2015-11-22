@@ -7,6 +7,7 @@
 #include <memory>
 #include <ostream>
 
+#include "base/make_noncopyable.h"
 #include "image/image_constants.h"
 #include "image/result.h"
 
@@ -23,6 +24,8 @@ class ImageReaderWriterFactory;
 class OptimizationStrategy;
 
 class ImageOptimizer {
+  MAKE_NONCOPYABLE(ImageOptimizer);
+
  public:
   static constexpr size_t kLongestSignatureMatch = sizeof("RIFF????WEBPVP") - 1;
 
