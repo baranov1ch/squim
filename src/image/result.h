@@ -1,6 +1,7 @@
 #ifndef IMAGE_RESULT_H_
 #define IMAGE_RESULT_H_
 
+#include <ostream>
 #include <string>
 
 #include "io/io_result.h"
@@ -9,10 +10,12 @@ namespace image {
 
 class Result {
  public:
+  // TODO: macro generator.
   enum class Code {
     kOk,
     kImageTooLarge,
     kImageTooSmall,
+    // TODO: separate read/write pend.
     kPending,
     kDecodeError,
     kErrorStart = kDecodeError,
@@ -22,6 +25,7 @@ class Result {
     kDunnoHowToEncode,
     kReadFrameError,
     kWriteFrameError,
+    kFailed,
   };
 
   static Result Error(Code code);
@@ -48,6 +52,8 @@ class Result {
   std::string custom_message_;
   bool finished_;
 };
+
+std::ostream& operator<<(std::ostream& os, Result::Code code);
 
 }  // namespace image
 

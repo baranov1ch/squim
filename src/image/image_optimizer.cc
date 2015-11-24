@@ -77,8 +77,16 @@ const char* ImageOptimizer::StateToString(State state) {
       return "ReadingFormat";
     case State::kReadingImageInfo:
       return "ReadingImageInfo";
-    case State::kOptimizing:
-      return "Optimizing";
+    case State::kReadFrame:
+      return "ReadFrame";
+    case State::kWriteFrame:
+      return "WriteFrame";
+    case State::kDrain:
+      return "Drain";
+    case State::kFinish:
+      return "Finish";
+    case State::kComplete:
+      return "Complete";
     case State::kNone:
       return "None";
     default:
@@ -126,9 +134,25 @@ Result ImageOptimizer::DoLoop(Result result) {
         CHECK(result.ok());
         result = DoReadImageInfo();
         break;
-      case State::kOptimizing:
+      case State::kReadFrame:
         CHECK(result.ok());
-        result = DoOptimize();
+        result = DoReadFrame();
+        break;
+      case State::kWriteFrame:
+        CHECK(result.ok());
+        result = DoWriteFrame();
+        break;
+      case State::kDrain:
+        CHECK(result.ok());
+        result = DoDrain();
+        break;
+      case State::kFinish:
+        CHECK(result.ok());
+        result = DoFinish();
+        break;
+      case State::kComplete:
+        CHECK(result.ok());
+        result = DoComplete();
         break;
       default:
         CHECK(false);
@@ -209,34 +233,60 @@ Result ImageOptimizer::DoReadImageInfo() {
 
   writer_->SetMetadata(reader_->GetMetadata());
 
-  state_ = State::kOptimizing;
+  state_ = State::kReadFrame;
   return Result::Ok();
 }
 
-Result ImageOptimizer::DoOptimize() {
-  CHECK_EQ(State::kOptimizing, state_);
+Result ImageOptimizer::DoReadFrame() {
+  CHECK_EQ(State::kReadFrame, state_);
   CHECK(reader_);
   CHECK(writer_);
   // Both sources must be transferred to coders.
   CHECK(!source_);
   CHECK(!dest_);
 
-  while (reader_->HasMoreFrames()) {
-    ImageFrame* frame;
-    auto result = reader_->GetNextFrame(&frame);
-    if (!result.ok())
-      return result;
-
-    CHECK(frame);
-    result = writer_->WriteFrame(frame);
-    if (!result.ok())
-      return result;
+  if (!reader_->HasMoreFrames()) {
+    if (!strategy_->ShouldWaitForMetadata()) {
+      state_ = State::kFinish;
+    } else {
+      state_ = State::kDrain;
+    }
+    return Result::Ok();
   }
 
-  auto result = writer_->FinishWrite();
-  if (!result.ok())
-    return result;
+  current_frame_ = nullptr;
+  auto result = reader_->GetNextFrame(&current_frame_);
+  if (result.ok()) {
+    state_ = State::kWriteFrame;
+  }
+  return result;
+}
 
+Result ImageOptimizer::DoWriteFrame() {
+  CHECK_EQ(State::kWriteFrame, state_);
+
+  CHECK(current_frame_);
+  state_ = State::kReadFrame;
+  return writer_->WriteFrame(current_frame_);
+}
+
+Result ImageOptimizer::DoDrain() {
+  CHECK_EQ(State::kDrain, state_);
+  auto result = reader_->ReadTillTheEnd();
+  if (result.ok())
+    state_ = State::kFinish;
+
+  return result;
+}
+
+Result ImageOptimizer::DoFinish() {
+  CHECK_EQ(State::kFinish, state_);
+  state_ = State::kComplete;
+  return writer_->FinishWrite();
+}
+
+Result ImageOptimizer::DoComplete() {
+  CHECK_EQ(State::kComplete, state_);
   return Result::Finish(Result::Code::kOk);
 }
 

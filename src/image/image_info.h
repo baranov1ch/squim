@@ -14,6 +14,7 @@ struct ImageInfo {
   uint64_t size;
   ImageType type;
   bool multiframe;
+  uint32_t quality;
 };
 
 }  // namespace image

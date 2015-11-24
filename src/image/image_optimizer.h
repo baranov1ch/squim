@@ -18,6 +18,7 @@ class Writer;
 
 namespace image {
 
+class ImageFrame;
 class ImageReader;
 class ImageWriter;
 class ImageReaderWriterFactory;
@@ -33,7 +34,11 @@ class ImageOptimizer {
     kInit,
     kReadingFormat,
     kReadingImageInfo,
-    kOptimizing,
+    kReadFrame,
+    kWriteFrame,
+    kDrain,
+    kFinish,
+    kComplete,
     kNone,
   };
 
@@ -61,7 +66,11 @@ class ImageOptimizer {
   Result DoInit();
   Result DoReadImageFormat();
   Result DoReadImageInfo();
-  Result DoOptimize();
+  Result DoReadFrame();
+  Result DoWriteFrame();
+  Result DoDrain();
+  Result DoFinish();
+  Result DoComplete();
 
   friend std::ostream& operator<<(std::ostream& os,
                                   ImageOptimizer::State state);
@@ -76,6 +85,7 @@ class ImageOptimizer {
   std::unique_ptr<ImageWriter> writer_;
   std::unique_ptr<io::BufReader> source_;
   std::unique_ptr<io::Writer> dest_;
+  ImageFrame* current_frame_ = nullptr;
 };
 
 std::ostream& operator<<(std::ostream& os, ImageOptimizer::State state);

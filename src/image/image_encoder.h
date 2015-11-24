@@ -6,6 +6,7 @@
 namespace image {
 
 class ImageFrame;
+class ImageMetadata;
 
 // General encoder interface.
 class ImageEncoder {
@@ -16,7 +17,10 @@ class ImageEncoder {
   // Sets metadata for the image. It can be empty at the beginning, but the
   // encoder can consult it from time to time when it decides that certain
   // type of meta should be written.
-  virtual void SetMetadata(const Metadata* metadata) = 0;
+  virtual void SetMetadata(const ImageMetadata* metadata) = 0;
+
+  // Writes the rest of the stuff (metadata) or flushes output if necessary.
+  virtual Result FinishWrite() = 0;
 
   virtual ~ImageEncoder() {}
 };

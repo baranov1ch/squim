@@ -35,6 +35,7 @@ class MockStrategy : public OptimizationStrategy {
   MOCK_METHOD0(GetOutputType, ImageType());
   MOCK_METHOD1(AdjustImageReader, Result(std::unique_ptr<ImageReader>*));
   MOCK_METHOD1(AdjustImageWriter, Result(std::unique_ptr<ImageWriter>*));
+  MOCK_METHOD0(ShouldWaitForMetadata, bool());
 };
 
 class MockFactory : public ImageReaderWriterFactory {
@@ -63,8 +64,11 @@ class MockReader : public ImageReader {
  public:
   MOCK_CONST_METHOD0(HasMoreFrames, bool());
   MOCK_CONST_METHOD0(GetMetadata, const ImageMetadata*());
-  MOCK_METHOD1(GetImageInfo, Result(ImageInfo**));
+  MOCK_CONST_METHOD0(GetNumberOfFramesRead, size_t());
+  MOCK_METHOD1(GetImageInfo, Result(const ImageInfo**));
   MOCK_METHOD1(GetNextFrame, Result(ImageFrame**));
+  MOCK_METHOD2(GetFrameAtIndex, Result(size_t, ImageFrame**));
+  MOCK_METHOD0(ReadTillTheEnd, Result());
 };
 
 class MockWriter : public ImageWriter {
@@ -127,6 +131,7 @@ class ImageOptimizerTest : public testing::Test {
     kAdjustWriter,
     kReadFrame,
     kWriteFrame,
+    kDrain,
     kFinish,
   };
 
@@ -240,8 +245,27 @@ class ImageOptimizerTest : public testing::Test {
                     Return(Result::Error(Result::Code::kWriteFrameError)));
           }
           break;
-        case Stage::kFinish:
+        case Stage::kDrain:
           EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(false));
+
+          EXPECT_CALL(*strategy_, ShouldWaitForMetadata())
+              .WillOnce(Return(should_wait_meta_));
+          if (should_wait_meta_) {
+            if (current_stage < int_stage) {
+              EXPECT_CALL(*reader, ReadTillTheEnd())
+                  .WillOnce(Return(Result::Ok()));
+            } else if (code == Result::Code::kPending) {
+              EXPECT_CALL(*reader, ReadTillTheEnd())
+                  .WillOnce(Return(Result::Pending()));
+            } else {
+              EXPECT_CALL(*reader, ReadTillTheEnd())
+                  .WillOnce(Return(Result::Error(Result::Code::kDecodeError)));
+            }
+          } else {
+            EXPECT_CALL(*reader, ReadTillTheEnd()).Times(0);
+          }
+          break;
+        case Stage::kFinish:
           if (code == Result::Code::kOk) {
             EXPECT_CALL(*writer, FinishWrite()).WillOnce(Return(Result::Ok()));
           } else if (code == Result::Code::kPending) {
@@ -305,6 +329,7 @@ class ImageOptimizerTest : public testing::Test {
   DevNullWriter* dest_ = nullptr;
   ImageFrame frame_;
   std::unique_ptr<ImageOptimizer> testee_;
+  bool should_wait_meta_ = false;
 };
 
 TEST_F(ImageOptimizerTest, ImageTypeChoice) {
@@ -403,6 +428,24 @@ TEST_F(ImageOptimizerTest, ShouldReturnErrorIfWriteFrameReturnsError) {
   RunTestCaseUntil(Stage::kWriteFrame, Result::Code::kWriteFrameError);
 }
 
+TEST_F(ImageOptimizerTest, ShouldReturnErrorIfDrainReturnsError) {
+  testee_ = CreateOptimizer();
+  should_wait_meta_ = true;
+  RunTestCaseUntil(Stage::kDrain, Result::Code::kDecodeError);
+}
+
+TEST_F(ImageOptimizerTest, ShouldPendOnDrain) {
+  testee_ = CreateOptimizer();
+  should_wait_meta_ = true;
+  RunTestCaseUntil(Stage::kDrain, Result::Code::kPending);
+}
+
+TEST_F(ImageOptimizerTest, ShouldPendOnFinishAfterDrain) {
+  testee_ = CreateOptimizer();
+  should_wait_meta_ = true;
+  RunTestCaseUntil(Stage::kFinish, Result::Code::kPending);
+}
+
 TEST_F(ImageOptimizerTest, ShouldPendOnFinishing) {
   testee_ = CreateOptimizer();
   RunTestCaseUntil(Stage::kFinish, Result::Code::kPending);
@@ -470,14 +513,21 @@ TEST_F(ImageOptimizerTest, ShouldTolerateMultilePendingCalls) {
       .WillOnce(Invoke(this, &ImageOptimizerTest::SetFrame));
   EXPECT_CALL(*writer, WriteFrame(_)).WillOnce(Return(Result::Ok()));
   EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(false));
+  EXPECT_CALL(*strategy_, ShouldWaitForMetadata()).WillOnce(Return(true));
+  EXPECT_CALL(*reader, ReadTillTheEnd()).WillOnce(Return(Result::Pending()));
+  result = testee_->Process();
+  EXPECT_TRUE(result.pending());
+  EXPECT_CALL(*reader, ReadTillTheEnd()).WillOnce(Return(Result::Pending()));
+  result = testee_->Process();
+  EXPECT_TRUE(result.pending());
+
+  EXPECT_CALL(*reader, ReadTillTheEnd()).WillOnce(Return(Result::Ok()));
   EXPECT_CALL(*writer, FinishWrite()).WillOnce(Return(Result::Pending()));
   result = testee_->Process();
   EXPECT_TRUE(result.pending());
 
-  EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(false));
-  EXPECT_CALL(*writer, FinishWrite()).WillOnce(Return(Result::Pending()));
   result = testee_->Process();
-  EXPECT_TRUE(result.pending());
+  EXPECT_TRUE(result.finished());
 }
 
 }  // namespace image

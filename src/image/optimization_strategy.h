@@ -11,6 +11,7 @@ class OptimizationStrategy {
   virtual ImageType GetOutputType() = 0;
   virtual Result AdjustImageReader(std::unique_ptr<ImageReader>* reader) = 0;
   virtual Result AdjustImageWriter(std::unique_ptr<ImageWriter>* writer) = 0;
+  virtual bool ShouldWaitForMetadata() = 0;
 
   virtual ~OptimizationStrategy() {}
 };

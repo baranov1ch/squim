@@ -27,24 +27,22 @@ class ImageDecoder {
 
   // Returns number of frames *decoded so far*. 1 does not generally mean that
   // image is single frame, other may not be decoded yet
-  virtual uint32_t GetFrameCount() const = 0;
+  virtual size_t GetFrameCount() const = 0;
 
   // Returns true if image could be multiframe (like gif/webp).
   virtual bool IsMultiFrame() const = 0;
 
+  // Estimated quality of the image in percents. 100 for lossless.
+  virtual uint32_t GetEstimatedQuality() const = 0;
+
   // Should return true iff frame at |index| has been successfully decoded
   // so far.
-  virtual bool IsFrameCompleteAtIndex(size_t index) = 0;
+  virtual bool IsFrameCompleteAtIndex(size_t index) const = 0;
 
   // Should return non-owned pointer to the decoded image frame. Implementations
-  // may assume that |index| refers to a parsed frame - it's up to the client to
-  // ensure it using IsFrameCompleteAtIndex().
+  // may assume that |index| refers to a decoded frame - it's up to the client
+  // to ensure it using IsFrameCompleteAtIndex().
   virtual ImageFrame* GetFrameAtIndex(size_t index) = 0;
-
-  // Returns duration of the frame. If image is not animated, returns
-  // |kInvalidDuration|. It's up to the client to ensure that requested frame is
-  // ready using IsFrameCompleteAtIndex().
-  virtual uint32_t GetFrameDurationAtIndex(size_t index) = 0;
 
   // Returns image metadata.
   virtual ImageMetadata* GetMetadata() = 0;
@@ -52,11 +50,17 @@ class ImageDecoder {
   // Should return true if all metadata has been parsed.
   virtual bool IsAllMetadataComplete() const = 0;
 
+  // Should return true if all frames has been decoded.
+  virtual bool IsAllFramesComplete() const = 0;
+
   // Should return true if the whole image is ready.
   virtual bool IsImageComplete() const = 0;
 
-  // Client callback to signal the more data is ready to parse.
-  virtual Result MoreDataAvailable() = 0;
+  // Should decode more if data available.
+  virtual Result Decode() = 0;
+
+  // Should try to decode only basic image info (usually from image header).
+  virtual Result DecodeImageInfo() = 0;
 
   // True if the error occurred. Decoding cannot progress after that.
   virtual bool HasError() const = 0;
