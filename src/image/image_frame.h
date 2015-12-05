@@ -13,22 +13,45 @@ class ImageFrame {
   MAKE_NONCOPYABLE(ImageFrame);
 
  public:
-  ImageFrame() {}
-  ~ImageFrame() {}
+  const size_t kNoPreviousFrameIndex = 0xFFFFFFFF;
 
-  uint32_t width() const { return 0; }
-  uint32_t height() const { return 0; }
-  uint32_t duration() const { return 0; }
-  ColorScheme color_scheme() const { return ColorScheme::kRGBA; }
-  bool has_alpha() const { return false; }
-  size_t required_previous_frame_index() const { return 0; }
-  ImageType image_type() const { return ImageType::kUnknown; }
+  ImageFrame();
+  ~ImageFrame();
+
+  uint32_t width() const { return width_; }
+  uint32_t height() const { return height_; }
+  uint32_t stride() const;
+  uint32_t duration() const { return duration_; }
+  ColorScheme color_scheme() const { return color_scheme_; }
+  bool has_alpha() const;
+  size_t required_previous_frame_index() const {
+    return required_previous_frame_index_;
+  }
+
+  size_t bpp() const { return bpp_; }
+
+  uint8_t* GetPixel(uint32_t x, uint32_t y) {
+    return data_.get() + (stride() * x + bpp_ * y);
+  }
+
+  const uint8_t* GetPixel(uint32_t x, uint32_t y) const {
+    return GetPixel(x, y);
+  }
+
+  uint8_t* GetData(size_t offset) { return data_.get() + offset; }
+
+  const uint8_t* GetData(size_t offset) const { return GetData(offset); }
+
+  void Init(uint32_t width, uint32_t height, ColorScheme color_scheme);
 
  private:
-  uint8_t* GetPixelData(uint32_t x, uint32_t y) { return nullptr; }
-  void SetPixelData(uint32_t x, uint32_t y, uint8_t* data) {}
-
-  std::unique_ptr<char[]> data_;
+  uint32_t width_ = 0;
+  uint32_t height_ = 0;
+  uint32_t duration_ = 0;
+  size_t bpp_ = 0;
+  ColorScheme color_scheme_ = ColorScheme::kUnknown;
+  size_t required_previous_frame_index_ = kNoPreviousFrameIndex;
+  std::unique_ptr<uint8_t[]> data_;
 };
 
 }  // namespace image

@@ -63,7 +63,7 @@ Result ImageOptimizer::DefaultImageTypeSelector(io::BufReader* reader,
   if (!result.ok())
     return result;
 
-  CHECK_EQ(kLongestSignatureMatch, io_result.nread());
+  CHECK_EQ(kLongestSignatureMatch, io_result.n());
   *image_type = ChooseImageType(signature);
   return Result::Ok();
 }

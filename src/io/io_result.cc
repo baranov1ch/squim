@@ -22,8 +22,8 @@ IoResult IoResult::Error() {
   return IoResult(IoResultCode::kError);
 }
 
-IoResult::IoResult(IoResultCode code) : code_(code), nread_(0u) {}
+IoResult::IoResult(IoResultCode code) : code_(code), n_(0u) {}
 
-IoResult::IoResult(size_t nread) : code_(IoResultCode::kOk), nread_(nread) {}
+IoResult::IoResult(size_t n) : code_(IoResultCode::kOk), n_(n) {}
 
 }  // namespace io

@@ -17,24 +17,24 @@ class BufReader {
   ~BufReader();
 
   // Sets |out| to the largest continuous piece of data available in |source_|.
-  // Advances the offset for returned IoResult::nread() bytes.
+  // Advances the offset for returned IoResult::n() bytes.
   // Do not copies any data, just returns a pointer.
   IoResult ReadSome(uint8_t** out);
 
   // Sets |out| to continuous piece of data of the size |n| or less.
-  // Advances the offset for returned IoResult::nread() bytes.
+  // Advances the offset for returned IoResult::n() bytes.
   // Do not copies any data, just returns a pointer.
   IoResult ReadAtMostN(uint8_t** out, size_t n);
 
   // Sets |out| to continuous piece of data of the size |n|.
-  // Advances the offset for returned IoResult::nread() bytes.
+  // Advances the offset for returned IoResult::n() bytes.
   // NOTE: If |source_| does not have enough continuous data, some of the chunks
   // will be merged, so data copies may occur during this call.
   // Returns error if |source_| ended (got EOF) earlier.
   IoResult ReadN(uint8_t** out, size_t n);
 
   // Copies into |out| piece of data of the size |n|.
-  // Advances the offset for returned IoResult::nread() bytes (which is |n|).
+  // Advances the offset for returned IoResult::n() bytes (which is |n|).
   // Returns error if |source_| ended (got EOF) earlier.
   IoResult ReadNInto(uint8_t* out, size_t n);
 

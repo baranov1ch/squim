@@ -54,23 +54,23 @@ TEST_F(BufReaderTest, ReadEOF) {
 TEST_F(BufReaderTest, Reading) {
   testee_->source()->AddChunk(base::make_unique<StringChunk>("test1"));
   uint8_t* out;
-  EXPECT_EQ(5, testee_->ReadSome(&out).nread());
+  EXPECT_EQ(5, testee_->ReadSome(&out).n());
   EXPECT_EQ("test1", StringFromBytes(out, 5));
   EXPECT_EQ(5, testee_->UnreadN(5));
 
-  EXPECT_EQ(5, testee_->ReadAtMostN(&out, 10).nread());
+  EXPECT_EQ(5, testee_->ReadAtMostN(&out, 10).n());
   EXPECT_EQ("test1", StringFromBytes(out, 5));
   EXPECT_EQ(5, testee_->UnreadN(5));
 
-  EXPECT_EQ(5, testee_->ReadN(&out, 5).nread());
+  EXPECT_EQ(5, testee_->ReadN(&out, 5).n());
   EXPECT_EQ("test1", StringFromBytes(out, 5));
   EXPECT_EQ(5, testee_->UnreadN(5));
 
   std::unique_ptr<uint8_t[]> buf(new uint8_t[10]);
-  EXPECT_EQ(5, testee_->PeekNInto(out, 5).nread());
+  EXPECT_EQ(5, testee_->PeekNInto(out, 5).n());
   EXPECT_EQ("test1", StringFromBytes(out, 5));
 
-  EXPECT_EQ(5, testee_->ReadNInto(out, 5).nread());
+  EXPECT_EQ(5, testee_->ReadNInto(out, 5).n());
   EXPECT_EQ("test1", StringFromBytes(out, 5));
 }
 

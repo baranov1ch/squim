@@ -23,6 +23,7 @@ class MockDecoder : public ImageDecoder {
   MOCK_CONST_METHOD0(GetSize, uint64_t());
   MOCK_CONST_METHOD0(GetImageType, ImageType());
   MOCK_CONST_METHOD0(GetColorScheme, ColorScheme());
+  MOCK_CONST_METHOD0(IsProgressive, bool());
   MOCK_CONST_METHOD0(IsImageInfoComplete, bool());
   MOCK_CONST_METHOD0(GetFrameCount, size_t());
   MOCK_CONST_METHOD0(IsMultiFrame, bool());
@@ -58,6 +59,7 @@ class DecodingReaderTest : public testing::Test {
     EXPECT_CALL(*decoder_, GetSize()).WillOnce(Return(6666666));
     EXPECT_CALL(*decoder_, GetImageType()).WillOnce(Return(ImageType::kGif));
     EXPECT_CALL(*decoder_, IsMultiFrame()).WillOnce(Return(true));
+    EXPECT_CALL(*decoder_, IsProgressive()).WillOnce(Return(true));
     EXPECT_CALL(*decoder_, GetEstimatedQuality()).WillOnce(Return(75));
   }
 
@@ -96,6 +98,7 @@ TEST_F(DecodingReaderTest, ReadingImageInfoSuccess) {
   EXPECT_EQ(6666666, image_info->size);
   EXPECT_EQ(ImageType::kGif, image_info->type);
   EXPECT_EQ(true, image_info->multiframe);
+  EXPECT_EQ(true, image_info->is_progressive);
   EXPECT_EQ(75, image_info->quality);
 }
 

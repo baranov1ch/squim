@@ -41,7 +41,7 @@ class StringChunk : public Chunk {
 
 class RawChunk : public Chunk {
  public:
-  explicit RawChunk(std::unique_ptr<uint8_t[]> data, uint64_t size);
+  RawChunk(std::unique_ptr<uint8_t[]> data, uint64_t size);
   ~RawChunk() override;
 
  private:

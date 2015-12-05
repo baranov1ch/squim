@@ -1,6 +1,8 @@
 #ifndef IMAGE_IMAGE_CONSTANTS_H_
 #define IMAGE_IMAGE_CONSTANTS_H_
 
+#include <cstdlib>
+
 namespace image {
 
 enum class ColorScheme {
@@ -10,6 +12,7 @@ enum class ColorScheme {
   kRGBA,
   kYUV,
   kCMYK,
+  kUnknown,
 };
 
 enum class ImageType {
@@ -19,6 +22,8 @@ enum class ImageType {
   kWebP,
   kUnknown,
 };
+
+size_t GetBytesPerPixel(ColorScheme scheme);
 
 }  // namespace image
 

@@ -36,5 +36,6 @@ cc_library(
     "upstream/pngwtran.c",
     "upstream/pngwutil.c",
   ],
+  deps = ["//external:zlib"],
   visibility = ["//visibility:public"]
 )

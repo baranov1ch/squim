@@ -91,7 +91,7 @@ Result TestImageTypeSelector(io::BufReader* reader, ImageType* image_type) {
   if (!result.ok())
     return result;
 
-  EXPECT_EQ(kSignatureLength, io_result.nread());
+  EXPECT_EQ(kSignatureLength, io_result.n());
   EXPECT_EQ("testsign", base::StringFromBytes(signature));
 
   *image_type = ImageType::kJpeg;

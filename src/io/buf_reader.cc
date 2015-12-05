@@ -69,7 +69,7 @@ IoResult BufReader::ReadNInto(uint8_t* out, size_t n) {
 IoResult BufReader::PeekNInto(uint8_t* out, size_t n) {
   auto result = ReadNInto(out, n);
   if (result.ok()) {
-    CHECK_EQ(n, result.nread());
+    CHECK_EQ(n, result.n());
     UnreadN(n);
   }
   return result;

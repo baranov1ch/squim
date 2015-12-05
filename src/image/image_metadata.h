@@ -31,6 +31,7 @@ class ImageMetadata {
   bool IsCompleted(Type type) const;
   bool IsAllCompleted() const;
   const io::ChunkList& Get(Type type) const;
+  bool Has(Type type) const;
 
   void Append(Type type, io::ChunkPtr data);
   void Freeze(Type type);

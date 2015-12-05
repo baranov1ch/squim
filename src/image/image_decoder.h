@@ -2,6 +2,7 @@
 #define IMAGE_IMAGE_DECODER_H_
 
 #include "image/image_constants.h"
+#include "image/result.h"
 
 namespace image {
 
@@ -20,6 +21,7 @@ class ImageDecoder {
 
   virtual ImageType GetImageType() const = 0;
   virtual ColorScheme GetColorScheme() const = 0;
+  virtual bool IsProgressive() const = 0;
 
   // Should return true if image header (containing width, height, and stuff)
   // has been parsed and client can call any of the methods above.
