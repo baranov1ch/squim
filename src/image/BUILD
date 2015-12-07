@@ -61,6 +61,7 @@ cc_test(
   name = "image_test",
   timeout = "short",
   srcs = [
+    "codecs/jpeg_decoder_test.cc",
     "codecs/png_decoder_test.cc",
     "decoding_reader_test.cc",
     "image_optimizer_test.cc",

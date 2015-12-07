@@ -79,4 +79,12 @@ size_t BufReader::UnreadN(size_t n) {
   return source_->UnreadN(n);
 }
 
+size_t BufReader::offset() const {
+  return source_->offset();
+}
+
+bool BufReader::HaveSome() const {
+  return source_->HaveSome();
+}
+
 }  // namespace io

@@ -28,8 +28,7 @@ enum ReadType {
   kReadHeaderThenBody,
 };
 
-using RefReader =
-    std::function<bool(const std::vector<uint8_t>&, ImageInfo*, ImageFrame*)>;
+using RefReader = std::function<bool(ImageInfo*, ImageFrame*)>;
 using DecoderBuilder = std::function<std::unique_ptr<ImageDecoder>(
     std::unique_ptr<io::BufReader>)>;
 
@@ -46,7 +45,9 @@ bool ReadTestFileWithExt(const std::string& path,
 
 // Decodes PNG from |png_data| using high-level libpng API. Used to verify other
 // images against this picture.
-bool LoadReferencePng(const std::vector<uint8_t>& png_data,
+// |filename| is used for logging only.
+bool LoadReferencePng(const std::string& filename,
+                      const std::vector<uint8_t>& png_data,
                       ImageInfo* image_info,
                       ImageFrame* image_frame);
 
@@ -60,6 +61,13 @@ void CheckImageFrame(const std::string& image_file,
                      ImageFrame* reference,
                      ImageDecoder* decoder);
 
+// Ensures images are more or less the same, with |min_psnr|
+// (google for Peak-Signal-to-Noise-Ratio).
+void CheckImageFrameByPSNR(const std::string& image_file,
+                           ImageFrame* reference,
+                           ImageDecoder* decoder,
+                           double min_psnr);
+
 // Creates randomized read sequence to emulate data coming from the network.
 // Used to test how decoders deal with io suspension.
 // Generates uniformly random sizes [1..max_chunk_size] to read. These read are
@@ -69,6 +77,10 @@ void CheckImageFrame(const std::string& image_file,
 // created.
 std::vector<std::vector<size_t>> GenerateFuzzyReads(size_t total_size,
                                                     size_t max_chunk_size);
+
+// Same as above, but all reads will be inone row, i.e. used as synchronous.
+std::vector<std::vector<size_t>> GenerateSyncFuzzyReads(size_t total_size,
+                                                        size_t max_chunk_size);
 
 // Does all the heavy-lifting of a single frame decoder testing.
 //

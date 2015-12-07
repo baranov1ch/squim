@@ -29,8 +29,34 @@ namespace image {
 
 namespace {
 
+const double kMaxPSNR = 0.99;
+
 std::string GetTestDirRoot() {
   return "image/testdata/";
+}
+
+// Definition of Peak-Signal-to-Noise-Ratio (PSNR):
+// http://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio
+//
+// The implementation is similar to
+// google/libwebp/tests/check_psnr.cc.
+// However, this implementation supports image with different number of
+// channels. It also allows padding at the end of scanlines.
+double ComputePSNR(ImageFrame* frame1, ImageFrame* frame2) {
+  double error = 0.0;
+  for (uint32_t y = 0; y < frame1->width(); ++y) {
+    for (uint32_t x = 0; x < frame1->height(); ++x) {
+      uint8_t* pixel1 = frame1->GetPixel(x, y);
+      uint8_t* pixel2 = frame2->GetPixel(x, y);
+      for (size_t ch = 0; ch < frame1->bpp(); ++ch) {
+        double dif =
+            static_cast<double>(pixel1[ch]) - static_cast<double>(pixel2[ch]);
+        error += dif * dif;
+      }
+    }
+  }
+  error /= (frame1->height() * frame1->width() * frame1->bpp());
+  return (error > 0.0) ? 10.0 * log10(255.0 * 255.0 / error) : kMaxPSNR;
 }
 }
 
@@ -64,18 +90,28 @@ bool ReadTestFileWithExt(const std::string& path,
   return ReadFile(GetTestDirRoot() + path + "/" + name_with_ext, contents);
 }
 
-bool LoadReferencePng(const std::vector<uint8_t>& png_data,
+bool LoadReferencePng(const std::string& filename,
+                      const std::vector<uint8_t>& png_data,
                       ImageInfo* image_info,
                       ImageFrame* image_frame) {
   DCHECK(image_info);
   DCHECK(image_frame);
-  auto error_fn =
-      +[](png_structp png, png_const_charp c) { longjmp(png_jmpbuf(png), 1); };
+  struct ErrData {
+    std::string filename;
+  };
+  auto error_fn = +[](png_structp png, png_const_charp c) {
+    auto* err_data = reinterpret_cast<ErrData*>(png_get_error_ptr(png));
+    LOG(ERROR) << err_data->filename << ": " << c;
+    longjmp(png_jmpbuf(png), 1);
+  };
 
-  auto warning_fn =
-      +[](png_structp png, png_const_charp c) { LOG(WARNING) << c; };
+  auto warning_fn = +[](png_structp png, png_const_charp c) {
+    auto* err_data = reinterpret_cast<ErrData*>(png_get_error_ptr(png));
+    LOG(WARNING) << err_data->filename << ": " << c;
+  };
 
-  auto* png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr,
+  ErrData err_data{filename};
+  auto* png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, &err_data,
                                          error_fn, warning_fn);
   auto* info_ptr = png_create_info_struct(png_ptr);
   if (setjmp(png_jmpbuf(png_ptr))) {
@@ -162,22 +198,35 @@ void CheckImageInfo(const std::string& image_file,
 }
 
 void CheckImageFrame(const std::string& image_file,
-                     ImageFrame* ref,
+                     ImageFrame* reference,
                      ImageDecoder* decoder) {
+  CheckImageFrameByPSNR(image_file, reference, decoder, kMaxPSNR);
+}
+
+void CheckImageFrameByPSNR(const std::string& image_file,
+                           ImageFrame* reference,
+                           ImageDecoder* decoder,
+                           double min_psnr) {
   ASSERT_TRUE(decoder->IsFrameCompleteAtIndex(0)) << image_file;
   auto* frame = decoder->GetFrameAtIndex(0);
-  EXPECT_EQ(ref->bpp(), frame->bpp()) << image_file;
-  EXPECT_EQ(ref->has_alpha(), frame->has_alpha()) << image_file;
-  ScanlineReader ref_reader(ref);
+  EXPECT_EQ(reference->bpp(), frame->bpp()) << image_file;
+  EXPECT_EQ(reference->has_alpha(), frame->has_alpha()) << image_file;
+  ScanlineReader ref_reader(reference);
   ScanlineReader test_reader(frame);
-  EXPECT_EQ(ref_reader.size(), test_reader.size()) << image_file;
-  for (uint32_t y = 0; y < ref->width(); ++y) {
-    for (uint32_t x = 0; x < ref->height(); ++x) {
-      auto* pixel = frame->GetPixel(x, y);
-      auto* ref_pixel = ref->GetPixel(x, y);
-      EXPECT_EQ(0, std::memcmp(pixel, ref_pixel, frame->bpp()))
-          << "x: " << x << " y: " << y << " @ " << image_file;
+  if (min_psnr >= kMaxPSNR) {
+    // Exact match.
+    EXPECT_EQ(ref_reader.size(), test_reader.size()) << image_file;
+    for (uint32_t y = 0; y < reference->width(); ++y) {
+      for (uint32_t x = 0; x < reference->height(); ++x) {
+        auto* pixel = frame->GetPixel(x, y);
+        auto* ref_pixel = reference->GetPixel(x, y);
+        EXPECT_EQ(0, std::memcmp(pixel, ref_pixel, frame->bpp()))
+            << "x: " << x << " y: " << y << " @ " << image_file;
+      }
     }
+  } else {
+    auto psnr = ComputePSNR(reference, frame);
+    EXPECT_LE(min_psnr, psnr);
   }
 }
 
@@ -208,6 +257,29 @@ std::vector<std::vector<size_t>> GenerateFuzzyReads(size_t total_size,
   return res;
 }
 
+std::vector<std::vector<size_t>> GenerateSyncFuzzyReads(size_t total_size,
+                                                        size_t max_chunk_size) {
+  std::vector<std::vector<size_t>> res;
+  if (max_chunk_size == 0) {
+    res.push_back(std::vector<size_t>{{total_size}});
+    return res;
+  }
+
+  std::random_device rd;
+  std::default_random_engine e1(rd());
+  std::uniform_int_distribution<int> chunk_size_dist(1, max_chunk_size);
+
+  std::vector<size_t> read_portion;
+  while (total_size > 0) {
+    size_t size = chunk_size_dist(e1);
+    auto effective_size = std::min(total_size, size);
+    total_size -= effective_size;
+    read_portion.push_back(effective_size);
+  }
+  res.push_back(read_portion);
+  return res;
+}
+
 void ValidateDecodeWithReadSpec(
     const std::string& filename,
     const std::vector<uint8_t>& raw_data,
@@ -217,7 +289,7 @@ void ValidateDecodeWithReadSpec(
     ReadType read_type) {
   ImageFrame ref_frame;
   ImageInfo ref_info;
-  ASSERT_TRUE(ref_reader(raw_data, &ref_info, &ref_frame)) << filename;
+  ASSERT_TRUE(ref_reader(&ref_info, &ref_frame)) << filename;
   auto source =
       base::make_unique<io::BufReader>(base::make_unique<io::BufferedSource>());
   auto* source_raw = source.get();
@@ -234,27 +306,38 @@ void ValidateDecodeWithReadSpec(
 
     if (read_type != ReadType::kReadAll && !header_read) {
       auto result = testee->DecodeImageInfo();
-      EXPECT_TRUE(result.pending() || result.ok()) << filename;
+      ASSERT_TRUE(result.pending() || result.ok()) << filename;
       if (result.ok()) {
         header_read = true;
         CheckImageInfo(filename, ref_info, testee.get());
         if (read_type == ReadType::kReadHeaderOnly) {
-          EXPECT_FALSE(testee->IsFrameCompleteAtIndex(0));
+          ASSERT_FALSE(testee->IsFrameCompleteAtIndex(0));
           return;
         }
       }
-    } else {
-      auto result = testee->Decode();
-      if (offset < raw_data.size()) {
-        EXPECT_EQ(Result::Code::kPending, result.code()) << filename;
-      } else {
-        EXPECT_EQ(Result::Code::kOk, result.code()) << filename;
+
+      if (result.pending()) {
+        LOG(INFO) << "keke";
+        continue;
       }
+    }
+
+    auto result = testee->Decode();
+    if (offset < raw_data.size()) {
+      ASSERT_EQ(Result::Code::kPending, result.code()) << filename;
+    } else {
+      ASSERT_EQ(Result::Code::kOk, result.code()) << filename;
     }
   }
   source_raw->source()->SendEof();
+  if (read_type == ReadType::kReadHeaderOnly) {
+    EXPECT_TRUE(testee->IsImageInfoComplete()) << filename;
+    EXPECT_FALSE(testee->IsFrameCompleteAtIndex(0)) << filename;
+  } else {
+    EXPECT_TRUE(testee->IsFrameCompleteAtIndex(0)) << filename;
+  }
   // Nothing should happen here.
-  EXPECT_TRUE(testee->Decode().ok());
+  EXPECT_TRUE(testee->Decode().ok()) << filename;
 
   if (!header_read)
     CheckImageInfo(filename, ref_info, testee.get());

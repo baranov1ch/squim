@@ -18,27 +18,19 @@ extern "C" {
 
 namespace image {
 
-namespace {
-
-enum class State {
-  kHeader,
-  kStartDecompress,
-  kDecompressProgressive,
-  kDecompressSequential,
-  kDone,
-};
-
-}  // namespace
-
 class JpegDecoder::Impl {
   MAKE_NONCOPYABLE(Impl);
 
  public:
   Impl(JpegDecoder* decoder) : decoder_(decoder) {
     memset(&decompress_, 0, sizeof(jpeg_decompress_struct));
+    memset(&jpeg_source_, 0, sizeof(DecoderSource));
+    memset(&error_handler_, 0, sizeof(DecoderErrorHandler));
 
     decompress_.err = jpeg_std_error(&error_handler_.pub);
     error_handler_.pub.error_exit = ErrorExit;
+    error_handler_.pub.emit_message = EmitMessage;
+    error_handler_.decoder = this;
 
     jpeg_create_decompress(&decompress_);
 
@@ -64,13 +56,15 @@ class JpegDecoder::Impl {
     jpeg_destroy_decompress(&decompress_);
   }
 
+  bool ImageComplete() const { return state_ >= State::kFinish; }
+
   bool HeaderComplete() const { return state_ > State::kHeader; }
 
   bool DecodingComplete() const { return state_ == State::kDone; }
 
   bool Decode(bool header_only) {
     if (setjmp(error_handler_.setjmp_buffer)) {
-      decoder_->Fail(Result::Error(Result::Code::kDecodeError));
+      decoder_->Fail(error_);
       return false;
     }
 
@@ -110,8 +104,12 @@ class JpegDecoder::Impl {
           // TODO: get metadata.
         }
 
-        if (header_only)
+        if (header_only) {
+          restart_needed_ = true;
+          UpdateRestartPosition();
+          ClearBuffer();
           return true;
+        }
 
       // TODO: Optional rescaling when targeting low-end clients:
       //
@@ -123,6 +121,9 @@ class JpegDecoder::Impl {
       case State::kStartDecompress:
         if (!jpeg_start_decompress(&decompress_))
           return false;  // I/O suspension.
+
+        decoder_->image_frame_.Init(decoder_->GetWidth(), decoder_->GetHeight(),
+                                    decoder_->GetColorScheme());
 
         state_ = decompress_.buffered_image ? State::kDecompressSequential
                                             : State::kDecompressProgressive;
@@ -148,22 +149,39 @@ class JpegDecoder::Impl {
             return false;  // I/O suspension.
         }
 
+        state_ = State::kFinish;
+
+      // Fall through:
+      case State::kFinish:
+        CHECK_EQ(decompress_.output_height, decompress_.output_scanline);
+        if (!jpeg_finish_decompress(&decompress_))
+          return false;  // I/O suspension.
+
         state_ = State::kDone;
 
       // Fall through:
       case State::kDone:
-        CHECK_EQ(decompress_.output_height, decompress_.output_scanline);
-        return jpeg_finish_decompress(&decompress_);
+        break;
     }
 
     return true;
   }
 
  private:
+  enum class State {
+    kHeader,
+    kStartDecompress,
+    kDecompressProgressive,
+    kDecompressSequential,
+    kFinish,
+    kDone,
+  };
+
   struct DecoderErrorHandler {
     struct jpeg_error_mgr pub;
     int num_corrupt_warnings;
     jmp_buf setjmp_buffer;
+    Impl* decoder;
   };
 
   struct DecoderSource {
@@ -186,7 +204,40 @@ class JpegDecoder::Impl {
 
   static void ErrorExit(j_common_ptr cinfo) {
     auto* err = reinterpret_cast<DecoderErrorHandler*>(cinfo->err);
-    longjmp(err->setjmp_buffer, -1);
+    char buffer[JMSG_LENGTH_MAX];
+    (*cinfo->err->format_message)(cinfo, buffer);
+    LOG(ERROR) << buffer;
+    err->decoder->error_ = Result::Error(Result::Code::kDecodeError, buffer);
+    longjmp(err->setjmp_buffer, 1);
+  }
+
+  static void EmitMessage(j_common_ptr cinfo, int msg_level) {
+    if (msg_level > 0 && !VLOG_IS_ON(msg_level))
+      return;
+
+    if (msg_level < 0) {
+      // It's a warning message.  Since corrupt files may generate many
+      // warnings,
+      // the policy implemented here is to show only the first warning,
+      // unless trace_level >= 3 (as in default libjpeg emitter).
+      auto* err = cinfo->err;
+      if (err->num_warnings == 0 || err->trace_level >= 3) {
+        char buffer[JMSG_LENGTH_MAX];
+        (*cinfo->err->format_message)(cinfo, buffer);
+
+        if (msg_level == 0) {
+          LOG(INFO) << buffer;
+        } else {
+          LOG(WARNING) << buffer;
+        }
+      }
+
+      err->num_warnings++;
+    } else {
+      char buffer[JMSG_LENGTH_MAX];
+      (*cinfo->err->format_message)(cinfo, buffer);
+      VLOG(msg_level) << buffer;
+    }
   }
 
   void SkipBytes(long num_bytes) {
@@ -202,17 +253,33 @@ class JpegDecoder::Impl {
       decompress_.src->bytes_in_buffer = 0;
       decompress_.src->next_input_byte = nullptr;
     }
+
+    restart_position_ =
+        decoder_->source()->offset() - decompress_.src->bytes_in_buffer;
+    last_set_byte_ = decompress_.src->next_input_byte;
   }
 
   bool FillBuffer() {
+    if (restart_needed_) {
+      restart_needed_ = false;
+      decoder_->source()->UnreadN(decoder_->source()->offset() -
+                                  restart_position_);
+    } else {
+      UpdateRestartPosition();
+    }
+
     uint8_t* out;
     size_t len;
     do {
       auto result = decoder_->source()->ReadSome(&out);
-      if (result.pending())
+      if (result.pending()) {
+        restart_needed_ = true;
+        ClearBuffer();
         return false;
+      }
 
       if (!result.ok()) {
+        // TODO: Log?
         decoder_->Fail(Result::FromIoResult(result, false));
         return false;
       }
@@ -221,15 +288,28 @@ class JpegDecoder::Impl {
       wanted_offset_ -= decrement;
       out += decrement;
       len = result.n() - decrement;
-    } while (wanted_offset_ > 0);
-
-    if (len <= 0)
-      return false;
+    } while (wanted_offset_ > 0 || len == 0);
 
     decompress_.src->bytes_in_buffer = len;
     auto next_byte = reinterpret_cast<const JOCTET*>(out);
     decompress_.src->next_input_byte = next_byte;
+    last_set_byte_ = next_byte;
     return true;
+  }
+
+  void UpdateRestartPosition() {
+    if (last_set_byte_ != decompress_.src->next_input_byte) {
+      // next_input_byte was updated by jpeg, meaning that it found a restart
+      // position.
+      restart_position_ =
+          decoder_->source()->offset() - decompress_.src->bytes_in_buffer;
+    }
+  }
+
+  void ClearBuffer() {
+    decompress_.src->bytes_in_buffer = 0;
+    decompress_.src->next_input_byte = nullptr;
+    last_set_byte_ = nullptr;
   }
 
   jpeg_decompress_struct decompress_;
@@ -240,6 +320,10 @@ class JpegDecoder::Impl {
   size_t wanted_offset_ = 0;
   JpegDecoder* decoder_;
   std::unique_ptr<uint8_t* []> rows_;
+  Result error_ = Result::Ok();
+  size_t restart_position_ = 0;
+  const JOCTET* last_set_byte_ = nullptr;
+  bool restart_needed_ = false;
 };
 
 JpegDecoder::JpegDecoder(std::unique_ptr<io::BufReader> source)
@@ -311,22 +395,26 @@ ImageMetadata* JpegDecoder::GetMetadata() {
 }
 
 bool JpegDecoder::IsAllMetadataComplete() const {
-  return impl_->HeaderComplete();
+  return impl_->DecodingComplete();
 }
 
 bool JpegDecoder::IsAllFramesComplete() const {
-  return impl_->DecodingComplete();
+  return impl_->ImageComplete();
 }
 
 bool JpegDecoder::IsImageComplete() const {
-  return impl_->DecodingComplete();
+  return impl_->ImageComplete();
 }
 
 Result JpegDecoder::Decode() {
+  if (HasError())
+    return decode_error_;
   return ProcessDecodeResult(impl_->Decode(false));
 }
 
 Result JpegDecoder::DecodeImageInfo() {
+  if (HasError())
+    return decode_error_;
   return ProcessDecodeResult(impl_->Decode(true));
 }
 

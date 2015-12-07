@@ -37,7 +37,8 @@ class PngDecoder::Impl {
     header_only_ = header_only;
 
     if (setjmp(png_jmpbuf(png_))) {
-      decoder_->Fail(Result::Error(Result::Code::kDecodeError, error_message_));
+      DCHECK(!error_.ok());
+      decoder_->Fail(error_);
       return false;
     }
 
@@ -242,7 +243,7 @@ class PngDecoder::Impl {
 
   void OnFail(png_const_charp msg) {
     LOG(ERROR) << msg;
-    error_message_ = msg;
+    error_ = Result::Error(Result::Code::kDecodeError, msg);
     longjmp(png_jmpbuf(png_), 1);
   }
 
@@ -282,7 +283,7 @@ class PngDecoder::Impl {
   png_structp png_;
   png_infop info_;
   std::unique_ptr<uint8_t[]> interlace_buffer_;
-  std::string error_message_;
+  Result error_ = Result::Ok();
 };
 
 PngDecoder::PngDecoder(std::unique_ptr<io::BufReader> source)
@@ -365,14 +366,22 @@ bool PngDecoder::IsImageComplete() const {
 }
 
 Result PngDecoder::Decode() {
+  if (HasError())
+    return decode_error_;
+
   if (impl_->DecodingComplete())
     return Result::Ok();
+
   return ProcessDecodeResult(impl_->Decode(false));
 }
 
 Result PngDecoder::DecodeImageInfo() {
+  if (HasError())
+    return decode_error_;
+
   if (impl_->HeaderComplete())
     return Result::Ok();
+
   return ProcessDecodeResult(impl_->Decode(true));
 }
 

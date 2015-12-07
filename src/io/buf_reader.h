@@ -56,6 +56,8 @@ class BufReader {
   size_t UnreadN(size_t n);
 
   BufferedSource* source() { return source_.get(); }
+  size_t offset() const;
+  bool HaveSome() const;
 
  private:
   std::unique_ptr<BufferedSource> source_;
