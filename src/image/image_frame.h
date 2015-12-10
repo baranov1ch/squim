@@ -15,9 +15,17 @@ class ImageFrame {
  public:
   const size_t kNoPreviousFrameIndex = 0xFFFFFFFF;
 
+  enum class Status {
+    kEmpty,
+    kPartial,
+    kComplete,
+  };
+
   ImageFrame();
   ~ImageFrame();
 
+  Status status() const { return status_; }
+  void set_status(Status status) { status_ = status; }
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
   uint32_t stride() const;
@@ -45,6 +53,7 @@ class ImageFrame {
   void Init(uint32_t width, uint32_t height, ColorScheme color_scheme);
 
  private:
+  Status status_ = Status::kEmpty;
   uint32_t width_ = 0;
   uint32_t height_ = 0;
   uint32_t duration_ = 0;

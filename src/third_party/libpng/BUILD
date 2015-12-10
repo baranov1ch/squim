@@ -36,6 +36,10 @@ cc_library(
     "upstream/pngwtran.c",
     "upstream/pngwutil.c",
   ],
+  copts = [
+    # Just to ensure we do not use system zlib.
+    "-Ithird_party/zlib",
+  ],
   deps = ["//external:zlib"],
   visibility = ["//visibility:public"]
 )
