@@ -28,15 +28,35 @@ class ImageFrame {
   void set_status(Status status) { status_ = status; }
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
-  uint32_t stride() const;
+  size_t bpp() const { return bpp_; }
+  uint32_t stride() const { return width_ * bpp_; }
   uint32_t duration() const { return duration_; }
   ColorScheme color_scheme() const { return color_scheme_; }
-  bool has_alpha() const;
+
+  bool has_alpha() const {
+    return color_scheme_ == ColorScheme::kRGBA ||
+           color_scheme_ == ColorScheme::kGrayScaleAlpha ||
+           color_scheme_ == ColorScheme::kYUVA;
+  }
+
+  bool is_grayscale() const {
+    return color_scheme_ == ColorScheme::kGrayScale ||
+           color_scheme_ == ColorScheme::kGrayScaleAlpha;
+  }
+
+  bool is_rgb() const {
+    return color_scheme_ == ColorScheme::kRGB ||
+           color_scheme_ == ColorScheme::kRGBA;
+  }
+
+  bool is_yuv() const {
+    return color_scheme_ == ColorScheme::kYUV ||
+           color_scheme_ == ColorScheme::kYUVA;
+  }
+
   size_t required_previous_frame_index() const {
     return required_previous_frame_index_;
   }
-
-  size_t bpp() const { return bpp_; }
 
   uint8_t* GetPixel(uint32_t x, uint32_t y) {
     return data_.get() + (stride() * x + bpp_ * y);

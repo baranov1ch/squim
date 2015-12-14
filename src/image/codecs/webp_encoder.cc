@@ -1,439 +1,279 @@
-#include "image/codecs/jpeg_decoder.h"
-
-#include <cstring>
-
-extern "C" {
-#include <setjmp.h>
-#include <stdio.h>  // jpeglib.h needs stdio FILE.
-}
+#include "image/codecs/webp_encoder.h"
 
 #include "base/memory/make_unique.h"
 #include "glog/logging.h"
-#include "image/scanline_reader.h"
-#include "io/buf_reader.h"
-
-extern "C" {
-#include "third_party/libjpeg_turbo/upstream/jpeglib.h"
-}
+#include "google/libwebp/upstream/src/webp/encode.h"
+#include "image/image_frame.h"
+#include "io/writer.h"
 
 namespace image {
 
-class JpegDecoder::Impl {
-  MAKE_NONCOPYABLE(Impl);
+namespace {
 
+WebPImageHint HintToWebPImageHint(WebPEncoder::Hint hint) {
+  switch (hint) {
+    case WebPEncoder::Hint::kDefault:
+      return WEBP_HINT_DEFAULT;
+    case WebPEncoder::Hint::kPicture:
+      return WEBP_HINT_PICTURE;
+    case WebPEncoder::Hint::kPhoto:
+      return WEBP_HINT_PHOTO;
+    case WebPEncoder::Hint::kGraph:
+      return WEBP_HINT_GRAPH;
+    default:
+      DCHECK(false) << "Unknown WebP image hint: " << static_cast<int>(hint);
+      return WEBP_HINT_DEFAULT;
+  }
+}
+
+WebPPreset PresetToWebPPreset(WebPEncoder::Preset preset) {
+  switch (preset) {
+    case WebPEncoder::Preset::kDefault:
+      return WEBP_PRESET_DEFAULT;
+    case WebPEncoder::Preset::kPicture:
+      return WEBP_PRESET_PICTURE;
+    case WebPEncoder::Preset::kPhoto:
+      return WEBP_PRESET_PHOTO;
+    case WebPEncoder::Preset::kDrawing:
+      return WEBP_PRESET_DRAWING;
+    case WebPEncoder::Preset::kIcon:
+      return WEBP_PRESET_ICON;
+    case WebPEncoder::Preset::kText:
+      return WEBP_PRESET_TEXT;
+    default:
+      DCHECK(false) << "Unknown WebP preset: " << static_cast<int>(preset);
+      return WEBP_PRESET_DEFAULT;
+  }
+}
+
+// Reader for 4:2:0 YUV-encoded image with alpha (optionally).
+class YUVAReader {
  public:
-  Impl(JpegDecoder* decoder) : decoder_(decoder) {
-    memset(&decompress_, 0, sizeof(jpeg_decompress_struct));
-    memset(&jpeg_source_, 0, sizeof(DecoderSource));
-    memset(&error_handler_, 0, sizeof(DecoderErrorHandler));
+  YUVAReader(ImageFrame* frame) {
+    uint8_t* mem = frame->GetData(0);
+    y_stride_ = frame->width();
+    y_ = mem;
+    mem += y_stride_;
 
-    decompress_.err = jpeg_std_error(&error_handler_.pub);
-    error_handler_.pub.error_exit = ErrorExit;
-    error_handler_.pub.emit_message = EmitMessage;
-    error_handler_.decoder = this;
+    uv_stride_ = (frame->width() + 1) >> 1;
+    u_ = mem;
+    mem += uv_stride_;
+    v_ = mem;
+    mem += uv_stride_;
 
-    jpeg_create_decompress(&decompress_);
-
-    DCHECK(!decompress_.src);
-    decompress_.src = reinterpret_cast<jpeg_source_mgr*>(&jpeg_source_);
-
-    jpeg_source_.pub.init_source = InitSource;
-    jpeg_source_.pub.fill_input_buffer = FillInputBuffer;
-    jpeg_source_.pub.skip_input_data = SkipInputData;
-    jpeg_source_.pub.resync_to_restart = jpeg_resync_to_restart;  // Default.
-    jpeg_source_.pub.term_source = TermSource;
-    jpeg_source_.decoder = this;
-
-    const unsigned int kMaxMarkerLength = 0xffff;
-    // Exif/XMP.
-    jpeg_save_markers(&decompress_, JPEG_APP0 + 1, kMaxMarkerLength);
-    // ICC profile.
-    jpeg_save_markers(&decompress_, JPEG_APP0 + 2, kMaxMarkerLength);
-  }
-
-  ~Impl() {
-    decompress_.src = nullptr;
-    jpeg_destroy_decompress(&decompress_);
-  }
-
-  bool ImageComplete() const { return state_ >= State::kFinish; }
-
-  bool HeaderComplete() const { return state_ > State::kHeader; }
-
-  bool DecodingComplete() const { return state_ == State::kDone; }
-
-  bool Decode(bool header_only) {
-    if (setjmp(error_handler_.setjmp_buffer)) {
-      decoder_->Fail(error_);
-      return false;
+    if (frame->has_alpha()) {
+      a_ = mem;
+      a_stride_ = frame->width();
+    } else {
+      a_ = nullptr;
+      a_stride_ = 0;
     }
-
-    switch (state_) {
-      case State::kHeader:
-        if (jpeg_read_header(&decompress_, true) == JPEG_SUSPENDED)
-          return false;  // I/O suspension.
-
-        switch (decompress_.jpeg_color_space) {
-          case JCS_YCbCr:
-          case JCS_RGB:
-            decompress_.out_color_space = JCS_RGB;
-            decoder_->set_color_space(ColorScheme::kRGB);
-            break;
-          case JCS_GRAYSCALE:
-            decompress_.out_color_space = JCS_GRAYSCALE;
-            decoder_->set_color_space(ColorScheme::kGrayScale);
-            break;
-          case JCS_CMYK:
-          case JCS_YCCK:
-            // TODO: do something (Manual conversion).
-            decompress_.out_color_space = JCS_CMYK;
-            decoder_->set_color_space(ColorScheme::kCMYK);
-          default:
-            decoder_->set_color_space(ColorScheme::kUnknown);
-            decoder_->Fail(Result::Error(Result::Code::kDecodeError,
-                                         "Unsupported color scheme"));
-            return false;
-        }
-
-        state_ = State::kStartDecompress;
-
-        decoder_->set_size(decompress_.image_width, decompress_.image_height);
-        decoder_->set_is_progressive(decompress_.progressive_mode);
-        for (auto marker = decompress_.marker_list; marker;
-             marker = marker->next) {
-          // TODO: get metadata.
-        }
-
-        if (header_only) {
-          restart_needed_ = true;
-          UpdateRestartPosition();
-          ClearBuffer();
-          return true;
-        }
-
-      // TODO: Optional rescaling when targeting low-end clients:
-      //
-      // decompress_.scale_num = ....;
-      // decompress_.scale_denom = scaleDenominator;
-      // jpeg_calc_output_dimensions(&decoder_);
-
-      // Fall through:
-      case State::kStartDecompress:
-        if (!jpeg_start_decompress(&decompress_))
-          return false;  // I/O suspension.
-
-        decoder_->image_frame_.Init(decoder_->GetWidth(), decoder_->GetHeight(),
-                                    decoder_->GetColorScheme());
-
-        state_ = decompress_.buffered_image ? State::kDecompressSequential
-                                            : State::kDecompressProgressive;
-
-      // Fall through:
-      case State::kDecompressSequential:
-      // TODO: do we need some progressive decoding? Prolly not.
-      case State::kDecompressProgressive:
-        if (!rows_) {
-          rows_.reset(new uint8_t*[decompress_.output_height]);
-          ScanlineReader scanlines(decoder_->frame());
-          size_t i = 0;
-          for (auto it = scanlines.begin(); it != scanlines.end(); ++it, ++i) {
-            rows_[i] = (*it).ptr();
-          }
-        }
-
-        while (decompress_.output_scanline < decompress_.output_height) {
-          int rows_read = jpeg_read_scanlines(
-              &decompress_, rows_.get() + decompress_.output_scanline,
-              decompress_.output_height - decompress_.output_scanline);
-          if (rows_read < 1)
-            return false;  // I/O suspension.
-        }
-
-        state_ = State::kFinish;
-
-      // Fall through:
-      case State::kFinish:
-        CHECK_EQ(decompress_.output_height, decompress_.output_scanline);
-        if (!jpeg_finish_decompress(&decompress_))
-          return false;  // I/O suspension.
-
-        state_ = State::kDone;
-
-      // Fall through:
-      case State::kDone:
-        break;
-    }
-
-    return true;
   }
+
+  uint8_t* y() { return y_; }
+  uint8_t* u() { return u_; }
+  uint8_t* v() { return v_; }
+  uint8_t* a() { return a_; }
+
+  uint32_t y_stride() const { return y_stride_; }
+  uint32_t uv_stride() const { return uv_stride_; }
+  uint32_t a_stride() const { return a_stride_; }
 
  private:
-  enum class State {
-    kHeader,
-    kStartDecompress,
-    kDecompressProgressive,
-    kDecompressSequential,
-    kFinish,
-    kDone,
-  };
+  uint8_t* y_;
+  uint32_t y_stride_;
+  uint8_t* u_;
+  uint8_t* v_;
+  uint32_t uv_stride_;
+  uint8_t* a_;
+  uint32_t a_stride_;
+};
 
-  struct DecoderErrorHandler {
-    struct jpeg_error_mgr pub;
-    int num_corrupt_warnings;
-    jmp_buf setjmp_buffer;
-    Impl* decoder;
-  };
+bool WebPPictureFromYUVAFrame(ImageFrame* frame, WebPPicture* picture) {
+  if (!frame->is_yuv())
+    return false;
 
-  struct DecoderSource {
-    struct jpeg_source_mgr pub;
-    Impl* decoder;
-  };
+  picture->width = frame->width();
+  picture->height = frame->height();
 
-  static void InitSource(j_decompress_ptr jd) {}
-  static boolean FillInputBuffer(j_decompress_ptr jd) {
-    auto* src = reinterpret_cast<DecoderSource*>(jd->src);
-    return src->decoder->FillBuffer();
+  YUVAReader frame_reader(frame);
+  picture->y = frame_reader.y();
+  picture->y_stride = frame_reader.y_stride();
+  picture->u = frame_reader.u();
+  picture->v = frame_reader.v();
+  picture->uv_stride = frame_reader.uv_stride();
+  picture->a = frame_reader.a();
+  picture->a_stride = frame_reader.a_stride();
+
+  picture->colorspace = frame->has_alpha() ? WEBP_YUV420A : WEBP_YUV420;
+  return true;
+}
+
+class Picture {
+ public:
+  Picture() {}
+
+  ~Picture() {
+    if (owns_data_)
+      WebPPictureFree(&picture_);
   }
 
-  static void SkipInputData(j_decompress_ptr jd, long num_bytes) {
-    auto* src = reinterpret_cast<DecoderSource*>(jd->src);
-    src->decoder->SkipBytes(num_bytes);
-  }
-
-  static void TermSource(j_decompress_ptr jd) {}
-
-  static void ErrorExit(j_common_ptr cinfo) {
-    auto* err = reinterpret_cast<DecoderErrorHandler*>(cinfo->err);
-    char buffer[JMSG_LENGTH_MAX];
-    (*cinfo->err->format_message)(cinfo, buffer);
-    LOG(ERROR) << buffer;
-    err->decoder->error_ = Result::Error(Result::Code::kDecodeError, buffer);
-    longjmp(err->setjmp_buffer, 1);
-  }
-
-  static void EmitMessage(j_common_ptr cinfo, int msg_level) {
-    if (msg_level > 0 && !VLOG_IS_ON(msg_level))
-      return;
-
-    if (msg_level < 0) {
-      // It's a warning message.  Since corrupt files may generate many
-      // warnings,
-      // the policy implemented here is to show only the first warning,
-      // unless trace_level >= 3 (as in default libjpeg emitter).
-      auto* err = cinfo->err;
-      if (err->num_warnings == 0 || err->trace_level >= 3) {
-        char buffer[JMSG_LENGTH_MAX];
-        (*cinfo->err->format_message)(cinfo, buffer);
-
-        if (msg_level == 0) {
-          LOG(INFO) << buffer;
-        } else {
-          LOG(WARNING) << buffer;
-        }
-      }
-
-      err->num_warnings++;
-    } else {
-      char buffer[JMSG_LENGTH_MAX];
-      (*cinfo->err->format_message)(cinfo, buffer);
-      VLOG(msg_level) << buffer;
-    }
-  }
-
-  void SkipBytes(long num_bytes) {
-    if (num_bytes <= 0)
-      return;
-
-    auto to_skip = static_cast<size_t>(num_bytes);
-    if (to_skip < decompress_.src->bytes_in_buffer) {
-      decompress_.src->bytes_in_buffer -= to_skip;
-      decompress_.src->next_input_byte += to_skip;
-    } else {
-      wanted_offset_ += num_bytes - decompress_.src->bytes_in_buffer;
-      decompress_.src->bytes_in_buffer = 0;
-      decompress_.src->next_input_byte = nullptr;
+  bool Init(ImageFrame* frame) {
+    std::unique_ptr<ImageFrame> trasnformed_frame;
+    if (frame->is_grayscale()) {
+      trasnformed_frame.reset(new ImageFrame);
+      frame = trasnformed_frame.get();
     }
 
-    restart_position_ =
-        decoder_->source()->offset() - decompress_.src->bytes_in_buffer;
-    last_set_byte_ = decompress_.src->next_input_byte;
-  }
+    if (!frame->is_yuv() && !frame->is_rgb())
+      return false;
 
-  bool FillBuffer() {
-    if (restart_needed_) {
-      restart_needed_ = false;
-      decoder_->source()->UnreadN(decoder_->source()->offset() -
-                                  restart_position_);
-    } else {
-      UpdateRestartPosition();
+    bool result = false;
+    switch (frame->color_scheme()) {
+      case ColorScheme::kRGB:
+        result =
+            WebPPictureImportRGB(&picture_, frame->GetData(0), frame->stride());
+        owns_data_ = true;
+        break;
+      case ColorScheme::kRGBA:
+        result = WebPPictureImportRGBA(&picture_, frame->GetData(0),
+                                       frame->stride());
+        owns_data_ = true;
+        break;
+      case ColorScheme::kYUV:
+      case ColorScheme::kYUVA:
+        result = WebPPictureFromYUVAFrame(frame, &picture_);
+        break;
+      default:
+        DCHECK(false);
     }
 
-    uint8_t* out;
-    size_t len;
-    do {
-      auto result = decoder_->source()->ReadSome(&out);
-      if (result.pending()) {
-        restart_needed_ = true;
-        ClearBuffer();
-        return false;
-      }
+    if (!result)
+      return false;
 
-      if (!result.ok()) {
-        // TODO: Log?
-        decoder_->Fail(Result::FromIoResult(result, false));
-        return false;
-      }
+    picture_.width = frame->width();
+    picture_.height = frame->height();
 
-      auto decrement = std::min(wanted_offset_, result.n());
-      wanted_offset_ -= decrement;
-      out += decrement;
-      len = result.n() - decrement;
-    } while (wanted_offset_ > 0 || len == 0);
-
-    decompress_.src->bytes_in_buffer = len;
-    auto next_byte = reinterpret_cast<const JOCTET*>(out);
-    decompress_.src->next_input_byte = next_byte;
-    last_set_byte_ = next_byte;
     return true;
   }
 
-  void UpdateRestartPosition() {
-    if (last_set_byte_ != decompress_.src->next_input_byte) {
-      // next_input_byte was updated by jpeg, meaning that it found a restart
-      // position.
-      restart_position_ =
-          decoder_->source()->offset() - decompress_.src->bytes_in_buffer;
-    }
-  }
+  WebPPicture* webp_picture() { return &picture_; }
 
-  void ClearBuffer() {
-    decompress_.src->bytes_in_buffer = 0;
-    decompress_.src->next_input_byte = nullptr;
-    last_set_byte_ = nullptr;
-  }
-
-  jpeg_decompress_struct decompress_;
-  DecoderErrorHandler error_handler_;
-  DecoderSource jpeg_source_;
-  State state_ = State::kHeader;
-  size_t num_read_ = 0;
-  size_t wanted_offset_ = 0;
-  JpegDecoder* decoder_;
-  std::unique_ptr<uint8_t* []> rows_;
-  Result error_ = Result::Ok();
-  size_t restart_position_ = 0;
-  const JOCTET* last_set_byte_ = nullptr;
-  bool restart_needed_ = false;
+ private:
+  bool owns_data_ = false;
+  WebPPicture picture_;
 };
 
-JpegDecoder::JpegDecoder(std::unique_ptr<io::BufReader> source)
-    : source_(std::move(source)) {
+}  // namespace
+
+class WebPEncoder::Impl {
+ public:
+  Impl(WebPEncoder* encoder) : encoder_(encoder) {}
+  ~Impl() {}
+
+  Result EncodeSingle(ImageFrame* frame) {
+    CHECK(idle_);
+    idle_ = false;
+
+    WebPConfig config;
+    const auto& params = encoder_->params_;
+
+    auto preset = PresetToWebPPreset(params.preset);
+    if (!WebPConfigPreset(&config, preset, params.quality))
+      return Result::Error(Result::Code::kEncodeError);
+
+    config.method = params.method;
+
+    if (!WebPValidateConfig(&config))
+      return Result::Error(Result::Code::kEncodeError);
+
+    Picture picture;
+    if (!picture.Init(frame))
+      return Result::Error(Result::Code::kEncodeError);
+
+    picture.webp_picture()->writer = ChunkWriter;
+    picture.webp_picture()->custom_ptr = this;
+    picture.webp_picture()->progress_hook = ProgressHook;
+    picture.webp_picture()->user_data = this;
+
+    // Now we need to take picture and WebP encode it.
+    bool result = WebPEncode(&config, picture.webp_picture());
+
+    return result ? Result::Ok() : Result::Error(Result::Code::kEncodeError);
+  }
+
+  Result EncodeNextFrame(ImageFrame* frame) {
+    idle_ = false;
+    return Result::Ok();
+  }
+
+  Result FinishEncoding() {
+    idle_ = false;
+    return Result::Ok();
+  }
+
+  bool idle() const { return idle_; }
+
+ private:
+  static int ProgressHook(int percent, const WebPPicture* picture) {
+    // TODO: handle timeouts.
+    return 0;
+  }
+
+  static int ChunkWriter(const uint8_t* data,
+                         size_t data_size,
+                         const WebPPicture* const picture) {
+    auto* impl = static_cast<Impl*>(picture->custom_ptr);
+    auto chunk = io::Chunk::Copy(data, data_size);
+    impl->encoder_->output_.push_back(std::move(chunk));
+    return 0;
+  }
+
+  bool idle_ = true;
+  WebPEncoder* encoder_;
+};
+
+WebPEncoder::WebPEncoder(Params params, std::unique_ptr<io::VectorWriter> dst)
+    : params_(params), dst_(std::move(dst)) {
   impl_ = base::make_unique<Impl>(this);
 }
 
-JpegDecoder::~JpegDecoder() {}
+WebPEncoder::~WebPEncoder() {}
 
-uint32_t JpegDecoder::GetWidth() const {
-  return width_;
+Result WebPEncoder::EncodeFrame(ImageFrame* frame, bool last_frame) {
+  if (impl_->idle() && last_frame && frame) {
+    // Single frame image - use simple API.
+    auto result = impl_->EncodeSingle(frame);
+    if (!result.ok())
+      return result;
+  } else {
+    // Otherwise, mess with WebP Muxer API.
+    if (frame) {
+      auto result = impl_->EncodeNextFrame(frame);
+      if (!result.ok())
+        return result;
+    }
+
+    if (last_frame) {
+      auto result = impl_->FinishEncoding();
+      if (!result.ok())
+        return result;
+    }
+  }
+
+  if (!output_.empty()) {
+    auto io_result = dst_->WriteV(std::move(output_));
+    output_ = io::ChunkList();
+    return Result::FromIoResult(io_result, false);
+  }
+
+  return Result::Ok();
 }
 
-uint32_t JpegDecoder::GetHeight() const {
-  return height_;
-}
+void WebPEncoder::SetMetadata(const ImageMetadata* metadata) {}
 
-uint64_t JpegDecoder::GetSize() const {
-  // TODO:
-  return 0;
-}
-
-ImageType JpegDecoder::GetImageType() const {
-  return ImageType::kJpeg;
-}
-
-ColorScheme JpegDecoder::GetColorScheme() const {
-  return color_scheme_;
-}
-
-bool JpegDecoder::IsProgressive() const {
-  return is_progressive_;
-}
-
-bool JpegDecoder::IsImageInfoComplete() const {
-  return impl_->HeaderComplete();
-}
-
-size_t JpegDecoder::GetFrameCount() const {
-  if (!impl_->DecodingComplete())
-    return 0;
-
-  return 1;
-}
-
-bool JpegDecoder::IsMultiFrame() const {
-  return false;
-}
-
-uint32_t JpegDecoder::GetEstimatedQuality() const {
-  // TODO:
-  return 0;
-}
-
-bool JpegDecoder::IsFrameCompleteAtIndex(size_t index) const {
-  if (index != 0)
-    return false;
-
-  return impl_->DecodingComplete();
-}
-
-ImageFrame* WebPDecoder::GetFrameAtIndex(size_t index) {
-  CHECK_GE(image_frames_.size(), index);
-  return (image_frame_.begin() + index).get();
-}
-
-ImageMetadata* WebPDecoder::GetMetadata() {
-  return &metadata_;
-}
-
-bool WebPDecoder::IsAllMetadataComplete() const {
-  return impl_->DecodingComplete();
-}
-
-bool WebPDecoder::IsAllFramesComplete() const {
-  return impl_->ImageComplete();
-}
-
-bool WebPDecoder::IsImageComplete() const {
-  return impl_->ImageComplete();
-}
-
-Result WebPDecoder::Decode() {
-  if (HasError())
-    return decode_error_;
-  return ProcessDecodeResult(impl_->Decode(false));
-}
-
-Result WebPDecoder::DecodeImageInfo() {
-  if (HasError())
-    return decode_error_;
-  return ProcessDecodeResult(impl_->Decode(true));
-}
-
-bool WebPDecoder::HasError() const {
-  return decode_error_.error();
-}
-
-void WebPDecoder::Fail(Result error) {
-  decode_error_ = error;
-}
-
-Result WebPDecoder::ProcessDecodeResult(bool result) {
-  if (result)
-    return Result::Ok();
-
-  if (HasError())
-    return decode_error_;
-
-  return Result::Pending();
+Result WebPEncoder::FinishWrite() {
+  return Result::Ok();
 }
 
 }  // namespace image

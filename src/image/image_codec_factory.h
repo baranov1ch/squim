@@ -7,7 +7,7 @@
 
 namespace io {
 class BufReader;
-class Writer;
+class VectorWriter;
 }
 
 namespace image {
@@ -23,7 +23,7 @@ class ImageCodecFactory {
       std::unique_ptr<io::BufReader> reader) = 0;
   virtual std::unique_ptr<ImageEncoder> CreateEncoder(
       ImageType type,
-      std::unique_ptr<io::Writer> writer) = 0;
+      std::unique_ptr<io::VectorWriter> writer) = 0;
 
   virtual ~ImageCodecFactory() {}
 };

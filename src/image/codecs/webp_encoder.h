@@ -1,80 +1,76 @@
-#ifndef IMAGE_CODECS_WEBP_DECODER_H_
-#define IMAGE_CODECS_WEBP_DECODER_H_
+#ifndef IMAGE_CODECS_WEBP_ENCODER_H_
+#define IMAGE_CODECS_WEBP_ENCODER_H_
 
 #include <memory>
-#include <vector>
 
 #include "base/make_noncopyable.h"
-#include "image/image_decoder.h"
-#include "image/image_frame.h"
-#include "image/image_metadata.h"
+#include "image/image_encoder.h"
+#include "io/chunk.h"
 
 namespace io {
-class BufReader;
+class VectorWriter;
 }
 
 namespace image {
 
-class WebPDecoder : public ImageDecoder {
-  MAKE_NONCOPYABLE(WebPDecoder);
+class WebPEncoder : public ImageEncoder {
+  MAKE_NONCOPYABLE(WebPEncoder);
 
  public:
-  WebPDecoder(std::unique_ptr<io::BufReader> source);
-  ~WebPDecoder() override;
+  enum class Preset {
+    kDefault,
+    kPhoto,
+    kPicture,
+    kDrawing,
+    kIcon,
+    kText,
+  };
 
-  // ImageDecoder implementation:
-  uint32_t GetWidth() const override;
-  uint32_t GetHeight() const override;
-  uint64_t GetSize() const override;
-  ImageType GetImageType() const override;
-  ColorScheme GetColorScheme() const override;
-  bool IsProgressive() const override;
-  bool IsImageInfoComplete() const override;
-  size_t GetFrameCount() const override;
-  bool IsMultiFrame() const override;
-  uint32_t GetEstimatedQuality() const override;
-  bool IsFrameCompleteAtIndex(size_t index) const override;
-  ImageFrame* GetFrameAtIndex(size_t index) override;
-  ImageMetadata* GetMetadata() override;
-  bool IsAllMetadataComplete() const override;
-  bool IsAllFramesComplete() const override;
-  bool IsImageComplete() const override;
-  Result Decode() override;
-  Result DecodeImageInfo() override;
-  bool HasError() const override;
+  enum class Hint {
+    kDefault,
+    kPicture,
+    kPhoto,
+    kGraph,
+  };
+
+  enum class Compression {
+    kLossy,
+    kLossless,
+    kMixed,
+  };
+
+  struct Params {
+    float quality = 50.0;
+    // Set WebP compression method to 3 (4 is the default). From
+    // third_party/libwebp/v0_2/src/webp/encode.h, the method determines the
+    // 'quality/speed trade-off (0=fast, 6=slower-better). On a representative
+    // set of images, we see a 26% improvement in the 75th percentile
+    // compression time, even greater improvements further along the tail, and
+    // no increase in file size. Method 2 incurs a prohibitive 10% increase in
+    // file size, which is not worth the compression time savings.
+    int method = 3;
+    Hint hint = Hint::kDefault;
+    Preset preset = Preset::kDefault;
+    Compression compression = Compression::kLossy;
+  };
+
+  WebPEncoder(Params params, std::unique_ptr<io::VectorWriter> dst);
+  ~WebPEncoder() override;
+
+  // ImageEncoder implementation:
+  Result EncodeFrame(ImageFrame* frame, bool last_frame) override;
+  void SetMetadata(const ImageMetadata* metadata) override;
+  Result FinishWrite() override;
 
  private:
   class Impl;
-
-  void Fail(Result error);
-  Result ProcessDecodeResult(bool result);
-
-  io::BufReader* source() { return source_.get(); }
-
-  ImageFrame* frame() { return &image_frame_; }
-
-  void set_size(uint32_t width, uint32_t height) {
-    width_ = width;
-    height_ = height;
-  }
-
-  void set_is_progressive(bool value) { is_progressive_ = value; }
-
-  void set_color_space(ColorScheme color_scheme) {
-    color_scheme_ = color_scheme;
-  }
-
-  std::vector<std::unique_ptr<ImageFrame>> image_frames_;
-  ImageMetadata metadata_;
-  std::unique_ptr<io::BufReader> source_;
   std::unique_ptr<Impl> impl_;
-  ColorScheme color_scheme_ = ColorScheme::kUnknown;
-  uint32_t width_ = 0;
-  uint32_t height_ = 0;
-  bool is_progressive_ = false;
-  Result decode_error_ = Result::Ok();
+  Params params_;
+  std::unique_ptr<io::VectorWriter> dst_;
+  const ImageMetadata* metadata_;
+  io::ChunkList output_;
 };
 
 }  // namespace image
 
-#endif  // IMAGE_CODECS_WEBP_DECODER_H_
+#endif  // IMAGE_CODECS_WEBP_ENCODER_H_

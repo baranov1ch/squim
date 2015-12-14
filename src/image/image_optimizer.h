@@ -13,7 +13,7 @@
 
 namespace io {
 class BufReader;
-class Writer;
+class VectorWriter;
 }
 
 namespace image {
@@ -54,7 +54,7 @@ class ImageOptimizer {
                  std::unique_ptr<OptimizationStrategy> strategy,
                  std::unique_ptr<ImageReaderWriterFactory> factory,
                  std::unique_ptr<io::BufReader> source,
-                 std::unique_ptr<io::Writer> dest);
+                 std::unique_ptr<io::VectorWriter> dest);
   ~ImageOptimizer();
 
   Result Process();
@@ -84,7 +84,7 @@ class ImageOptimizer {
   std::unique_ptr<ImageReader> reader_;
   std::unique_ptr<ImageWriter> writer_;
   std::unique_ptr<io::BufReader> source_;
-  std::unique_ptr<io::Writer> dest_;
+  std::unique_ptr<io::VectorWriter> dest_;
   ImageFrame* current_frame_ = nullptr;
 };
 

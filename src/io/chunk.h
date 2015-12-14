@@ -25,6 +25,11 @@ class Chunk {
 
   base::StringPiece ToString() const;
 
+  static ChunkPtr FromString(std::string data);
+  static ChunkPtr Copy(const uint8_t* data, size_t size);
+  static ChunkPtr View(uint8_t* data, size_t size);
+  static ChunkPtr Own(std::unique_ptr<uint8_t[]> data, size_t size);
+
  private:
   uint8_t* data_;
   size_t size_;
@@ -41,7 +46,7 @@ class StringChunk : public Chunk {
 
 class RawChunk : public Chunk {
  public:
-  RawChunk(std::unique_ptr<uint8_t[]> data, uint64_t size);
+  RawChunk(std::unique_ptr<uint8_t[]> data, size_t size);
   ~RawChunk() override;
 
  private:

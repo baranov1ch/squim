@@ -182,6 +182,7 @@ class PngDecoder::Impl {
     if (state_ == State::kStartDecompress) {
       frame->Init(decoder_->GetWidth(), decoder_->GetHeight(),
                   decoder_->GetColorScheme());
+      decoder_->frame()->set_status(ImageFrame::Status::kPartial);
       state_ = State::kDecompress;
     }
 
@@ -247,7 +248,10 @@ class PngDecoder::Impl {
     longjmp(png_jmpbuf(png_), 1);
   }
 
-  void OnComplete() { state_ = State::kDone; }
+  void OnComplete() {
+    decoder_->frame()->set_status(ImageFrame::Status::kComplete);
+    state_ = State::kDone;
+  }
 
   static Impl* Get(png_structp png) {
     return reinterpret_cast<Impl*>(png_get_progressive_ptr(png));

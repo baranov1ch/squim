@@ -50,14 +50,14 @@ class MockFactory : public ImageReaderWriterFactory {
   std::unique_ptr<ImageWriter> CreateWriterForImage(
       ImageType image_type,
       ImageReader* image_reader,
-      std::unique_ptr<io::Writer> writer) override {
+      std::unique_ptr<io::VectorWriter> writer) override {
     return std::unique_ptr<ImageWriter>(
         CreateWriterForImageImpl(image_type, image_reader, writer.get()));
   }
 
   MOCK_METHOD2(CreateReaderImpl, ImageReader*(ImageType, io::BufReader*));
   MOCK_METHOD3(CreateWriterForImageImpl,
-               ImageWriter*(ImageType, ImageReader*, io::Writer*));
+               ImageWriter*(ImageType, ImageReader*, io::VectorWriter*));
 };
 
 class MockReader : public ImageReader {
@@ -78,9 +78,11 @@ class MockWriter : public ImageWriter {
   MOCK_METHOD0(FinishWrite, Result());
 };
 
-class DevNullWriter : public io::Writer {
+class DevNullWriter : public io::VectorWriter {
  public:
-  io::IoResult Write(io::Chunk* chunk) override { return io::IoResult::Eof(); }
+  io::IoResult WriteV(io::ChunkList chunks) override {
+    return io::IoResult::Eof();
+  }
 };
 
 Result TestImageTypeSelector(io::BufReader* reader, ImageType* image_type) {

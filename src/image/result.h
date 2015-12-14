@@ -19,6 +19,7 @@ class Result {
     kPending,
     kDecodeError,
     kErrorStart = kDecodeError,
+    kEncodeError,
     kUnsupportedFormat,
     kUnexpectedEof,
     kIoErrorOther,

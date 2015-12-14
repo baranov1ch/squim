@@ -7,7 +7,7 @@
 
 namespace io {
 class BufReader;
-class Writer;
+class VectorWriter;
 }
 
 namespace image {
@@ -23,7 +23,7 @@ class ImageReaderWriterFactory {
   virtual std::unique_ptr<ImageWriter> CreateWriterForImage(
       ImageType type,
       ImageReader* reader,
-      std::unique_ptr<io::Writer> writer) = 0;
+      std::unique_ptr<io::VectorWriter> writer) = 0;
 
   virtual ~ImageReaderWriterFactory() {}
 };

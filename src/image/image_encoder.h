@@ -2,6 +2,7 @@
 #define IMAGE_IMAGE_ENCODER_H_
 
 #include "image/image_constants.h"
+#include "image/result.h"
 
 namespace image {
 

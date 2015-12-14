@@ -6,15 +6,6 @@ ImageFrame::ImageFrame() {}
 
 ImageFrame::~ImageFrame() {}
 
-uint32_t ImageFrame::stride() const {
-  return width_ * bpp_;
-}
-
-bool ImageFrame::has_alpha() const {
-  return color_scheme_ == ColorScheme::kRGBA ||
-         color_scheme_ == ColorScheme::kGrayScaleAlpha;
-}
-
 void ImageFrame::Init(uint32_t width,
                       uint32_t height,
                       ColorScheme color_scheme) {

@@ -139,6 +139,7 @@ class JpegDecoder::Impl {
           for (auto it = scanlines.begin(); it != scanlines.end(); ++it, ++i) {
             rows_[i] = (*it).ptr();
           }
+          decoder_->frame()->set_status(ImageFrame::Status::kPartial);
         }
 
         while (decompress_.output_scanline < decompress_.output_height) {
@@ -150,6 +151,7 @@ class JpegDecoder::Impl {
         }
 
         state_ = State::kFinish;
+        decoder_->frame()->set_status(ImageFrame::Status::kComplete);
 
       // Fall through:
       case State::kFinish:

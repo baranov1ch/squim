@@ -99,7 +99,7 @@ ImageOptimizer::ImageOptimizer(
     std::unique_ptr<OptimizationStrategy> strategy,
     std::unique_ptr<ImageReaderWriterFactory> factory,
     std::unique_ptr<io::BufReader> source,
-    std::unique_ptr<io::Writer> dest)
+    std::unique_ptr<io::VectorWriter> dest)
     : input_type_selector_(input_type_selector),
       strategy_(std::move(strategy)),
       factory_(std::move(factory)),

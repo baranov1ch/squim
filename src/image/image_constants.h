@@ -11,6 +11,7 @@ enum class ColorScheme {
   kRGB,
   kRGBA,
   kYUV,
+  kYUVA,
   kCMYK,
   kUnknown,
 };
