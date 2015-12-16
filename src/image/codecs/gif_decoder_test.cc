@@ -27,8 +27,8 @@ std::unique_ptr<ImageDecoder> CreateDecoder(
 class GifDecoderTest : public testing::Test {
  protected:
   void ValidateGifRandomReads(const std::string& filename,
-                               size_t max_chunk_size,
-                               ReadType read_type) {
+                              size_t max_chunk_size,
+                              ReadType read_type) {
     std::vector<uint8_t> gif_data;
     std::vector<uint8_t> png_data;
     ASSERT_TRUE(ReadTestFile(kGifTestDir, filename, "gif", &gif_data));
@@ -56,7 +56,6 @@ class GifDecoderTest : public testing::Test {
   }
 };
 
-TEST_F(GifDecoderTest, ReadSuccessAll) {
-}
+TEST_F(GifDecoderTest, ReadSuccessAll) {}
 
 }  // namespace image

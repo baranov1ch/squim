@@ -56,7 +56,6 @@ class WebPDecoderTest : public testing::Test {
   }
 };
 
-TEST_F(WebPDecoderTest, ReadSuccessAll) {
-}
+TEST_F(WebPDecoderTest, ReadSuccessAll) {}
 
 }  // namespace image

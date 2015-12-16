@@ -119,14 +119,21 @@ class Picture {
   }
 
   bool Init(ImageFrame* frame) {
-    std::unique_ptr<ImageFrame> trasnformed_frame;
+    if (!WebPPictureInit(&picture_))
+      return false;
+
+    std::unique_ptr<ImageFrame> transformed_frame;
     if (frame->is_grayscale()) {
-      trasnformed_frame.reset(new ImageFrame);
-      frame = trasnformed_frame.get();
+      // TODO: transform to RGB(A).
+      transformed_frame.reset(new ImageFrame);
+      frame = transformed_frame.get();
     }
 
     if (!frame->is_yuv() && !frame->is_rgb())
       return false;
+
+    picture_.width = frame->width();
+    picture_.height = frame->height();
 
     bool result = false;
     switch (frame->color_scheme()) {
@@ -150,9 +157,6 @@ class Picture {
 
     if (!result)
       return false;
-
-    picture_.width = frame->width();
-    picture_.height = frame->height();
 
     return true;
   }
@@ -217,7 +221,7 @@ class WebPEncoder::Impl {
  private:
   static int ProgressHook(int percent, const WebPPicture* picture) {
     // TODO: handle timeouts.
-    return 0;
+    return 1;
   }
 
   static int ChunkWriter(const uint8_t* data,
@@ -226,7 +230,7 @@ class WebPEncoder::Impl {
     auto* impl = static_cast<Impl*>(picture->custom_ptr);
     auto chunk = io::Chunk::Copy(data, data_size);
     impl->encoder_->output_.push_back(std::move(chunk));
-    return 0;
+    return 1;
   }
 
   bool idle_ = true;

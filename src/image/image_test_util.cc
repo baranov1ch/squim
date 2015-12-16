@@ -317,7 +317,6 @@ void ValidateDecodeWithReadSpec(
       }
 
       if (result.pending()) {
-        LOG(INFO) << "keke";
         continue;
       }
     }

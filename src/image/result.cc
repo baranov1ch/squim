@@ -16,6 +16,8 @@ const char* Result::CodeToString(Code code) {
       return "Pending";
     case Code::kDecodeError:
       return "DecodeError";
+    case Code::kEncodeError:
+      return "EncodeError";
     case Code::kUnsupportedFormat:
       return "UnsupportedFormat";
     case Code::kUnexpectedEof:

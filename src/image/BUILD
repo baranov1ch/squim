@@ -19,6 +19,8 @@ cc_library(
     "single_frame_writer.h",
   ],
   srcs = [
+    "codecs/gif_decoder.cc",
+    "codecs/gif_decoder.h",
     "codecs/jpeg_decoder.cc",
     "codecs/jpeg_decoder.h",
     "codecs/png_decoder.cc",
@@ -65,8 +67,11 @@ cc_test(
   name = "image_test",
   timeout = "short",
   srcs = [
+    "codecs/gif_decoder_test.cc",
     "codecs/jpeg_decoder_test.cc",
     "codecs/png_decoder_test.cc",
+    "codecs/webp_decoder_test.cc",
+    "codecs/webp_encoder_test.cc",
     "decoding_reader_test.cc",
     "image_optimizer_test.cc",
   ],
