@@ -19,6 +19,10 @@ namespace {
 
 const char kWebPTestDir[] = "webp";
 
+const char* kValidImages[] = {
+    "alpha_32x32", "opaque_32x20",
+};
+
 class TestWriter : public io::VectorWriter {
  public:
   io::IoResult WriteV(io::ChunkList chunks) override {
@@ -63,27 +67,34 @@ bool ReadWebP(const std::vector<uint8_t>& data,
 
 }  // namespace
 
-class WebPEncoderTest : public testing::Test {};
+class WebPEncoderTest : public testing::Test {
+ protected:
+  void ValidateEncoding(const std::string filename) {
+    auto writer = base::make_unique<TestWriter>();
+    auto* writer_raw = writer.get();
+    std::vector<uint8_t> png_data;
+    ImageInfo info;
+    ImageFrame ref_frame;
+    ASSERT_TRUE(ReadTestFile(kWebPTestDir, filename, "png", &png_data))
+        << filename;
+    ASSERT_TRUE(LoadReferencePng(filename, png_data, &info, &ref_frame))
+        << filename;
+    WebPEncoder::Params params;
+    params.quality = 90;
+    auto testee = base::make_unique<WebPEncoder>(params, std::move(writer));
+    auto result = testee->EncodeFrame(&ref_frame, true);
+    EXPECT_EQ(Result::Code::kOk, result.code());
+    ImageFrame webp_frame;
+    ASSERT_TRUE(ReadWebP(writer_raw->data(), info.width, info.height,
+                         info.color_scheme, &webp_frame))
+        << filename;
+    CheckImageFrameByPSNR(filename, &ref_frame, &webp_frame, 33);
+  }
+};
 
 TEST_F(WebPEncoderTest, Success) {
-  auto writer = base::make_unique<TestWriter>();
-  auto* writer_raw = writer.get();
-  std::vector<uint8_t> png_data;
-  ImageInfo info;
-  ImageFrame frame;
-  ASSERT_TRUE(ReadTestFile(kWebPTestDir, "alpha_32x32", "png", &png_data));
-  ASSERT_TRUE(LoadReferencePng("alpha_32x32", png_data, &info, &frame));
-  WebPEncoder::Params params;
-  params.quality = 90;
-  WebPEncoder encoder(params, std::move(writer));
-  auto result = encoder.EncodeFrame(&frame, true);
-  EXPECT_EQ(Result::Code::kOk, result.code());
-  ImageFrame webp_frame;
-  ASSERT_TRUE(ReadWebP(writer_raw->data(), info.width, info.height,
-                       ColorScheme::kRGBA, &webp_frame));
-  LOG(INFO) << writer_raw->data().size();
-  LOG(INFO) << png_data.size();
-  CheckImageFrameByPSNR("alpha_32x32", &frame, &webp_frame, 33);
+  for (auto pic : kValidImages)
+    ValidateEncoding(pic);
 }
 
 }  // namespace image
