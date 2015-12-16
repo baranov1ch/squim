@@ -29,7 +29,7 @@ namespace image {
 
 namespace {
 
-const double kMaxPSNR = 0.99;
+const double kMaxPSNR = 99.0;
 
 std::string GetTestDirRoot() {
   return "image/testdata/";
@@ -197,20 +197,26 @@ void CheckImageInfo(const std::string& image_file,
   EXPECT_EQ(ref.color_scheme, decoder->GetColorScheme()) << image_file;
 }
 
-void CheckImageFrame(const std::string& image_file,
-                     ImageFrame* reference,
-                     ImageDecoder* decoder) {
-  CheckImageFrameByPSNR(image_file, reference, decoder, kMaxPSNR);
-}
-
-void CheckImageFrameByPSNR(const std::string& image_file,
-                           ImageFrame* reference,
-                           ImageDecoder* decoder,
-                           double min_psnr) {
+void CheckDecodedFrame(const std::string& image_file,
+                       ImageFrame* reference,
+                       ImageDecoder* decoder) {
   ASSERT_TRUE(decoder->IsFrameCompleteAtIndex(0)) << image_file;
   auto* frame = decoder->GetFrameAtIndex(0);
   EXPECT_EQ(reference->bpp(), frame->bpp()) << image_file;
   EXPECT_EQ(reference->has_alpha(), frame->has_alpha()) << image_file;
+  CheckImageFrame(image_file, reference, frame);
+}
+
+void CheckImageFrame(const std::string& image_file,
+                     ImageFrame* reference,
+                     ImageFrame* frame) {
+  CheckImageFrameByPSNR(image_file, reference, frame, kMaxPSNR);
+}
+
+void CheckImageFrameByPSNR(const std::string& image_file,
+                           ImageFrame* reference,
+                           ImageFrame* frame,
+                           double min_psnr) {
   ScanlineReader ref_reader(reference);
   ScanlineReader test_reader(frame);
   if (min_psnr >= kMaxPSNR) {
@@ -341,7 +347,7 @@ void ValidateDecodeWithReadSpec(
   if (!header_read)
     CheckImageInfo(filename, ref_info, testee.get());
 
-  CheckImageFrame(filename, &ref_frame, testee.get());
+  CheckDecodedFrame(filename, &ref_frame, testee.get());
 }
 
 }  // namespace image

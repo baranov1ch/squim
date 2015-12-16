@@ -9,6 +9,7 @@
 #include "image/image_test_util.h"
 #include "io/writer.h"
 #include "glog/logging.h"
+#include "google/libwebp/upstream/src/webp/decode.h"
 
 #include "gtest/gtest.h"
 
@@ -32,7 +33,35 @@ class TestWriter : public io::VectorWriter {
  private:
   std::vector<uint8_t> data_;
 };
+
+bool ReadWebP(const std::vector<uint8_t>& data,
+              uint32_t width,
+              uint32_t height,
+              ColorScheme color_scheme,
+              ImageFrame* frame) {
+  WebPDecoderConfig config;
+  if (!WebPInitDecoderConfig(&config))
+    return false;
+
+  frame->Init(width, height, color_scheme);
+
+  if (color_scheme == ColorScheme::kRGB) {
+    config.output.colorspace = MODE_RGB;
+  } else {
+    config.output.colorspace = MODE_RGBA;
+  }
+
+  config.output.u.RGBA.rgba = frame->GetData(0);
+  config.output.u.RGBA.stride = frame->stride();
+  config.output.u.RGBA.size = frame->stride() * frame->height();
+  config.output.is_external_memory = true;
+
+  auto result = WebPDecode(&data[0], data.size(), &config);
+  WebPFreeDecBuffer(&config.output);
+  return result == VP8_STATUS_OK;
 }
+
+}  // namespace
 
 class WebPEncoderTest : public testing::Test {};
 
@@ -44,11 +73,17 @@ TEST_F(WebPEncoderTest, Success) {
   ImageFrame frame;
   ASSERT_TRUE(ReadTestFile(kWebPTestDir, "alpha_32x32", "png", &png_data));
   ASSERT_TRUE(LoadReferencePng("alpha_32x32", png_data, &info, &frame));
-  WebPEncoder encoder(WebPEncoder::Params(), std::move(writer));
+  WebPEncoder::Params params;
+  params.quality = 90;
+  WebPEncoder encoder(params, std::move(writer));
   auto result = encoder.EncodeFrame(&frame, true);
   EXPECT_EQ(Result::Code::kOk, result.code());
+  ImageFrame webp_frame;
+  ASSERT_TRUE(ReadWebP(writer_raw->data(), info.width, info.height,
+                       ColorScheme::kRGBA, &webp_frame));
   LOG(INFO) << writer_raw->data().size();
   LOG(INFO) << png_data.size();
+  CheckImageFrameByPSNR("alpha_32x32", &frame, &webp_frame, 33);
 }
 
 }  // namespace image

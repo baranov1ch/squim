@@ -56,16 +56,21 @@ void CheckImageInfo(const std::string& image_file,
                     const ImageInfo& reference,
                     ImageDecoder* decoder);
 
+// Checks single frame read from |decoder|.
+void CheckDecodedFrame(const std::string& image_file,
+                       ImageFrame* reference,
+                       ImageDecoder* decoder);
+
 // Does pixel-by-pixel comparison of the decoded frame against |reference|.
 void CheckImageFrame(const std::string& image_file,
                      ImageFrame* reference,
-                     ImageDecoder* decoder);
+                     ImageFrame* frame);
 
 // Ensures images are more or less the same, with |min_psnr|
 // (google for Peak-Signal-to-Noise-Ratio).
 void CheckImageFrameByPSNR(const std::string& image_file,
                            ImageFrame* reference,
-                           ImageDecoder* decoder,
+                           ImageFrame* frame,
                            double min_psnr);
 
 // Creates randomized read sequence to emulate data coming from the network.
