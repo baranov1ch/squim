@@ -11,7 +11,6 @@ cc_library(
     "image_metadata.h",
     "image_optimizer.h",
     "image_reader.h",
-    "image_reader_writer_factory.h",
     "image_writer.h",
     "optimization_strategy.h",
     "result.h",

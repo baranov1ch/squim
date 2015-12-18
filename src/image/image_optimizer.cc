@@ -4,7 +4,6 @@
 
 #include "glog/logging.h"
 #include "image/image_reader.h"
-#include "image/image_reader_writer_factory.h"
 #include "image/image_writer.h"
 #include "image/optimization_strategy.h"
 #include "io/buf_reader.h"
@@ -94,15 +93,12 @@ const char* ImageOptimizer::StateToString(State state) {
   }
 }
 
-ImageOptimizer::ImageOptimizer(
-    ImageTypeSelector input_type_selector,
-    std::unique_ptr<OptimizationStrategy> strategy,
-    std::unique_ptr<ImageReaderWriterFactory> factory,
-    std::unique_ptr<io::BufReader> source,
-    std::unique_ptr<io::VectorWriter> dest)
+ImageOptimizer::ImageOptimizer(ImageTypeSelector input_type_selector,
+                               std::unique_ptr<OptimizationStrategy> strategy,
+                               std::unique_ptr<io::BufReader> source,
+                               std::unique_ptr<io::VectorWriter> dest)
     : input_type_selector_(input_type_selector),
       strategy_(std::move(strategy)),
-      factory_(std::move(factory)),
       source_(std::move(source)),
       dest_(std::move(dest)) {}
 
@@ -193,9 +189,11 @@ Result ImageOptimizer::DoReadImageFormat() {
     return Result::Error(Result::Code::kUnsupportedFormat);
   }
 
-  reader_ = factory_->CreateReader(image_type, std::move(source_));
-  if (!reader_)
-    return Result::Error(Result::Code::kUnsupportedFormat);
+  result =
+      strategy_->CreateImageReader(image_type, std::move(source_), &reader_);
+  DCHECK(!result.pending());
+  if (!result.ok())
+    return result;
 
   state_ = State::kReadingImageInfo;
   return Result::Ok();
@@ -212,21 +210,9 @@ Result ImageOptimizer::DoReadImageInfo() {
   auto result = reader_->GetImageInfo(nullptr);
   if (!result.ok())
     return result;
-  result = strategy_->AdjustImageReader(&reader_);
-  DCHECK(!result.pending());
-  if (!result.ok())
-    return result;
 
-  auto output_type = strategy_->GetOutputType();
-  if (output_type == ImageType::kUnknown)
-    return Result::Error(Result::Code::kDunnoHowToEncode);
-
-  writer_ = factory_->CreateWriterForImage(output_type, reader_.get(),
-                                           std::move(dest_));
-  if (!writer_)
-    return Result::Error(Result::Code::kDunnoHowToEncode);
-
-  result = strategy_->AdjustImageWriter(&writer_);
+  result =
+      strategy_->CreateImageWriter(std::move(dest_), reader_.get(), &writer_);
   DCHECK(!result.pending());
   if (!result.ok())
     return result;

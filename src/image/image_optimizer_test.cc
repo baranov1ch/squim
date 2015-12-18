@@ -10,7 +10,6 @@
 #include "image/image_info.h"
 #include "image/image_metadata.h"
 #include "image/image_reader.h"
-#include "image/image_reader_writer_factory.h"
 #include "image/image_writer.h"
 #include "image/optimization_strategy.h"
 #include "io/buf_reader.h"
@@ -31,33 +30,28 @@ namespace {
 
 class MockStrategy : public OptimizationStrategy {
  public:
+  Result CreateImageReader(ImageType image_type,
+                           std::unique_ptr<io::BufReader> src,
+                           std::unique_ptr<ImageReader>* reader) override {
+    return CreateImageReaderImpl(image_type, src.get(), reader);
+  }
+  Result CreateImageWriter(std::unique_ptr<io::VectorWriter> dest,
+                           ImageReader* reader,
+                           std::unique_ptr<ImageWriter>* writer) override {
+    return CreateImageWriterImpl(dest.get(), reader, writer);
+  }
   MOCK_METHOD0(ShouldEvenBother, Result());
-  MOCK_METHOD0(GetOutputType, ImageType());
-  MOCK_METHOD1(AdjustImageReader, Result(std::unique_ptr<ImageReader>*));
-  MOCK_METHOD1(AdjustImageWriter, Result(std::unique_ptr<ImageWriter>*));
+  MOCK_METHOD1(AdjustImageReaderAfterInfoReady,
+               Result(std::unique_ptr<ImageReader>*));
+  MOCK_METHOD3(CreateImageReaderImpl,
+               Result(ImageType,
+                      io::BufReader*,
+                      std::unique_ptr<ImageReader>*));
+  MOCK_METHOD3(CreateImageWriterImpl,
+               Result(io::VectorWriter*,
+                      ImageReader*,
+                      std::unique_ptr<ImageWriter>*));
   MOCK_METHOD0(ShouldWaitForMetadata, bool());
-};
-
-class MockFactory : public ImageReaderWriterFactory {
- public:
-  std::unique_ptr<ImageReader> CreateReader(
-      ImageType image_type,
-      std::unique_ptr<io::BufReader> reader) override {
-    return std::unique_ptr<ImageReader>(
-        CreateReaderImpl(image_type, reader.get()));
-  }
-
-  std::unique_ptr<ImageWriter> CreateWriterForImage(
-      ImageType image_type,
-      ImageReader* image_reader,
-      std::unique_ptr<io::VectorWriter> writer) override {
-    return std::unique_ptr<ImageWriter>(
-        CreateWriterForImageImpl(image_type, image_reader, writer.get()));
-  }
-
-  MOCK_METHOD2(CreateReaderImpl, ImageReader*(ImageType, io::BufReader*));
-  MOCK_METHOD3(CreateWriterForImageImpl,
-               ImageWriter*(ImageType, ImageReader*, io::VectorWriter*));
 };
 
 class MockReader : public ImageReader {
@@ -121,16 +115,27 @@ class ImageOptimizerTest : public testing::Test {
     return Result::Ok();
   }
 
+  Result CreateReader(ImageType image_type,
+                      io::BufReader* src,
+                      std::unique_ptr<ImageReader>* reader) {
+    reader->reset(image_reader_);
+    return Result::Ok();
+  }
+
+  Result CreateWriter(io::VectorWriter* dst,
+                      ImageReader* reader,
+                      std::unique_ptr<ImageWriter>* writer) {
+    writer->reset(image_writer_);
+    return Result::Ok();
+  }
+
  protected:
   enum class Stage {
     kInit,
     kReadSignature,
     kCreateReader,
     kReadImageInfo,
-    kAdjustReader,
-    kGetOutputType,
     kCreateWriter,
-    kAdjustWriter,
     kReadFrame,
     kWriteFrame,
     kDrain,
@@ -140,8 +145,6 @@ class ImageOptimizerTest : public testing::Test {
   void RunTestCaseUntil(Stage stage, Result::Code code) {
     auto current_stage = static_cast<int>(Stage::kInit);
     auto int_stage = static_cast<int>(stage);
-    MockReader* reader = nullptr;
-    MockWriter* writer = nullptr;
     ImageMetadata meta;
     InSequence seq;
     do {
@@ -160,121 +163,100 @@ class ImageOptimizerTest : public testing::Test {
           break;
         case Stage::kCreateReader:
           if (current_stage < int_stage) {
-            reader = new MockReader();
-            EXPECT_CALL(*factory_, CreateReaderImpl(ImageType::kJpeg, source_))
-                .WillOnce(Return(reader));
+            image_reader_ = new MockReader();
+            EXPECT_CALL(*strategy_,
+                        CreateImageReaderImpl(ImageType::kJpeg, source_, _))
+                .WillOnce(Invoke(this, &ImageOptimizerTest::CreateReader));
           } else {
-            EXPECT_CALL(*factory_, CreateReaderImpl(ImageType::kJpeg, source_))
-                .WillOnce(Return(nullptr));
+            EXPECT_CALL(*strategy_,
+                        CreateImageReaderImpl(ImageType::kJpeg, source_, _))
+                .WillOnce(Return(Result::Error(Result::Code::kDecodeError)));
           }
           break;
         case Stage::kReadImageInfo:
+          ASSERT_TRUE(image_reader_);
           if (current_stage < int_stage) {
-            EXPECT_CALL(*reader, GetImageInfo(nullptr))
+            EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))
                 .WillOnce(Return(Result::Ok()));
           } else if (code == Result::Code::kPending) {
-            EXPECT_CALL(*reader, GetImageInfo(nullptr))
+            EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))
                 .WillOnce(Return(Result::Pending()));
           } else {
-            EXPECT_CALL(*reader, GetImageInfo(nullptr))
+            EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))
                 .WillOnce(Return(Result::Error(Result::Code::kDecodeError)));
-          }
-          break;
-        case Stage::kAdjustReader:
-          if (current_stage < int_stage) {
-            EXPECT_CALL(*strategy_, AdjustImageReader(_))
-                .WillOnce(Return(Result::Ok()));
-          } else {
-            EXPECT_CALL(*strategy_, AdjustImageReader(_))
-                .WillOnce(Return(Result::Error(Result::Code::kDecodeError)));
-          }
-          break;
-        case Stage::kGetOutputType:
-          if (current_stage < int_stage) {
-            EXPECT_CALL(*strategy_, GetOutputType())
-                .WillOnce(Return(ImageType::kWebP));
-          } else {
-            EXPECT_CALL(*strategy_, GetOutputType())
-                .WillOnce(Return(ImageType::kUnknown));
           }
           break;
         case Stage::kCreateWriter:
           if (current_stage < int_stage) {
-            writer = new MockWriter();
-            EXPECT_CALL(*factory_, CreateWriterForImageImpl(ImageType::kWebP,
-                                                            reader, dest_))
-                .WillOnce(Return(writer));
+            image_writer_ = new MockWriter();
+            EXPECT_CALL(*strategy_,
+                        CreateImageWriterImpl(dest_, image_reader_, _))
+                .WillOnce(Invoke(this, &ImageOptimizerTest::CreateWriter));
           } else {
-            EXPECT_CALL(*factory_, CreateWriterForImageImpl(ImageType::kWebP,
-                                                            reader, dest_))
-                .WillOnce(Return(nullptr));
-          }
-          break;
-        case Stage::kAdjustWriter:
-          if (current_stage < int_stage) {
-            EXPECT_CALL(*strategy_, AdjustImageWriter(_))
-                .WillOnce(Return(Result::Ok()));
-          } else {
-            EXPECT_CALL(*strategy_, AdjustImageWriter(_))
+            EXPECT_CALL(*strategy_,
+                        CreateImageWriterImpl(dest_, image_reader_, _))
                 .WillOnce(
                     Return(Result::Error(Result::Code::kDunnoHowToEncode)));
           }
           break;
         case Stage::kReadFrame:
-          EXPECT_CALL(*reader, GetMetadata()).WillOnce(Return(&meta));
-          EXPECT_CALL(*writer, SetMetadata(&meta));
-          EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(true));
+          EXPECT_CALL(*image_reader_, GetMetadata()).WillOnce(Return(&meta));
+          EXPECT_CALL(*image_writer_, SetMetadata(&meta));
+          EXPECT_CALL(*image_reader_, HasMoreFrames()).WillOnce(Return(true));
           if (current_stage < int_stage) {
-            EXPECT_CALL(*reader, GetNextFrame(_))
+            EXPECT_CALL(*image_reader_, GetNextFrame(_))
                 .WillOnce(Invoke(this, &ImageOptimizerTest::SetFrame));
           } else if (code == Result::Code::kPending) {
-            EXPECT_CALL(*reader, GetNextFrame(_))
+            EXPECT_CALL(*image_reader_, GetNextFrame(_))
                 .WillOnce(Return(Result::Pending()));
           } else {
-            EXPECT_CALL(*reader, GetNextFrame(_))
+            EXPECT_CALL(*image_reader_, GetNextFrame(_))
                 .WillOnce(Return(Result::Error(Result::Code::kReadFrameError)));
           }
           break;
         case Stage::kWriteFrame:
+          ASSERT_TRUE(image_writer_);
           if (current_stage < int_stage) {
-            EXPECT_CALL(*writer, WriteFrame(_)).WillOnce(Return(Result::Ok()));
+            EXPECT_CALL(*image_writer_, WriteFrame(_))
+                .WillOnce(Return(Result::Ok()));
           } else if (code == Result::Code::kPending) {
-            EXPECT_CALL(*writer, WriteFrame(_))
+            EXPECT_CALL(*image_writer_, WriteFrame(_))
                 .WillOnce(Return(Result::Pending()));
           } else {
-            EXPECT_CALL(*writer, WriteFrame(_))
+            EXPECT_CALL(*image_writer_, WriteFrame(_))
                 .WillOnce(
                     Return(Result::Error(Result::Code::kWriteFrameError)));
           }
           break;
         case Stage::kDrain:
-          EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(false));
+          EXPECT_CALL(*image_reader_, HasMoreFrames()).WillOnce(Return(false));
 
           EXPECT_CALL(*strategy_, ShouldWaitForMetadata())
               .WillOnce(Return(should_wait_meta_));
           if (should_wait_meta_) {
             if (current_stage < int_stage) {
-              EXPECT_CALL(*reader, ReadTillTheEnd())
+              EXPECT_CALL(*image_reader_, ReadTillTheEnd())
                   .WillOnce(Return(Result::Ok()));
             } else if (code == Result::Code::kPending) {
-              EXPECT_CALL(*reader, ReadTillTheEnd())
+              EXPECT_CALL(*image_reader_, ReadTillTheEnd())
                   .WillOnce(Return(Result::Pending()));
             } else {
-              EXPECT_CALL(*reader, ReadTillTheEnd())
+              EXPECT_CALL(*image_reader_, ReadTillTheEnd())
                   .WillOnce(Return(Result::Error(Result::Code::kDecodeError)));
             }
           } else {
-            EXPECT_CALL(*reader, ReadTillTheEnd()).Times(0);
+            EXPECT_CALL(*image_reader_, ReadTillTheEnd()).Times(0);
           }
           break;
         case Stage::kFinish:
           if (code == Result::Code::kOk) {
-            EXPECT_CALL(*writer, FinishWrite()).WillOnce(Return(Result::Ok()));
+            EXPECT_CALL(*image_writer_, FinishWrite())
+                .WillOnce(Return(Result::Ok()));
           } else if (code == Result::Code::kPending) {
-            EXPECT_CALL(*writer, FinishWrite())
+            EXPECT_CALL(*image_writer_, FinishWrite())
                 .WillOnce(Return(Result::Pending()));
           } else {
-            EXPECT_CALL(*writer, FinishWrite())
+            EXPECT_CALL(*image_writer_, FinishWrite())
                 .WillOnce(Return(Result::Error(Result::Code::kIoErrorOther)));
           }
           break;
@@ -313,22 +295,21 @@ class ImageOptimizerTest : public testing::Test {
       bool end,
       ImageOptimizer::ImageTypeSelector image_type_selector) {
     auto source = CreateReaderFromData(data, end);
-    auto factory = base::make_unique<MockFactory>();
     auto strategy = base::make_unique<MockStrategy>();
     auto dest = base::make_unique<DevNullWriter>();
-    factory_ = factory.get();
     strategy_ = strategy.get();
     source_ = source.get();
     dest_ = dest.get();
     return base::make_unique<ImageOptimizer>(
-        image_type_selector, std::move(strategy), std::move(factory),
-        std::move(source), std::move(dest));
+        image_type_selector, std::move(strategy), std::move(source),
+        std::move(dest));
   }
 
-  MockFactory* factory_ = nullptr;
   MockStrategy* strategy_ = nullptr;
   io::BufReader* source_ = nullptr;
   DevNullWriter* dest_ = nullptr;
+  MockReader* image_reader_ = nullptr;
+  MockWriter* image_writer_ = nullptr;
   ImageFrame frame_;
   std::unique_ptr<ImageOptimizer> testee_;
   bool should_wait_meta_ = false;
@@ -375,9 +356,9 @@ TEST_F(ImageOptimizerTest, ShouldReturnErrorIfNoImageTypeSelected) {
   RunTestCaseUntil(Stage::kReadSignature, Result::Code::kUnsupportedFormat);
 }
 
-TEST_F(ImageOptimizerTest, ShouldReturnErrorIfReaderFromFactoryIsNull) {
+TEST_F(ImageOptimizerTest, ShouldReturnErrorIfReaderCreationFailed) {
   testee_ = CreateOptimizer();
-  RunTestCaseUntil(Stage::kCreateReader, Result::Code::kUnsupportedFormat);
+  RunTestCaseUntil(Stage::kCreateReader, Result::Code::kDecodeError);
 }
 
 TEST_F(ImageOptimizerTest, ShouldReturnErrorIfImageInfoError) {
@@ -390,24 +371,9 @@ TEST_F(ImageOptimizerTest, ShouldPendOnImageInfo) {
   RunTestCaseUntil(Stage::kReadImageInfo, Result::Code::kPending);
 }
 
-TEST_F(ImageOptimizerTest, ShouldReturnErrorIfReaderAdjustReturnsError) {
-  testee_ = CreateOptimizer();
-  RunTestCaseUntil(Stage::kAdjustReader, Result::Code::kDecodeError);
-}
-
-TEST_F(ImageOptimizerTest, ShouldReturnErrorIfUnknownOutputType) {
-  testee_ = CreateOptimizer();
-  RunTestCaseUntil(Stage::kGetOutputType, Result::Code::kDunnoHowToEncode);
-}
-
-TEST_F(ImageOptimizerTest, ShouldReturnErrorIfNoWriterReturned) {
+TEST_F(ImageOptimizerTest, ShouldReturnErrorIfWriterCreationFailed) {
   testee_ = CreateOptimizer();
   RunTestCaseUntil(Stage::kCreateWriter, Result::Code::kDunnoHowToEncode);
-}
-
-TEST_F(ImageOptimizerTest, ShouldReturnErrorIfWriterAdjustReturnsError) {
-  testee_ = CreateOptimizer();
-  RunTestCaseUntil(Stage::kAdjustWriter, Result::Code::kDunnoHowToEncode);
 }
 
 TEST_F(ImageOptimizerTest, ShouldSetMetadataAndPendOnReadingFrame) {
@@ -467,64 +433,68 @@ TEST_F(ImageOptimizerTest, ShouldTolerateMultilePendingCalls) {
   testee_ = CreateOptimizer();
   InSequence seq;
   EXPECT_CALL(*strategy_, ShouldEvenBother()).WillOnce(Return(Result::Ok()));
-  auto* reader = new MockReader();
-  EXPECT_CALL(*factory_, CreateReaderImpl(ImageType::kJpeg, source_))
-      .WillOnce(Return(reader));
-  EXPECT_CALL(*reader, GetImageInfo(nullptr))
+  image_reader_ = new MockReader();
+  EXPECT_CALL(*strategy_, CreateImageReaderImpl(ImageType::kJpeg, source_, _))
+      .WillOnce(Invoke(this, &ImageOptimizerTest::CreateReader));
+  EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))
       .WillRepeatedly(Return(Result::Pending()));
   auto result = testee_->Process();
   EXPECT_TRUE(result.pending());
   result = testee_->Process();
   EXPECT_TRUE(result.pending());
-  EXPECT_CALL(*reader, GetImageInfo(nullptr)).WillOnce(Return(Result::Ok()));
-  EXPECT_CALL(*strategy_, AdjustImageReader(_)).WillOnce(Return(Result::Ok()));
-  EXPECT_CALL(*strategy_, GetOutputType()).WillOnce(Return(ImageType::kWebP));
-  auto* writer = new MockWriter();
-  EXPECT_CALL(*factory_,
-              CreateWriterForImageImpl(ImageType::kWebP, reader, dest_))
-      .WillOnce(Return(writer));
-  EXPECT_CALL(*strategy_, AdjustImageWriter(_)).WillOnce(Return(Result::Ok()));
+  EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))
+      .WillOnce(Return(Result::Ok()));
+  image_writer_ = new MockWriter();
+  EXPECT_CALL(*strategy_, CreateImageWriterImpl(dest_, image_reader_, _))
+      .WillOnce(Invoke(this, &ImageOptimizerTest::CreateWriter));
   ImageMetadata meta;
-  EXPECT_CALL(*reader, GetMetadata()).WillOnce(Return(&meta));
-  EXPECT_CALL(*writer, SetMetadata(&meta));
-  EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(true));
-  EXPECT_CALL(*reader, GetNextFrame(_)).WillOnce(Return(Result::Pending()));
+  EXPECT_CALL(*image_reader_, GetMetadata()).WillOnce(Return(&meta));
+  EXPECT_CALL(*image_writer_, SetMetadata(&meta));
+  EXPECT_CALL(*image_reader_, HasMoreFrames()).WillOnce(Return(true));
+  EXPECT_CALL(*image_reader_, GetNextFrame(_))
+      .WillOnce(Return(Result::Pending()));
   result = testee_->Process();
   EXPECT_TRUE(result.pending());
-  EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(true));
-  EXPECT_CALL(*reader, GetNextFrame(_)).WillOnce(Return(Result::Pending()));
-  result = testee_->Process();
-  EXPECT_TRUE(result.pending());
-
-  EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(true));
-  EXPECT_CALL(*reader, GetNextFrame(_))
-      .WillOnce(Invoke(this, &ImageOptimizerTest::SetFrame));
-  EXPECT_CALL(*writer, WriteFrame(_)).WillOnce(Return(Result::Pending()));
+  EXPECT_CALL(*image_reader_, HasMoreFrames()).WillOnce(Return(true));
+  EXPECT_CALL(*image_reader_, GetNextFrame(_))
+      .WillOnce(Return(Result::Pending()));
   result = testee_->Process();
   EXPECT_TRUE(result.pending());
 
-  EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(true));
-  EXPECT_CALL(*reader, GetNextFrame(_))
+  EXPECT_CALL(*image_reader_, HasMoreFrames()).WillOnce(Return(true));
+  EXPECT_CALL(*image_reader_, GetNextFrame(_))
       .WillOnce(Invoke(this, &ImageOptimizerTest::SetFrame));
-  EXPECT_CALL(*writer, WriteFrame(_)).WillOnce(Return(Result::Pending()));
+  EXPECT_CALL(*image_writer_, WriteFrame(_))
+      .WillOnce(Return(Result::Pending()));
   result = testee_->Process();
   EXPECT_TRUE(result.pending());
 
-  EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(true));
-  EXPECT_CALL(*reader, GetNextFrame(_))
+  EXPECT_CALL(*image_reader_, HasMoreFrames()).WillOnce(Return(true));
+  EXPECT_CALL(*image_reader_, GetNextFrame(_))
       .WillOnce(Invoke(this, &ImageOptimizerTest::SetFrame));
-  EXPECT_CALL(*writer, WriteFrame(_)).WillOnce(Return(Result::Ok()));
-  EXPECT_CALL(*reader, HasMoreFrames()).WillOnce(Return(false));
+  EXPECT_CALL(*image_writer_, WriteFrame(_))
+      .WillOnce(Return(Result::Pending()));
+  result = testee_->Process();
+  EXPECT_TRUE(result.pending());
+
+  EXPECT_CALL(*image_reader_, HasMoreFrames()).WillOnce(Return(true));
+  EXPECT_CALL(*image_reader_, GetNextFrame(_))
+      .WillOnce(Invoke(this, &ImageOptimizerTest::SetFrame));
+  EXPECT_CALL(*image_writer_, WriteFrame(_)).WillOnce(Return(Result::Ok()));
+  EXPECT_CALL(*image_reader_, HasMoreFrames()).WillOnce(Return(false));
   EXPECT_CALL(*strategy_, ShouldWaitForMetadata()).WillOnce(Return(true));
-  EXPECT_CALL(*reader, ReadTillTheEnd()).WillOnce(Return(Result::Pending()));
+  EXPECT_CALL(*image_reader_, ReadTillTheEnd())
+      .WillOnce(Return(Result::Pending()));
   result = testee_->Process();
   EXPECT_TRUE(result.pending());
-  EXPECT_CALL(*reader, ReadTillTheEnd()).WillOnce(Return(Result::Pending()));
+  EXPECT_CALL(*image_reader_, ReadTillTheEnd())
+      .WillOnce(Return(Result::Pending()));
   result = testee_->Process();
   EXPECT_TRUE(result.pending());
 
-  EXPECT_CALL(*reader, ReadTillTheEnd()).WillOnce(Return(Result::Ok()));
-  EXPECT_CALL(*writer, FinishWrite()).WillOnce(Return(Result::Pending()));
+  EXPECT_CALL(*image_reader_, ReadTillTheEnd()).WillOnce(Return(Result::Ok()));
+  EXPECT_CALL(*image_writer_, FinishWrite())
+      .WillOnce(Return(Result::Pending()));
   result = testee_->Process();
   EXPECT_TRUE(result.pending());
 

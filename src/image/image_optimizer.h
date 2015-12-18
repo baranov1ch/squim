@@ -52,7 +52,6 @@ class ImageOptimizer {
 
   ImageOptimizer(ImageTypeSelector input_type_selector,
                  std::unique_ptr<OptimizationStrategy> strategy,
-                 std::unique_ptr<ImageReaderWriterFactory> factory,
                  std::unique_ptr<io::BufReader> source,
                  std::unique_ptr<io::VectorWriter> dest);
   ~ImageOptimizer();
@@ -80,7 +79,6 @@ class ImageOptimizer {
 
   ImageTypeSelector input_type_selector_;
   std::unique_ptr<OptimizationStrategy> strategy_;
-  std::unique_ptr<ImageReaderWriterFactory> factory_;
   std::unique_ptr<ImageReader> reader_;
   std::unique_ptr<ImageWriter> writer_;
   std::unique_ptr<io::BufReader> source_;
