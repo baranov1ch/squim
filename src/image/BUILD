@@ -1,6 +1,12 @@
 cc_library(
   name = "image",
   hdrs = [
+    "codecs/decode_params.h",
+    "codecs/gif_decoder.h",
+    "codecs/jpeg_decoder.h",
+    "codecs/png_decoder.h",
+    "codecs/webp_decoder.h",
+    "codecs/webp_encoder.h",
     "decoding_reader.h",
     "image_codec_factory.h",
     "image_constants.h",
@@ -20,15 +26,10 @@ cc_library(
   ],
   srcs = [
     "codecs/gif_decoder.cc",
-    "codecs/gif_decoder.h",
     "codecs/jpeg_decoder.cc",
-    "codecs/jpeg_decoder.h",
     "codecs/png_decoder.cc",
-    "codecs/png_decoder.h",
     "codecs/webp_decoder.cc",
-    "codecs/webp_decoder.h",
     "codecs/webp_encoder.cc",
-    "codecs/webp_encoder.h",
     "decoding_reader.cc",
     "image_constants.cc",
     "image_frame.cc",

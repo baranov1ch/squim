@@ -51,6 +51,14 @@ bool LoadReferencePng(const std::string& filename,
                       ImageInfo* image_info,
                       ImageFrame* image_frame);
 
+// Same as above, but if |expand_gray| is true, grayscale image will be
+// converted into RGB.
+bool LoadReferencePngExpandGray(const std::string& filename,
+                                const std::vector<uint8_t>& png_data,
+                                bool expand_gray,
+                                ImageInfo* image_info,
+                                ImageFrame* image_frame);
+
 // Compares all image properties with provided |reference|.
 void CheckImageInfo(const std::string& image_file,
                     const ImageInfo& reference,

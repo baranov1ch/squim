@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "base/make_noncopyable.h"
+#include "image/codecs/decode_params.h"
 #include "image/image_decoder.h"
 #include "image/image_frame.h"
 #include "image/image_metadata.h"
@@ -18,7 +19,11 @@ class JpegDecoder : public ImageDecoder {
   MAKE_NONCOPYABLE(JpegDecoder);
 
  public:
-  JpegDecoder(std::unique_ptr<io::BufReader> source);
+  struct Params : public DecodeParams {
+    static Params Default();
+  };
+
+  JpegDecoder(Params params, std::unique_ptr<io::BufReader> source);
   ~JpegDecoder() override;
 
   // ImageDecoder implementation:
@@ -72,6 +77,7 @@ class JpegDecoder : public ImageDecoder {
   uint32_t height_ = 0;
   bool is_progressive_ = false;
   Result decode_error_ = Result::Ok();
+  Params params_;
 };
 
 }  // namespace image

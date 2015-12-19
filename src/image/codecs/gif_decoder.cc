@@ -6,6 +6,16 @@
 
 namespace image {
 
+// static
+GifDecoder::Params GifDecoder::Params::Default() {
+  Params params;
+  params.allowed_color_schemes.insert(ColorScheme::kRGB);
+  params.allowed_color_schemes.insert(ColorScheme::kRGBA);
+  params.allowed_color_schemes.insert(ColorScheme::kGrayScale);
+  params.allowed_color_schemes.insert(ColorScheme::kGrayScaleAlpha);
+  return params;
+}
+
 class GifDecoder::Impl {
   MAKE_NONCOPYABLE(Impl);
 
@@ -25,8 +35,8 @@ class GifDecoder::Impl {
   GifDecoder* decoder_;
 };
 
-GifDecoder::GifDecoder(std::unique_ptr<io::BufReader> source)
-    : source_(std::move(source)) {
+GifDecoder::GifDecoder(Params params, std::unique_ptr<io::BufReader> source)
+    : source_(std::move(source)), params_(params) {
   impl_ = base::make_unique<Impl>(this);
 }
 

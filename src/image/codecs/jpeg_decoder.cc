@@ -18,6 +18,16 @@ extern "C" {
 
 namespace image {
 
+// static
+JpegDecoder::Params JpegDecoder::Params::Default() {
+  Params params;
+  params.allowed_color_schemes.insert(ColorScheme::kRGB);
+  params.allowed_color_schemes.insert(ColorScheme::kRGBA);
+  params.allowed_color_schemes.insert(ColorScheme::kGrayScale);
+  params.allowed_color_schemes.insert(ColorScheme::kGrayScaleAlpha);
+  return params;
+}
+
 class JpegDecoder::Impl {
   MAKE_NONCOPYABLE(Impl);
 
@@ -75,19 +85,33 @@ class JpegDecoder::Impl {
 
         switch (decompress_.jpeg_color_space) {
           case JCS_YCbCr:
+            if (decoder_->params_.color_scheme_allowed(ColorScheme::kYUV)) {
+              decompress_.out_color_space = JCS_YCbCr;
+              decoder_->set_color_space(ColorScheme::kYUV);
+            } else {
+              decompress_.out_color_space = JCS_RGB;
+              decoder_->set_color_space(ColorScheme::kRGB);
+            }
           case JCS_RGB:
             decompress_.out_color_space = JCS_RGB;
             decoder_->set_color_space(ColorScheme::kRGB);
             break;
           case JCS_GRAYSCALE:
-            decompress_.out_color_space = JCS_GRAYSCALE;
-            decoder_->set_color_space(ColorScheme::kGrayScale);
+            if (decoder_->params_.color_scheme_allowed(
+                    ColorScheme::kGrayScale)) {
+              decompress_.out_color_space = JCS_GRAYSCALE;
+              decoder_->set_color_space(ColorScheme::kGrayScale);
+            } else {
+              decompress_.out_color_space = JCS_RGB;
+              decoder_->set_color_space(ColorScheme::kRGB);
+            }
             break;
           case JCS_CMYK:
           case JCS_YCCK:
             // TODO: do something (Manual conversion).
             decompress_.out_color_space = JCS_CMYK;
             decoder_->set_color_space(ColorScheme::kCMYK);
+          // FALLTHROUGH. CMYK/YCCK not supported yet.
           default:
             decoder_->set_color_space(ColorScheme::kUnknown);
             decoder_->Fail(Result::Error(Result::Code::kDecodeError,
@@ -328,8 +352,8 @@ class JpegDecoder::Impl {
   bool restart_needed_ = false;
 };
 
-JpegDecoder::JpegDecoder(std::unique_ptr<io::BufReader> source)
-    : source_(std::move(source)) {
+JpegDecoder::JpegDecoder(Params params, std::unique_ptr<io::BufReader> source)
+    : source_(std::move(source)), params_(params) {
   impl_ = base::make_unique<Impl>(this);
 }
 

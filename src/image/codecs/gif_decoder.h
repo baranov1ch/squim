@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "base/make_noncopyable.h"
+#include "image/codecs/decode_params.h"
 #include "image/image_decoder.h"
 #include "image/image_frame.h"
 #include "image/image_metadata.h"
@@ -19,7 +20,11 @@ class GifDecoder : public ImageDecoder {
   MAKE_NONCOPYABLE(GifDecoder);
 
  public:
-  GifDecoder(std::unique_ptr<io::BufReader> source);
+  struct Params : public DecodeParams {
+    static Params Default();
+  };
+
+  GifDecoder(Params params, std::unique_ptr<io::BufReader> source);
   ~GifDecoder() override;
 
   // ImageDecoder implementation:
@@ -71,6 +76,7 @@ class GifDecoder : public ImageDecoder {
   uint32_t height_ = 0;
   bool is_progressive_ = false;
   Result decode_error_ = Result::Ok();
+  Params params_;
 };
 
 }  // namespace image

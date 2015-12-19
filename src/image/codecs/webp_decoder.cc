@@ -9,6 +9,14 @@
 
 namespace image {
 
+// static
+WebPDecoder::Params WebPDecoder::Params::Default() {
+  Params params;
+  params.allowed_color_schemes.insert(ColorScheme::kYUV);
+  params.allowed_color_schemes.insert(ColorScheme::kYUVA);
+  return params;
+}
+
 class WebPDecoder::Impl {
   MAKE_NONCOPYABLE(Impl);
 
@@ -33,8 +41,8 @@ class WebPDecoder::Impl {
   WebPDecoder* decoder_;
 };
 
-WebPDecoder::WebPDecoder(std::unique_ptr<io::BufReader> source)
-    : source_(std::move(source)) {
+WebPDecoder::WebPDecoder(Params params, std::unique_ptr<io::BufReader> source)
+    : source_(std::move(source)), params_(params) {
   impl_ = base::make_unique<Impl>(this);
 }
 

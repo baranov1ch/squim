@@ -17,7 +17,8 @@ const char kGifTestDir[] = "gif";
 
 std::unique_ptr<ImageDecoder> CreateDecoder(
     std::unique_ptr<io::BufReader> source) {
-  auto decoder = base::make_unique<GifDecoder>(std::move(source));
+  auto decoder = base::make_unique<GifDecoder>(GifDecoder::Params::Default(),
+                                               std::move(source));
   EXPECT_EQ(ImageType::kGif, decoder->GetImageType());
   return std::move(decoder);
 }
@@ -50,7 +51,8 @@ class GifDecoderTest : public testing::Test {
     source->source()->AddChunk(
         base::make_unique<io::Chunk>(&data[0], data.size()));
     source->source()->SendEof();
-    auto testee = base::make_unique<GifDecoder>(std::move(source));
+    auto testee = base::make_unique<GifDecoder>(GifDecoder::Params::Default(),
+                                                std::move(source));
     auto result = testee->Decode();
     EXPECT_EQ(Result::Code::kDecodeError, result.code()) << filename;
   }

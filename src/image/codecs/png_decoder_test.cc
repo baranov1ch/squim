@@ -56,7 +56,8 @@ const char kPngSuiteDir[] = "pngsuite";
 
 std::unique_ptr<ImageDecoder> CreateDecoder(
     std::unique_ptr<io::BufReader> source) {
-  auto decoder = base::make_unique<PngDecoder>(std::move(source));
+  auto decoder = base::make_unique<PngDecoder>(PngDecoder::Params::Default(),
+                                               std::move(source));
   EXPECT_EQ(ImageType::kPng, decoder->GetImageType());
   return std::move(decoder);
 }
@@ -87,7 +88,8 @@ class PngDecoderTest : public testing::Test {
     source->source()->AddChunk(
         base::make_unique<io::Chunk>(&data[0], data.size()));
     source->source()->SendEof();
-    auto testee = base::make_unique<PngDecoder>(std::move(source));
+    auto testee = base::make_unique<PngDecoder>(PngDecoder::Params::Default(),
+                                                std::move(source));
     auto result = testee->Decode();
     if (filename == "emptyfile") {
       EXPECT_EQ(Result::Code::kUnexpectedEof, result.code()) << filename;
@@ -140,6 +142,32 @@ TEST_F(PngDecoderTest, ReadHeaderThenRestSmall) {
 TEST_F(PngDecoderTest, ReadHeaderThenRestMedium) {
   for (auto pic : kValidPngSuiteFiles)
     ValidatePngRandomReads(pic, 100, ReadType::kReadHeaderThenBody);
+}
+
+TEST_F(PngDecoderTest, ReadExpandGray) {
+  auto decoder_builder = [](
+      std::unique_ptr<io::BufReader> source) -> std::unique_ptr<ImageDecoder> {
+    PngDecoder::Params params;
+    params.allowed_color_schemes.insert(ColorScheme::kRGB);
+    params.allowed_color_schemes.insert(ColorScheme::kRGBA);
+    auto decoder = base::make_unique<PngDecoder>(params, std::move(source));
+    EXPECT_EQ(ImageType::kPng, decoder->GetImageType());
+    return std::move(decoder);
+  };
+  const char* kSomeGrayImages[] = {
+      "basi0g01", "basi0g02", "basi0g04", "basi0g08", "basi0g16",
+  };
+  for (const auto& filename : kSomeGrayImages) {
+    std::vector<uint8_t> data;
+    ASSERT_TRUE(ReadTestFile(kPngSuiteDir, filename, "png", &data));
+    auto read_spec = GenerateFuzzyReads(data.size(), 1000);
+    auto ref_reader = [&data, filename](ImageInfo* info,
+                                        ImageFrame* frame) -> bool {
+      return LoadReferencePngExpandGray(filename, data, true, info, frame);
+    };
+    ValidateDecodeWithReadSpec(filename, data, decoder_builder, ref_reader,
+                               read_spec, ReadType::kReadAll);
+  }
 }
 
 }  // namespace image

@@ -94,6 +94,15 @@ bool LoadReferencePng(const std::string& filename,
                       const std::vector<uint8_t>& png_data,
                       ImageInfo* image_info,
                       ImageFrame* image_frame) {
+  return LoadReferencePngExpandGray(filename, png_data, false, image_info,
+                                    image_frame);
+}
+
+bool LoadReferencePngExpandGray(const std::string& filename,
+                                const std::vector<uint8_t>& png_data,
+                                bool expand_gray,
+                                ImageInfo* image_info,
+                                ImageFrame* image_frame) {
   DCHECK(image_info);
   DCHECK(image_frame);
   struct ErrData {
@@ -134,6 +143,9 @@ bool LoadReferencePng(const std::string& filename,
   png_set_read_fn(png_ptr, &reader, read_fn);
 
   auto transforms = PNG_TRANSFORM_EXPAND | PNG_TRANSFORM_SCALE_16;
+  if (expand_gray)
+    transforms |= PNG_TRANSFORM_GRAY_TO_RGB;
+
   png_read_png(png_ptr, info_ptr, transforms, nullptr);
 
   png_uint_32 width, height;

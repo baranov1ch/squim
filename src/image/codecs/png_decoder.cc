@@ -17,6 +17,16 @@ extern "C" {
 
 namespace image {
 
+// static
+PngDecoder::Params PngDecoder::Params::Default() {
+  Params params;
+  params.allowed_color_schemes.insert(ColorScheme::kRGB);
+  params.allowed_color_schemes.insert(ColorScheme::kRGBA);
+  params.allowed_color_schemes.insert(ColorScheme::kGrayScale);
+  params.allowed_color_schemes.insert(ColorScheme::kGrayScaleAlpha);
+  return params;
+}
+
 class PngDecoder::Impl {
  public:
   Impl(PngDecoder* decoder) : decoder_(decoder) {
@@ -110,13 +120,24 @@ class PngDecoder::Impl {
     }
 
     if (color_type == PNG_COLOR_TYPE_GRAY) {
-      if (!has_trns) {
-        decoder_->set_color_space(ColorScheme::kGrayScale);
+      if (!decoder_->params_.color_scheme_allowed(ColorScheme::kGrayScale)) {
+        png_set_gray_to_rgb(png_);
+        decoder_->set_color_space(ColorScheme::kRGB);
+      } else {
+        if (!has_trns) {
+          decoder_->set_color_space(ColorScheme::kGrayScale);
+        } else {
+          decoder_->set_color_space(ColorScheme::kGrayScaleAlpha);
+        }
+      }
+    } else if (color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+      if (!decoder_->params_.color_scheme_allowed(
+              ColorScheme::kGrayScaleAlpha)) {
+        png_set_gray_to_rgb(png_);
+        decoder_->set_color_space(ColorScheme::kRGBA);
       } else {
         decoder_->set_color_space(ColorScheme::kGrayScaleAlpha);
       }
-    } else if (color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
-      decoder_->set_color_space(ColorScheme::kGrayScaleAlpha);
     } else if (color_type == PNG_COLOR_TYPE_PALETTE ||
                color_type == PNG_COLOR_TYPE_RGB) {
       if (!has_trns) {
@@ -290,8 +311,8 @@ class PngDecoder::Impl {
   Result error_ = Result::Ok();
 };
 
-PngDecoder::PngDecoder(std::unique_ptr<io::BufReader> source)
-    : source_(std::move(source)) {
+PngDecoder::PngDecoder(Params params, std::unique_ptr<io::BufReader> source)
+    : source_(std::move(source)), params_(params) {
   impl_ = base::make_unique<Impl>(this);
 }
 

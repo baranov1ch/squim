@@ -32,7 +32,8 @@ const char* kInvalidFiles[] = {
 
 std::unique_ptr<ImageDecoder> CreateDecoder(
     std::unique_ptr<io::BufReader> source) {
-  auto decoder = base::make_unique<JpegDecoder>(std::move(source));
+  auto decoder = base::make_unique<JpegDecoder>(JpegDecoder::Params::Default(),
+                                                std::move(source));
   EXPECT_EQ(ImageType::kJpeg, decoder->GetImageType());
   return std::move(decoder);
 }
@@ -57,37 +58,6 @@ class JpegDecoderTest : public testing::Test {
                                read_spec, read_type);
   }
 
-  void ValidateJpegDeterminedReads(const std::string& filename,
-                                   size_t max_chunk_size,
-                                   ReadType read_type) {
-    std::vector<uint8_t> jpeg_data;
-    std::vector<uint8_t> png_data;
-    ASSERT_TRUE(ReadTestFile(kJpegTestDir, filename, "jpg", &jpeg_data));
-    ASSERT_TRUE(ReadTestFile(kJpegTestDir, filename, "png", &png_data));
-    std::vector<std::vector<size_t>> read_spec;
-    // size_t bound = 2530;
-    read_spec.push_back(std::vector<size_t>{{2, 1, 1}});
-    read_spec.push_back(std::vector<size_t>{{2, 4}});
-    read_spec.push_back(std::vector<size_t>{{4, 2, 3}});
-    read_spec.push_back(std::vector<size_t>{{2, 2}});
-    read_spec.push_back(std::vector<size_t>{{4}});
-    read_spec.push_back(std::vector<size_t>{{2, 1}});
-    read_spec.push_back(std::vector<size_t>{{3, 3}});
-    read_spec.push_back(std::vector<size_t>{{2, 5}});
-    read_spec.push_back(std::vector<size_t>{{5, 5, 2}});
-    read_spec.push_back(std::vector<size_t>{{4, 4}});
-    read_spec.push_back(std::vector<size_t>{{1, 1, 3}});
-    read_spec.push_back(std::vector<size_t>{{2}});
-    read_spec.push_back(std::vector<size_t>{{5, 4}});
-    read_spec.push_back(std::vector<size_t>{{jpeg_data.size()}});
-    auto ref_reader = [&png_data, filename](ImageInfo* info,
-                                            ImageFrame* frame) -> bool {
-      return LoadReferencePng(filename, png_data, info, frame);
-    };
-    ValidateDecodeWithReadSpec(filename, jpeg_data, CreateDecoder, ref_reader,
-                               read_spec, read_type);
-  }
-
   void CheckInvalidRead(const std::string& filename) {
     std::vector<uint8_t> data;
     ASSERT_TRUE(ReadTestFileWithExt(kJpegTestDir, filename, &data));
@@ -96,7 +66,8 @@ class JpegDecoderTest : public testing::Test {
     source->source()->AddChunk(
         base::make_unique<io::Chunk>(&data[0], data.size()));
     source->source()->SendEof();
-    auto testee = base::make_unique<JpegDecoder>(std::move(source));
+    auto testee = base::make_unique<JpegDecoder>(JpegDecoder::Params::Default(),
+                                                 std::move(source));
     auto result = testee->Decode();
     if (filename == "emptyfile.jpg") {
       EXPECT_EQ(Result::Code::kUnexpectedEof, result.code()) << filename;
