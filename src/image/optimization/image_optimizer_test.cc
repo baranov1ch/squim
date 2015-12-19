@@ -1,4 +1,4 @@
-#include "image/image_optimizer.h"
+#include "image/optimization/image_optimizer.h"
 
 #include <memory>
 #include <vector>
@@ -11,7 +11,7 @@
 #include "image/image_metadata.h"
 #include "image/image_reader.h"
 #include "image/image_writer.h"
-#include "image/optimization_strategy.h"
+#include "image/optimization/optimization_strategy.h"
 #include "io/buf_reader.h"
 #include "io/buffered_source.h"
 #include "io/writer.h"

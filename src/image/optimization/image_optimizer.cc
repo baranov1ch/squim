@@ -1,11 +1,11 @@
-#include "image/image_optimizer.h"
+#include "image/optimization/image_optimizer.h"
 
 #include <cstring>
 
 #include "glog/logging.h"
 #include "image/image_reader.h"
 #include "image/image_writer.h"
-#include "image/optimization_strategy.h"
+#include "image/optimization/optimization_strategy.h"
 #include "io/buf_reader.h"
 #include "io/writer.h"
 
