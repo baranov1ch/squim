@@ -59,7 +59,7 @@ class ImageFrame {
   }
 
   uint8_t* GetPixel(uint32_t x, uint32_t y) {
-    return data_.get() + (stride() * x + bpp_ * y);
+    return GetData(stride() * y + bpp() * x);
   }
 
   const uint8_t* GetPixel(uint32_t x, uint32_t y) const {
@@ -81,6 +81,19 @@ class ImageFrame {
   ColorScheme color_scheme_ = ColorScheme::kUnknown;
   size_t required_previous_frame_index_ = kNoPreviousFrameIndex;
   std::unique_ptr<uint8_t[]> data_;
+};
+
+class Bitmap {
+ public:
+  Bitmap(ImageFrame* frame) : frame_(frame) {}
+
+  template <typename Pixel>
+  Pixel GetPixel(uint32_t x, uint32_t y) {
+    DCHECK_EQ(Pixel::size(), frame_->bpp());
+    return Pixel(frame_->GetPixel(x, y));
+  }
+
+  ImageFrame* frame_;
 };
 
 }  // namespace image

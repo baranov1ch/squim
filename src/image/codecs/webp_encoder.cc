@@ -4,6 +4,7 @@
 #include "glog/logging.h"
 #include "google/libwebp/upstream/src/webp/encode.h"
 #include "image/image_frame.h"
+#include "image/pixel.h"
 #include "io/writer.h"
 
 namespace image {
@@ -43,6 +44,33 @@ WebPPreset PresetToWebPPreset(WebPEncoder::Preset preset) {
     default:
       DCHECK(false) << "Unknown WebP preset: " << static_cast<int>(preset);
       return WEBP_PRESET_DEFAULT;
+  }
+}
+
+void ConvertGrayToRGB(ImageFrame* in, ImageFrame* out) {
+  Bitmap from(in);
+  Bitmap to(out);
+  auto width = in->width();
+  auto height = in->height();
+
+  if (in->has_alpha()) {
+    out->Init(width, height, ColorScheme::kRGBA);
+    for (uint32_t y = 0; y < height; ++y) {
+      for (uint32_t x = 0; x < width; ++x) {
+        const auto gray = from.GetPixel<GrayScaleAlphaPixel>(x, y);
+        auto rgb = to.GetPixel<RGBAPixel>(x, y);
+        rgb.set(gray.g(), gray.g(), gray.g(), gray.a());
+      }
+    }
+  } else {
+    out->Init(width, height, ColorScheme::kRGB);
+    for (uint32_t y = 0; y < height; ++y) {
+      for (uint32_t x = 0; x < width; ++x) {
+        const auto gray = from.GetPixel<GrayScalePixel>(x, y);
+        auto rgb = to.GetPixel<RGBPixel>(x, y);
+        rgb.set(gray.g(), gray.g(), gray.g());
+      }
+    }
   }
 }
 
@@ -126,6 +154,7 @@ class Picture {
     if (frame->is_grayscale()) {
       // TODO: transform to RGB(A).
       transformed_frame.reset(new ImageFrame);
+      ConvertGrayToRGB(frame, transformed_frame.get());
       frame = transformed_frame.get();
     }
 

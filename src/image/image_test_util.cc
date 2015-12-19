@@ -44,8 +44,8 @@ std::string GetTestDirRoot() {
 // channels. It also allows padding at the end of scanlines.
 double ComputePSNR(ImageFrame* frame1, ImageFrame* frame2) {
   double error = 0.0;
-  for (uint32_t y = 0; y < frame1->width(); ++y) {
-    for (uint32_t x = 0; x < frame1->height(); ++x) {
+  for (uint32_t y = 0; y < frame1->height(); ++y) {
+    for (uint32_t x = 0; x < frame1->width(); ++x) {
       uint8_t* pixel1 = frame1->GetPixel(x, y);
       uint8_t* pixel2 = frame2->GetPixel(x, y);
       for (size_t ch = 0; ch < frame1->bpp(); ++ch) {
@@ -222,8 +222,8 @@ void CheckImageFrameByPSNR(const std::string& image_file,
   if (min_psnr >= kMaxPSNR) {
     // Exact match.
     EXPECT_EQ(ref_reader.size(), test_reader.size()) << image_file;
-    for (uint32_t y = 0; y < reference->width(); ++y) {
-      for (uint32_t x = 0; x < reference->height(); ++x) {
+    for (uint32_t y = 0; y < reference->height(); ++y) {
+      for (uint32_t x = 0; x < reference->width(); ++x) {
         auto* pixel = frame->GetPixel(x, y);
         auto* ref_pixel = reference->GetPixel(x, y);
         EXPECT_EQ(0, std::memcmp(pixel, ref_pixel, frame->bpp()))

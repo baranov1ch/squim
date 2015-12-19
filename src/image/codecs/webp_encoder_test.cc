@@ -19,9 +19,8 @@ namespace {
 
 const char kWebPTestDir[] = "webp";
 
-const char* kValidImages[] = {
-    "alpha_32x32", "opaque_32x20",
-};
+const char* kValidImages[] = {"alpha_32x32", "opaque_32x20",
+                              "pagespeed_32x32_gray"};
 
 class TestWriter : public io::VectorWriter {
  public:
@@ -85,8 +84,14 @@ class WebPEncoderTest : public testing::Test {
     auto result = testee->EncodeFrame(&ref_frame, true);
     EXPECT_EQ(Result::Code::kOk, result.code());
     ImageFrame webp_frame;
+    auto webp_color_scheme = info.color_scheme;
+    if (webp_color_scheme == ColorScheme::kGrayScale) {
+      webp_color_scheme = ColorScheme::kRGB;
+    } else if (webp_color_scheme == ColorScheme::kGrayScaleAlpha) {
+      webp_color_scheme = ColorScheme::kRGBA;
+    }
     ASSERT_TRUE(ReadWebP(writer_raw->data(), info.width, info.height,
-                         info.color_scheme, &webp_frame))
+                         webp_color_scheme, &webp_frame))
         << filename;
     CheckImageFrameByPSNR(filename, &ref_frame, &webp_frame, 33);
   }

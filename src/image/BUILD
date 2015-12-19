@@ -13,6 +13,7 @@ cc_library(
     "image_reader.h",
     "image_writer.h",
     "optimization_strategy.h",
+    "pixel.h",
     "result.h",
     "scanline_reader.h",
     "single_frame_writer.h",
