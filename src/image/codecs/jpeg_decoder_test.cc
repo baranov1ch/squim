@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "base/memory/make_unique.h"
+#include "image/image_info.h"
 #include "image/image_test_util.h"
 #include "glog/logging.h"
 
@@ -130,6 +131,30 @@ TEST_F(JpegDecoderTest, ReadHeaderThenRestSmall) {
 TEST_F(JpegDecoderTest, ReadHeaderThenRestMedium) {
   for (auto pic : kValidJpegImages)
     ValidateJpegRandomReads(pic, 100, ReadType::kReadHeaderThenBody);
+}
+
+TEST_F(JpegDecoderTest, ReadExpandGrayScale) {
+  auto decoder_builder = [](
+      std::unique_ptr<io::BufReader> source) -> std::unique_ptr<ImageDecoder> {
+    JpegDecoder::Params params;
+    params.allowed_color_schemes.insert(ColorScheme::kRGB);
+    params.allowed_color_schemes.insert(ColorScheme::kRGBA);
+    auto decoder = base::make_unique<JpegDecoder>(params, std::move(source));
+    EXPECT_EQ(ImageType::kJpeg, decoder->GetImageType());
+    return std::move(decoder);
+  };
+  std::string filename("testgray");
+  std::vector<uint8_t> jpeg_data;
+  std::vector<uint8_t> png_data;
+  ASSERT_TRUE(ReadTestFile(kJpegTestDir, filename, "jpg", &jpeg_data));
+  ASSERT_TRUE(ReadTestFile(kJpegTestDir, filename, "png", &png_data));
+  auto read_spec = GenerateFuzzyReads(jpeg_data.size(), 1000);
+  auto ref_reader = [&png_data, filename](ImageInfo* info,
+                                          ImageFrame* frame) -> bool {
+    return LoadReferencePngExpandGray(filename, png_data, true, info, frame);
+  };
+  ValidateDecodeWithReadSpec(filename, jpeg_data, decoder_builder, ref_reader,
+                             read_spec, ReadType::kReadHeaderOnly);
 }
 
 }  // namespace image
