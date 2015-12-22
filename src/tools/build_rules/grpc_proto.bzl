@@ -1,3 +1,6 @@
+# This is almost complete copy of kythe protobuf build rules:
+# https://github.com/google/kythe/blob/master/tools/build_rules/go.bzl
+
 standard_proto_path = "google/protobuf/src/"
 
 def _genproto_impl(ctx):

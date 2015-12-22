@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Largely copied from google depot_tools git_cl.py.
+# https://chromium.googlesource.com/chromium/tools/depot_tools.git/+/master/git_cl.py
 
 import argparse
 import logging

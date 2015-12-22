@@ -25,12 +25,13 @@ class ConvertToWebPStrategy : public OptimizationStrategy {
  public:
   Result ShouldEvenBother() override;
   Result CreateImageReader(ImageType image_type,
-                                   std::unique_ptr<io::BufReader> src,
-                                   std::unique_ptr<ImageReader>* reader) override;
+                           std::unique_ptr<io::BufReader> src,
+                           std::unique_ptr<ImageReader>* reader) override;
   Result CreateImageWriter(std::unique_ptr<io::VectorWriter> dest,
-                                   ImageReader* reader,
-                                   std::unique_ptr<ImageWriter>* writer) override;
-  Result AdjustImageReaderAfterInfoReady(std::unique_ptr<ImageReader>* reader) override;
+                           ImageReader* reader,
+                           std::unique_ptr<ImageWriter>* writer) override;
+  Result AdjustImageReaderAfterInfoReady(
+      std::unique_ptr<ImageReader>* reader) override;
   bool ShouldWaitForMetadata() override;
 };
 

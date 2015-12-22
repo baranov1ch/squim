@@ -1,5 +1,21 @@
-#ifndef IMAGE_IMAGE_OPTIMIZER_H_
-#define IMAGE_IMAGE_OPTIMIZER_H_
+/*
+ * Copyright 2015 Alexey Baranov <me@kotiki.cc>. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef IMAGE_OPTIMIZATION_IMAGE_OPTIMIZER_H_
+#define IMAGE_OPTIMIZATION_IMAGE_OPTIMIZER_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -30,18 +46,6 @@ class ImageOptimizer {
  public:
   static constexpr size_t kLongestSignatureMatch = sizeof("RIFF????WEBPVP") - 1;
 
-  enum class State {
-    kInit,
-    kReadingFormat,
-    kReadingImageInfo,
-    kReadFrame,
-    kWriteFrame,
-    kDrain,
-    kFinish,
-    kComplete,
-    kNone,
-  };
-
   using ImageTypeSelector = std::function<Result(io::BufReader*, ImageType*)>;
 
   static ImageType ChooseImageType(
@@ -60,6 +64,18 @@ class ImageOptimizer {
   bool Finished() const;
 
  private:
+  enum class State {
+    kInit,
+    kReadingFormat,
+    kReadingImageInfo,
+    kReadFrame,
+    kWriteFrame,
+    kDrain,
+    kFinish,
+    kComplete,
+    kNone,
+  };
+
   Result DoLoop(Result result);
 
   Result DoInit();
@@ -90,4 +106,4 @@ std::ostream& operator<<(std::ostream& os, ImageOptimizer::State state);
 
 }  // namespace image
 
-#endif  // IMAGE_IMAGE_OPTIMIZER_H_
+#endif  // IMAGE_OPTIMIZATION_IMAGE_OPTIMIZER_H_
