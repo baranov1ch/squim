@@ -22,7 +22,7 @@
 #include <cstring>
 #include <iterator>
 
-#include "glog/logging.h"
+#include "base/logging.h"
 
 namespace image {
 

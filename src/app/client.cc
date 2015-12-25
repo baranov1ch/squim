@@ -19,7 +19,7 @@
 #include <random>
 #include <thread>
 
-#include "glog/logging.h"
+#include "base/logging.h"
 #include "gflags/gflags.h"
 #include "grpc++/grpc++.h"
 #include "proto/image_optimizer.grpc.pb.h"

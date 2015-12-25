@@ -16,8 +16,8 @@
 
 #include "image/codecs/webp_decoder.h"
 
+#include "base/logging.h"
 #include "base/memory/make_unique.h"
-#include "glog/logging.h"
 #include "google/libwebp/upstream/src/webp/decode.h"
 #include "google/libwebp/upstream/src/webp/demux.h"
 #include "image/scanline_reader.h"

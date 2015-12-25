@@ -14,26 +14,12 @@
  * limitations under the License.
  */
 
-#include "image/image_constants.h"
-
-#include "base/logging.h"
+#include "image/optimization/codec_factory_with_configurator.h"
 
 namespace image {
 
-size_t GetBytesPerPixel(ColorScheme scheme) {
-  switch (scheme) {
-    case ColorScheme::kGrayScale:
-      return 1;
-    case ColorScheme::kGrayScaleAlpha:
-      return 2;
-    case ColorScheme::kRGB:
-      return 3;
-    case ColorScheme::kRGBA:
-      return 4;
-    default:
-      DCHECK(false);
-      return 0;
-  }
-}
+CodecFactoryWithConfigurator::CodecFactoryWithConfigurator(
+    CodecConfigurator* configurator)
+    : configurator_(configurator) {}
 
 }  // namespace image

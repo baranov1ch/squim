@@ -16,8 +16,8 @@
 
 #include "image/codecs/gif_decoder.h"
 
+#include "base/logging.h"
 #include "base/memory/make_unique.h"
-#include "glog/logging.h"
 #include "io/buf_reader.h"
 
 namespace image {

@@ -29,7 +29,6 @@ cc_library(
   ],
   deps = [
     "//base:base",
-    "//external:glog",
   ],
   visibility = ["//visibility:public"]
 )

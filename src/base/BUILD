@@ -15,6 +15,7 @@
 cc_library(
   name = "base",
   hdrs = [
+    "logging.h",
     "make_noncopyable.h",
     "memory/make_unique.h",
     "strings/string_piece.h",

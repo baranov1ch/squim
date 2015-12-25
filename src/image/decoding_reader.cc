@@ -16,7 +16,7 @@
 
 #include "image/decoding_reader.h"
 
-#include "glog/logging.h"
+#include "base/logging.h"
 #include "image/image_decoder.h"
 
 namespace image {

@@ -18,8 +18,8 @@
 
 #include <cstring>
 
+#include "base/logging.h"
 #include "base/memory/make_unique.h"
-#include "glog/logging.h"
 
 namespace io {
 

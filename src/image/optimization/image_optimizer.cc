@@ -18,7 +18,7 @@
 
 #include <cstring>
 
-#include "glog/logging.h"
+#include "base/logging.h"
 #include "image/image_reader.h"
 #include "image/image_writer.h"
 #include "image/optimization/optimization_strategy.h"

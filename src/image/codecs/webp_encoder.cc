@@ -16,8 +16,8 @@
 
 #include "image/codecs/webp_encoder.h"
 
+#include "base/logging.h"
 #include "base/memory/make_unique.h"
-#include "glog/logging.h"
 #include "google/libwebp/upstream/src/webp/encode.h"
 #include "image/image_frame.h"
 #include "image/pixel.h"
@@ -214,6 +214,11 @@ class Picture {
 };
 
 }  // namespace
+
+// static
+WebPEncoder::Params WebPEncoder::Params::Default() {
+  return Params();
+}
 
 class WebPEncoder::Impl {
  public:

@@ -19,9 +19,9 @@
 #include <memory>
 #include <vector>
 
+#include "base/logging.h"
 #include "base/memory/make_unique.h"
 #include "base/strings/string_util.h"
-#include "glog/logging.h"
 #include "image/image_frame.h"
 #include "image/image_info.h"
 #include "image/image_metadata.h"

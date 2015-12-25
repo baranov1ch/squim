@@ -17,7 +17,7 @@
 #include <memory>
 
 #include "app/image_optimizer_service.h"
-#include "glog/logging.h"
+#include "base/logging.h"
 #include "webp/encode.h"
 #include "gflags/gflags.h"
 #include "grpc++/grpc++.h"

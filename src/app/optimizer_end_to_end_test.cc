@@ -19,7 +19,7 @@
 #include <memory>
 #include <thread>
 
-#include "glog/logging.h"
+#include "base/logging.h"
 #include "grpc++/grpc++.h"
 
 #include "gtest/gtest.h"

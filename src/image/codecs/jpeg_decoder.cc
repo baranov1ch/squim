@@ -23,8 +23,8 @@ extern "C" {
 #include <stdio.h>  // jpeglib.h needs stdio FILE.
 }
 
+#include "base/logging.h"
 #include "base/memory/make_unique.h"
-#include "glog/logging.h"
 #include "image/scanline_reader.h"
 #include "io/buf_reader.h"
 

@@ -21,7 +21,7 @@ cc_library(
     "image_optimizer_service.cc"
   ],
   deps = [
-    "//external:glog",
+    "//base:base",
     "//external:grpc++",
     "//image:image",
     "//io:io",
@@ -50,8 +50,8 @@ cc_binary(
     "client.cc",
   ],
   deps = [
+    "//base:base",
     "//external:gflags",
-    "//external:glog",
     "//external:grpc++",
     "//proto:image_optimizer_cc",
   ],

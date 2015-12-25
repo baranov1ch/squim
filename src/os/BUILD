@@ -20,7 +20,6 @@ cc_library(
   ],
   deps = [
     "//base:base",
-    "//external:glog",
     "//io:io",
   ],
   visibility = ["//visibility:public"]

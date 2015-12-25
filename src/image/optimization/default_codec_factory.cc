@@ -16,8 +16,8 @@
 
 #include "image/optimization/default_codec_factory.h"
 
+#include "base/logging.h"
 #include "base/memory/make_unique.h"
-#include "glog/logging.h"
 #include "image/optimization/codec_configurator.h"
 #include "io/buf_reader.h"
 #include "io/writer.h"

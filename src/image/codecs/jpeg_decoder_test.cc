@@ -19,10 +19,10 @@
 #include <memory>
 #include <vector>
 
+#include "base/logging.h"
 #include "base/memory/make_unique.h"
 #include "image/image_info.h"
 #include "image/image_test_util.h"
-#include "glog/logging.h"
 
 #include "gtest/gtest.h"
 

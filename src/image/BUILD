@@ -51,6 +51,7 @@ cc_library(
     "image_constants.cc",
     "image_frame.cc",
     "optimization/codec_configurator.cc",
+    "optimization/codec_factory_with_configurator.cc",
     "optimization/default_codec_factory.cc",
     "optimization/image_optimizer.cc",
     "result.cc",
@@ -58,7 +59,6 @@ cc_library(
   ],
   deps = [
     "//base:base",
-    "//external:glog",
     "//external:libjpeg",
     "//external:libpng",
     "//external:libwebp",

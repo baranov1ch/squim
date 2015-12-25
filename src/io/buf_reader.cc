@@ -18,7 +18,7 @@
 
 #include <cstring>
 
-#include "glog/logging.h"
+#include "base/logging.h"
 #include "io/buffered_source.h"
 
 namespace io {
