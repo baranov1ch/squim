@@ -17,18 +17,25 @@
 #ifndef IMAGE_OPTIMIZATION_CODEC_CONFIGURATOR_H_
 #define IMAGE_OPTIMIZATION_CODEC_CONFIGURATOR_H_
 
+#include "image/codecs/gif_decoder.h"
+#include "image/codecs/jpeg_decoder.h"
+#include "image/codecs/png_decoder.h"
+#include "image/codecs/webp_decoder.h"
+#include "image/codecs/webp_encoder.h"
+
 namespace image {
 
 class CodecConfigurator {
  public:
+  CodecConfigurator();
+  virtual ~CodecConfigurator();
+
   virtual GifDecoder::Params GetGifDecoderParams();
   virtual JpegDecoder::Params GetJpegDecoderParams();
   virtual PngDecoder::Params GetPngDecoderParams();
   virtual WebPDecoder::Params GetWebPDecoderParams();
 
   virtual WebPEncoder::Params GetWebPEncoderParams();
-
-  virtual ~CodecConfigurator();
 };
 
 }  // namespace image

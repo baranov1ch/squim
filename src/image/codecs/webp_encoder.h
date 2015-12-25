@@ -68,6 +68,8 @@ class WebPEncoder : public ImageEncoder {
     Hint hint = Hint::kDefault;
     Preset preset = Preset::kDefault;
     Compression compression = Compression::kLossy;
+
+    static Params Default();
   };
 
   WebPEncoder(Params params, std::unique_ptr<io::VectorWriter> dst);

@@ -17,12 +17,20 @@
 #ifndef IMAGE_OPTIMIZATION_CONVERT_TO_WEBP_STRATEGY_H_
 #define IMAGE_OPTIMIZATION_CONVERT_TO_WEBP_STRATEGY_H_
 
+#include "base/make_noncopyable.h"
+#include "image/optimization/codec_configurator.h"
 #include "image/optimization/optimization_strategy.h"
 
 namespace image {
 
-class ConvertToWebPStrategy : public OptimizationStrategy {
+class ImageCodecFactory;
+
+class ConvertToWebPStrategy : public OptimizationStrategy,
+                              public CodecConfigurator {
+  MAKE_NONCOPYABLE(ConvertToWebPStrategy);
+
  public:
+  // OptimizationStrategy implementation:
   Result ShouldEvenBother() override;
   Result CreateImageReader(ImageType image_type,
                            std::unique_ptr<io::BufReader> src,
@@ -33,6 +41,16 @@ class ConvertToWebPStrategy : public OptimizationStrategy {
   Result AdjustImageReaderAfterInfoReady(
       std::unique_ptr<ImageReader>* reader) override;
   bool ShouldWaitForMetadata() override;
+
+  // CodecConfigurator overrides:
+  GifDecoder::Params GetGifDecoderParams() override;
+  JpegDecoder::Params GetJpegDecoderParams() override;
+  PngDecoder::Params GetPngDecoderParams() override;
+  WebPDecoder::Params GetWebPDecoderParams() override;
+  WebPEncoder::Params GetWebPEncoderParams() override;
+
+ private:
+  std::unique_ptr<ImageCodecFactory> codec_factory_;
 };
 
 }  // namespace image

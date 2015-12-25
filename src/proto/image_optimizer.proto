@@ -23,10 +23,103 @@ service ImageOptimizer {
       returns (stream ImageResponsePart) {}
 }
 
+enum ImageType {
+  JPEG = 0;
+  PNG = 1;
+  GIF = 2;
+  WEBP = 3;
+  UNKNOWN = 4;
+}
+
 message ImageRequestPart {
+  enum MessageType {
+    META = 0;
+    IMAGE_DATA = 1;
+  }
+
+  enum WebPCompressionType {
+    LOSSY = 0;
+    LOSSLESS = 1;
+    MIXED = 2;
+  }
+
+  message Meta {
+    message WebPOptimizationParams {
+      double quality = 1;
+      int32 strength = 2;
+      WebPCompressionType compression_type = 3;
+    }
+
+    // Expected type of image. Just for bookeeping, actual image type will be
+    // determined from image data.
+    ImageType expected_type = 1;
+
+    // Expected input size.
+    uint64 content_length = 2;
+
+    // Which format to optimize to. For now, only webp is supported.
+    ImageType target_type = 3;
+
+    bool try_strip_alpha = 5;
+    bool strip_iccp = 6;
+    bool strip_exif = 7;
+    bool strip_xmp = 8;
+    uint32 timeout_millis = 9;
+
+    WebPOptimizationParams webp_params = 10;
+  }
+
   string name = 1;
+  MessageType type = 2;
+  Meta meta = 3;
+  bytes data = 4;
 }
 
 message ImageResponsePart {
+  enum Result {
+    OK = 0;
+    DECODE_ERROR = 1;
+    ENCODE_ERROR = 2;
+    REJECTED = 3;
+    TIMEOUT = 4;
+  }
+
+  enum ColorScheme {
+    GRAY = 0;
+    GRAY_ALPHA = 1;
+    RGB = 2;
+    RGBA = 3;
+    YUV = 4;
+    YUVA = 5;
+    CMYK = 6;
+  }
+
+  enum MessageType {
+    META = 0;
+    IMAGE_DATA = 1;
+    STATS = 2;
+  }
+
+  message Meta {
+    Result code = 1;
+    string message = 2;
+  }
+
+  message Stats {
+    ColorScheme color_scheme = 1;
+    uint32 iccp_size = 2;
+    uint32 exif_size = 3;
+    uint32 xmp_size = 4;
+    bool iccp_stripped = 5;
+    bool exif_stripped = 6;
+    bool xmp_stripped = 7;
+    double psnr = 8;
+    bool multiframe = 9;
+  }
+
   string message = 1;
+  MessageType type = 2;
+  Meta meta = 3;
+  bytes data = 4;
+  Stats stats = 5;
 }

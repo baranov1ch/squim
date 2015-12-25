@@ -14,25 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef IMAGE_OPTIMIZATION_CODEC_FACTORY_WITH_CONFIGURATOR_H_
-#define IMAGE_OPTIMIZATION_CODEC_FACTORY_WITH_CONFIGURATOR_H_
+#ifndef IMAGE_OPTIMIZATION_DEFAULT_CODEC_FACTORY_H_
+#define IMAGE_OPTIMIZATION_DEFAULT_CODEC_FACTORY_H_
 
-#include "image/image_codec_factory.h"
+#include "image/optimization/codec_factory_with_configurator.h"
 
 namespace image {
 
-class CodecConfigurator;
+class DefaultCodecFactory : public CodecFactoryWithConfigurator {
+ public:
+  DefaultCodecFactory(CodecConfigurator* configurator);
+  ~DefaultCodecFactory() override;
 
-class CodecFactoryWithConfigurator : public ImageCodecFactory {
- protected:
-  CodecFactoryWithConfigurator(CodecConfigurator* configurator);
-
-  CodecConfigurator* configurator() { return configurator_; }
-
- private:
-  CodecConfigurator* configurator_;
+  std::unique_ptr<ImageDecoder> CreateDecoder(
+      ImageType type,
+      std::unique_ptr<io::BufReader> reader) override;
+  std::unique_ptr<ImageEncoder> CreateEncoder(
+      ImageType type,
+      std::unique_ptr<io::VectorWriter> writer) override;
 };
 
 }  // namespace image
 
-#endif  // IMAGE_OPTIMIZATION_CODEC_FACTORY_WITH_CONFIGURATOR_H_
+#endif  // IMAGE_OPTIMIZATION_DEFAULT_CODEC_FACTORY_H_

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef IMAGE_CODECS_JPEG_DECODER_H_
-#define IMAGE_CODECS_JPEG_DECODER_H_
+#ifndef IMAGE_CODECS_PNG_DECODER_H_
+#define IMAGE_CODECS_PNG_DECODER_H_
 
 #include <memory>
 
@@ -98,4 +98,4 @@ class PngDecoder : public ImageDecoder {
 
 }  // namespace image
 
-#endif  // IMAGE_CODECS_JPEG_DECODER_H_
+#endif  // IMAGE_CODECS_PNG_DECODER_H_
