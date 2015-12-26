@@ -30,6 +30,11 @@ class ConvertToWebPStrategy : public OptimizationStrategy,
   MAKE_NONCOPYABLE(ConvertToWebPStrategy);
 
  public:
+  using CodecFactoryBuilder =
+      std::function<std::unique_ptr<ImageCodecFactory>(CodecConfigurator*)>;
+  ConvertToWebPStrategy(CodecFactoryBuilder codec_factory_builder);
+  ~ConvertToWebPStrategy() override;
+
   // OptimizationStrategy implementation:
   Result ShouldEvenBother() override;
   Result CreateImageReader(ImageType image_type,

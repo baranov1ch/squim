@@ -21,6 +21,7 @@
 #include "base/memory/make_unique.h"
 #include "image/image_decoder.h"
 #include "image/image_frame.h"
+#include "test/mock_decoder.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -29,33 +30,6 @@ using testing::InSequence;
 using testing::Return;
 
 namespace image {
-
-namespace {
-
-class MockDecoder : public ImageDecoder {
- public:
-  MOCK_CONST_METHOD0(GetWidth, uint32_t());
-  MOCK_CONST_METHOD0(GetHeight, uint32_t());
-  MOCK_CONST_METHOD0(GetSize, uint64_t());
-  MOCK_CONST_METHOD0(GetImageType, ImageType());
-  MOCK_CONST_METHOD0(GetColorScheme, ColorScheme());
-  MOCK_CONST_METHOD0(IsProgressive, bool());
-  MOCK_CONST_METHOD0(IsImageInfoComplete, bool());
-  MOCK_CONST_METHOD0(GetFrameCount, size_t());
-  MOCK_CONST_METHOD0(IsMultiFrame, bool());
-  MOCK_CONST_METHOD0(GetEstimatedQuality, uint32_t());
-  MOCK_CONST_METHOD1(IsFrameCompleteAtIndex, bool(size_t));
-  MOCK_METHOD1(GetFrameAtIndex, ImageFrame*(size_t));
-  MOCK_METHOD0(GetMetadata, ImageMetadata*());
-  MOCK_CONST_METHOD0(IsAllMetadataComplete, bool());
-  MOCK_CONST_METHOD0(IsAllFramesComplete, bool());
-  MOCK_CONST_METHOD0(IsImageComplete, bool());
-  MOCK_METHOD0(Decode, Result());
-  MOCK_METHOD0(DecodeImageInfo, Result());
-  MOCK_CONST_METHOD0(HasError, bool());
-};
-
-}  // namespace
 
 class DecodingReaderTest : public testing::Test {
  protected:

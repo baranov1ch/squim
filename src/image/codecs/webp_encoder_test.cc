@@ -23,7 +23,7 @@
 #include "base/memory/make_unique.h"
 #include "image/image_frame.h"
 #include "image/image_info.h"
-#include "image/image_test_util.h"
+#include "image/test/image_test_util.h"
 #include "io/writer.h"
 #include "google/libwebp/upstream/src/webp/decode.h"
 

@@ -33,6 +33,7 @@ cc_library(
     "image_writer.h",
     "optimization/codec_configurator.h",
     "optimization/codec_factory_with_configurator.h",
+    "optimization/convert_to_webp_strategy.h",
     "optimization/default_codec_factory.h",
     "optimization/image_optimizer.h",
     "optimization/optimization_strategy.h",
@@ -52,6 +53,7 @@ cc_library(
     "image_frame.cc",
     "optimization/codec_configurator.cc",
     "optimization/codec_factory_with_configurator.cc",
+    "optimization/convert_to_webp_strategy.cc",
     "optimization/default_codec_factory.cc",
     "optimization/image_optimizer.cc",
     "result.cc",
@@ -71,13 +73,15 @@ cc_library(
   name = "image_test_support",
   testonly = 1,
   hdrs = [
-    "image_test_util.h",
+    "test/image_test_util.h",
+    "test/mock_decoder.h",
   ],
   srcs = [
-    "image_test_util.cc",
+    "test/image_test_util.cc",
   ],
   deps = [
     ":image",
+    "//external:gmock",
     "//external:gtest",
   ],
   visibility = ["//visibility:public"]
