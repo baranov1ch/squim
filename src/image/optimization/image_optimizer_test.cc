@@ -28,6 +28,7 @@
 #include "image/image_reader.h"
 #include "image/image_writer.h"
 #include "image/optimization/optimization_strategy.h"
+#include "image/test/mock_image_reader.h"
 #include "io/buf_reader.h"
 #include "io/buffered_source.h"
 #include "io/writer.h"
@@ -70,29 +71,11 @@ class MockStrategy : public OptimizationStrategy {
   MOCK_METHOD0(ShouldWaitForMetadata, bool());
 };
 
-class MockReader : public ImageReader {
- public:
-  MOCK_CONST_METHOD0(HasMoreFrames, bool());
-  MOCK_CONST_METHOD0(GetMetadata, const ImageMetadata*());
-  MOCK_CONST_METHOD0(GetNumberOfFramesRead, size_t());
-  MOCK_METHOD1(GetImageInfo, Result(const ImageInfo**));
-  MOCK_METHOD1(GetNextFrame, Result(ImageFrame**));
-  MOCK_METHOD2(GetFrameAtIndex, Result(size_t, ImageFrame**));
-  MOCK_METHOD0(ReadTillTheEnd, Result());
-};
-
 class MockWriter : public ImageWriter {
  public:
   MOCK_METHOD1(SetMetadata, void(const ImageMetadata*));
   MOCK_METHOD1(WriteFrame, Result(ImageFrame*));
   MOCK_METHOD0(FinishWrite, Result());
-};
-
-class DevNullWriter : public io::VectorWriter {
- public:
-  io::IoResult WriteV(io::ChunkList chunks) override {
-    return io::IoResult::Eof();
-  }
 };
 
 Result TestImageTypeSelector(io::BufReader* reader, ImageType* image_type) {
@@ -179,7 +162,7 @@ class ImageOptimizerTest : public testing::Test {
           break;
         case Stage::kCreateReader:
           if (current_stage < int_stage) {
-            image_reader_ = new MockReader();
+            image_reader_ = new MockImageReader();
             EXPECT_CALL(*strategy_,
                         CreateImageReaderImpl(ImageType::kJpeg, source_, _))
                 .WillOnce(Invoke(this, &ImageOptimizerTest::CreateReader));
@@ -312,7 +295,7 @@ class ImageOptimizerTest : public testing::Test {
       ImageOptimizer::ImageTypeSelector image_type_selector) {
     auto source = CreateReaderFromData(data, end);
     auto strategy = base::make_unique<MockStrategy>();
-    auto dest = base::make_unique<DevNullWriter>();
+    auto dest = base::make_unique<io::DevNull>();
     strategy_ = strategy.get();
     source_ = source.get();
     dest_ = dest.get();
@@ -323,8 +306,8 @@ class ImageOptimizerTest : public testing::Test {
 
   MockStrategy* strategy_ = nullptr;
   io::BufReader* source_ = nullptr;
-  DevNullWriter* dest_ = nullptr;
-  MockReader* image_reader_ = nullptr;
+  io::DevNull* dest_ = nullptr;
+  MockImageReader* image_reader_ = nullptr;
   MockWriter* image_writer_ = nullptr;
   ImageFrame frame_;
   std::unique_ptr<ImageOptimizer> testee_;
@@ -449,7 +432,7 @@ TEST_F(ImageOptimizerTest, ShouldTolerateMultilePendingCalls) {
   testee_ = CreateOptimizer();
   InSequence seq;
   EXPECT_CALL(*strategy_, ShouldEvenBother()).WillOnce(Return(Result::Ok()));
-  image_reader_ = new MockReader();
+  image_reader_ = new MockImageReader();
   EXPECT_CALL(*strategy_, CreateImageReaderImpl(ImageType::kJpeg, source_, _))
       .WillOnce(Invoke(this, &ImageOptimizerTest::CreateReader));
   EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))

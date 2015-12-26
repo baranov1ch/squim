@@ -36,6 +36,12 @@ class VectorWriter {
   virtual ~VectorWriter() {}
 };
 
+class DevNull : public Writer, public VectorWriter {
+ public:
+  IoResult Write(Chunk* chunk) override;
+  IoResult WriteV(ChunkList chunks) override;
+};
+
 }  // namespace io
 
 #endif  // IO_WRITER_H_

@@ -19,9 +19,15 @@
 #include <cstring>
 
 #include "base/logging.h"
+#include "base/memory/make_unique.h"
 #include "io/buffered_source.h"
 
 namespace io {
+
+// static
+std::unique_ptr<BufReader> BufReader::CreateEmpty() {
+  return base::make_unique<BufReader>(base::make_unique<BufferedSource>());
+}
 
 BufReader::BufReader(std::unique_ptr<BufferedSource> source)
     : source_(std::move(source)) {}

@@ -73,6 +73,9 @@ Result ConvertToWebPStrategy::CreateImageWriter(
 
   auto encoder =
       codec_factory_->CreateEncoder(ImageType::kWebP, std::move(dest));
+  if (!encoder)
+    return Result::Error(Result::Code::kDunnoHowToEncode);
+
   writer->reset(new SingleFrameWriter(std::move(encoder)));
   return Result::Ok();
 }

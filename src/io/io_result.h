@@ -34,6 +34,7 @@ class IoResult {
  public:
   static IoResult Pending();
   static IoResult Read(size_t n);
+  static IoResult Write(size_t n);
   static IoResult Eof();
   static IoResult Error();
 

@@ -29,6 +29,8 @@ class BufferedSource;
 // Reads data from the underlying |source_|. Tries not to do any copies.
 class BufReader {
  public:
+  static std::unique_ptr<BufReader> CreateEmpty();
+
   BufReader(std::unique_ptr<BufferedSource> source);
   ~BufReader();
 

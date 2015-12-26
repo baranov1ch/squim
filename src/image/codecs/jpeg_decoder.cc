@@ -12,6 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * The code in this file is very much inspired by blink JPEGImageDecoder.
  */
 
 #include "image/codecs/jpeg_decoder.h"
@@ -126,7 +128,6 @@ class JpegDecoder::Impl {
           case JCS_YCCK:
             // TODO: do something (Manual conversion).
             decompress_.out_color_space = JCS_CMYK;
-            decoder_->set_color_space(ColorScheme::kCMYK);
           // FALLTHROUGH. CMYK/YCCK not supported yet.
           default:
             decoder_->set_color_space(ColorScheme::kUnknown);

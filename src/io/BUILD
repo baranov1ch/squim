@@ -26,6 +26,7 @@ cc_library(
     "buffered_source.cc",
     "chunk.cc",
     "io_result.cc",
+    "writer.cc",
   ],
   deps = [
     "//base:base",

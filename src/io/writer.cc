@@ -14,33 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef IMAGE_IMAGE_CONSTANTS_H_
-#define IMAGE_IMAGE_CONSTANTS_H_
+#include "io/writer.h"
 
-#include <cstdlib>
+namespace io {
 
-namespace image {
+IoResult DevNull::Write(Chunk* chunk) {
+  return IoResult::Write(chunk->size());
+}
 
-enum class ColorScheme {
-  kGrayScale,
-  kGrayScaleAlpha,
-  kRGB,
-  kRGBA,
-  kYUV,
-  kYUVA,
-  kUnknown,
-};
+IoResult DevNull::WriteV(ChunkList chunks) {
+  uint64_t size = 0;
+  for (const auto& chunk : chunks) {
+    size += chunk->size();
+  }
+  return IoResult::Write(size);
+}
 
-enum class ImageType {
-  kJpeg,
-  kPng,
-  kGif,
-  kWebP,
-  kUnknown,
-};
-
-size_t GetBytesPerPixel(ColorScheme scheme);
-
-}  // namespace image
-
-#endif  // IMAGE_IMAGE_CONSTANTS_H_
+}  // namespace io

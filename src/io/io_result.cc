@@ -24,8 +24,12 @@ IoResult IoResult::Pending() {
 }
 
 // static
-IoResult IoResult::Read(size_t nread) {
-  return IoResult(nread);
+IoResult IoResult::Read(size_t n) {
+  return IoResult(n);
+}
+
+IoResult IoResult::Write(size_t n) {
+  return IoResult(n);
 }
 
 // static

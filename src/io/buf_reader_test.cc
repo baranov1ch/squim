@@ -35,10 +35,7 @@ std::string StringFromBytes(uint8_t* bytes, uint64_t len) {
 
 class BufReaderTest : public ::testing::Test {
  public:
-  void SetUp() override {
-    auto source = base::make_unique<BufferedSource>();
-    testee_ = base::make_unique<BufReader>(std::move(source));
-  }
+  void SetUp() override { testee_ = BufReader::CreateEmpty(); }
 
  protected:
   std::unique_ptr<BufReader> testee_;

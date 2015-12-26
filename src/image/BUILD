@@ -75,6 +75,7 @@ cc_library(
   hdrs = [
     "test/image_test_util.h",
     "test/mock_decoder.h",
+    "test/mock_image_reader.h",
   ],
   srcs = [
     "test/image_test_util.cc",
@@ -97,6 +98,7 @@ cc_test(
     "codecs/webp_decoder_test.cc",
     "codecs/webp_encoder_test.cc",
     "decoding_reader_test.cc",
+    "optimization/convert_to_webp_strategy_test.cc",
     "optimization/image_optimizer_test.cc",
   ],
   deps = [

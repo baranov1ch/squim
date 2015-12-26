@@ -16,8 +16,6 @@
 
 #include "image/decoding_reader.h"
 
-#include <memory>
-
 #include "base/memory/make_unique.h"
 #include "image/image_decoder.h"
 #include "image/image_frame.h"
