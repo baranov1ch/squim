@@ -107,6 +107,7 @@ cc_test(
     "decoding_reader_test.cc",
     "optimization/convert_to_webp_strategy_test.cc",
     "optimization/image_optimizer_test.cc",
+    "single_frame_writer_test.cc",
   ],
   deps = [
     "//external:gmock",
