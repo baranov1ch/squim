@@ -81,6 +81,7 @@ cc_library(
   hdrs = [
     "test/image_test_util.h",
     "test/mock_decoder.h",
+    "test/mock_encoder.h",
     "test/mock_image_reader.h",
   ],
   srcs = [

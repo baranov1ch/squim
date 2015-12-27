@@ -21,6 +21,7 @@
 #include "image/image_reader.h"
 #include "image/image_writer.h"
 #include "image/test/mock_decoder.h"
+#include "image/test/mock_encoder.h"
 #include "image/test/mock_image_reader.h"
 #include "io/buf_reader.h"
 #include "io/writer.h"
@@ -52,13 +53,6 @@ class MockCodecFactory : public ImageCodecFactory {
 
   MOCK_METHOD2(CreateDecoderImpl, ImageDecoder*(ImageType, io::BufReader*));
   MOCK_METHOD2(CreateEncoderImpl, ImageEncoder*(ImageType, io::VectorWriter*));
-};
-
-class MockEncoder : public ImageEncoder {
- public:
-  MOCK_METHOD2(EncodeFrame, Result(ImageFrame*, bool));
-  MOCK_METHOD1(SetMetadata, void(const ImageMetadata*));
-  MOCK_METHOD0(FinishWrite, Result());
 };
 
 MockDecoder* CreateDecoder(ImageType type, io::BufReader* reader) {
