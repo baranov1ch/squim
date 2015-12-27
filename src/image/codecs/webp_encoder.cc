@@ -38,7 +38,7 @@ WebPImageHint HintToWebPImageHint(WebPEncoder::Hint hint) {
     case WebPEncoder::Hint::kGraph:
       return WEBP_HINT_GRAPH;
     default:
-      DCHECK(false) << "Unknown WebP image hint: " << static_cast<int>(hint);
+      NOTREACHED() << "Unknown WebP image hint: " << static_cast<int>(hint);
       return WEBP_HINT_DEFAULT;
   }
 }
@@ -58,7 +58,7 @@ WebPPreset PresetToWebPPreset(WebPEncoder::Preset preset) {
     case WebPEncoder::Preset::kText:
       return WEBP_PRESET_TEXT;
     default:
-      DCHECK(false) << "Unknown WebP preset: " << static_cast<int>(preset);
+      NOTREACHED() << "Unknown WebP preset: " << static_cast<int>(preset);
       return WEBP_PRESET_DEFAULT;
   }
 }
@@ -197,7 +197,7 @@ class Picture {
         result = WebPPictureFromYUVAFrame(frame, &picture_);
         break;
       default:
-        DCHECK(false);
+        NOTREACHED();
     }
 
     if (!result)

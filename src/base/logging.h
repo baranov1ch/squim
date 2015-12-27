@@ -21,4 +21,6 @@
 
 #define NOTREACHED() DCHECK(false)
 
+#define NOTIMPLEMENTED() NOTREACHED()
+
 #endif  // BASE_LOGGING_H_

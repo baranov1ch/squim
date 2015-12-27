@@ -31,7 +31,7 @@ size_t GetBytesPerPixel(ColorScheme scheme) {
     case ColorScheme::kRGBA:
       return 4;
     default:
-      DCHECK(false);
+      NOTREACHED();
       return 0;
   }
 }

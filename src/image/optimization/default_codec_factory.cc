@@ -52,7 +52,7 @@ std::unique_ptr<ImageDecoder> DefaultCodecFactory::CreateDecoder(
       return base::make_unique<WebPDecoder>(
           configurator()->GetWebPDecoderParams(), std::move(reader));
     default:
-      DCHECK(false);
+      NOTREACHED();
       return std::unique_ptr<ImageDecoder>();
   }
 }
@@ -65,7 +65,7 @@ std::unique_ptr<ImageEncoder> DefaultCodecFactory::CreateEncoder(
       return base::make_unique<WebPEncoder>(
           configurator()->GetWebPEncoderParams(), std::move(writer));
     default:
-      DCHECK(false);
+      NOTREACHED();
       return std::unique_ptr<ImageEncoder>();
   }
 }
