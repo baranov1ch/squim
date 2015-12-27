@@ -31,9 +31,9 @@ using grpc::InsecureCredentials;
 using grpc::InsecureServerCredentials;
 using grpc::Server;
 using grpc::ServerBuilder;
-using tapoc::ImageOptimizer;
-using tapoc::ImageRequestPart;
-using tapoc::ImageResponsePart;
+using squim::ImageOptimizer;
+using squim::ImageRequestPart;
+using squim::ImageResponsePart;
 
 namespace {
 const char kServerAddress[] = "0.0.0.0:50051";

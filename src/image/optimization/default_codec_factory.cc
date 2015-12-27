@@ -24,6 +24,12 @@
 
 namespace image {
 
+// static
+std::unique_ptr<ImageCodecFactory> DefaultCodecFactory::Builder(
+    CodecConfigurator* configurator) {
+  return base::make_unique<DefaultCodecFactory>(configurator);
+}
+
 DefaultCodecFactory::DefaultCodecFactory(CodecConfigurator* configurator)
     : CodecFactoryWithConfigurator(configurator) {}
 

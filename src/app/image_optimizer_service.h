@@ -21,11 +21,11 @@
 #include "proto/image_optimizer.grpc.pb.h"
 #include "proto/image_optimizer.pb.h"
 
-class ImageOptimizerService final : public tapoc::ImageOptimizer::Service {
+class ImageOptimizerService final : public squim::ImageOptimizer::Service {
   grpc::Status OptimizeImage(
       grpc::ServerContext* context,
-      grpc::ServerReaderWriter<tapoc::ImageResponsePart,
-                               tapoc::ImageRequestPart>* stream) override;
+      grpc::ServerReaderWriter<squim::ImageResponsePart,
+                               squim::ImageRequestPart>* stream) override;
 };
 
 #endif  // APP_IMAGE_OPTIMIZER_SERVICE_H_

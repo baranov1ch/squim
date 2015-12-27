@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package tapoc;
+package squim;
 
 service ImageOptimizer {
   rpc OptimizeImage(stream ImageRequestPart)

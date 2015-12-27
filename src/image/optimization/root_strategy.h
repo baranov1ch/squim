@@ -14,24 +14,39 @@
  * limitations under the License.
  */
 
-#ifndef IMAGE_OPTIMIZATION_CONVERT_TO_WEBP_STRATEGY_H_
-#define IMAGE_OPTIMIZATION_CONVERT_TO_WEBP_STRATEGY_H_
+#ifndef IMAGE_OPIMIZATION_ROOT_STRATEGY_H_
+#define IMAGE_OPIMIZATION_ROOT_STRATEGY_H_
 
-#include "base/make_noncopyable.h"
+#include <memory>
+
 #include "image/optimization/codec_aware_strategy.h"
 
 namespace image {
 
-class ImageCodecFactory;
-
-class ConvertToWebPStrategy : public CodecAwareStrategy {
-  MAKE_NONCOPYABLE(ConvertToWebPStrategy);
-
+class RootStrategy : public CodecAwareStrategy {
  public:
-  using CodecFactoryBuilder =
-      std::function<std::unique_ptr<ImageCodecFactory>(CodecConfigurator*)>;
-  ConvertToWebPStrategy(CodecFactoryBuilder codec_factory_builder);
-  ~ConvertToWebPStrategy() override;
+  class Adjuster {
+   public:
+    virtual Result ShouldEvenBother() = 0;
+    virtual Result AdjustReader(ImageType image_type,
+                                std::unique_ptr<ImageReader>* reader) = 0;
+    virtual Result AdjustReaderAfterInfoReady(
+        std::unique_ptr<ImageReader>* reader) = 0;
+    virtual Result AdjustWriter(ImageReader* reader,
+                                std::unique_ptr<ImageWriter>* writer) = 0;
+    virtual bool ShouldWaitForMetadata() = 0;
+    virtual void AdjustGifDecoderParams(GifDecoder::Params* params) = 0;
+    virtual void AdjustJpegDecoderParams(JpegDecoder::Params* params) = 0;
+    virtual void AdjustPngDecoderParams(PngDecoder::Params* params) = 0;
+    virtual void AdjustWebPDecoderParams(WebPDecoder::Params* params) = 0;
+    virtual void AdjustWebPEncoderParams(WebPEncoder::Params* params) = 0;
+
+    virtual ~Adjuster() {}
+  };
+
+  RootStrategy(std::unique_ptr<CodecAwareStrategy> base_strategy,
+               std::unique_ptr<Adjuster> adjuster);
+  ~RootStrategy() override;
 
   // CodecAwareStrategy implementation:
   Result ShouldEvenBother() override;
@@ -51,9 +66,10 @@ class ConvertToWebPStrategy : public CodecAwareStrategy {
   WebPEncoder::Params GetWebPEncoderParams() override;
 
  private:
-  std::unique_ptr<ImageCodecFactory> codec_factory_;
+  std::unique_ptr<CodecAwareStrategy> base_strategy_;
+  std::unique_ptr<Adjuster> adjuster_;
 };
 
 }  // namespace image
 
-#endif  // IMAGE_OPTIMIZATION_CONVERT_TO_WEBP_STRATEGY_H_
+#endif  // IMAGE_OPIMIZATION_ROOT_STRATEGY_H_

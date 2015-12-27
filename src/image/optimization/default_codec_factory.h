@@ -23,6 +23,9 @@ namespace image {
 
 class DefaultCodecFactory : public CodecFactoryWithConfigurator {
  public:
+  static std::unique_ptr<ImageCodecFactory> Builder(
+      CodecConfigurator* configurator);
+
   DefaultCodecFactory(CodecConfigurator* configurator);
   ~DefaultCodecFactory() override;
 

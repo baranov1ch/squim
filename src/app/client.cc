@@ -25,8 +25,12 @@
 #include "proto/image_optimizer.grpc.pb.h"
 #include "proto/image_optimizer.pb.h"
 
-tapoc::ImageRequestPart MakeImageRequestPart(const std::string& name) {
-  tapoc::ImageRequestPart p;
+using squim::ImageOptimizer;
+using squim::ImageRequestPart;
+using squim::ImageResponsePart;
+
+ImageRequestPart MakeImageRequestPart(const std::string& name) {
+  ImageRequestPart p;
   p.set_name(name);
   return p;
 }
@@ -34,22 +38,22 @@ tapoc::ImageRequestPart MakeImageRequestPart(const std::string& name) {
 class OptimizerClient {
  public:
   OptimizerClient(std::shared_ptr<grpc::Channel> channel)
-      : stub_(tapoc::ImageOptimizer::NewStub(channel)) {}
+      : stub_(squim::ImageOptimizer::NewStub(channel)) {}
 
   // Assambles the client's payload, sends it and presents the response back
   // from the server.
   void OptimizeImage() {
     grpc::ClientContext context;
 
-    std::shared_ptr<grpc::ClientReaderWriter<tapoc::ImageRequestPart,
-                                             tapoc::ImageResponsePart>>
+    std::shared_ptr<
+        grpc::ClientReaderWriter<ImageRequestPart, ImageResponsePart>>
         stream(stub_->OptimizeImage(&context));
 
     std::thread writer([stream]() {
       auto seed = std::chrono::system_clock::now().time_since_epoch().count();
       std::default_random_engine generator(seed);
       std::uniform_int_distribution<int> delay_distribution(500, 1500);
-      std::vector<tapoc::ImageRequestPart> parts{
+      std::vector<ImageRequestPart> parts{
           MakeImageRequestPart("First message"),
           MakeImageRequestPart("Second message"),
           MakeImageRequestPart("Third message"),
@@ -63,7 +67,7 @@ class OptimizerClient {
       stream->WritesDone();
     });
 
-    tapoc::ImageResponsePart response_part;
+    ImageResponsePart response_part;
     while (stream->Read(&response_part)) {
       LOG(INFO) << "Got message " << response_part.message();
     }
@@ -75,7 +79,7 @@ class OptimizerClient {
   }
 
  private:
-  std::unique_ptr<tapoc::ImageOptimizer::Stub> stub_;
+  std::unique_ptr<ImageOptimizer::Stub> stub_;
 };
 
 int main(int argc, char** argv) {

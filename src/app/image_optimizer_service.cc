@@ -16,15 +16,25 @@
 
 #include "app/image_optimizer_service.h"
 
+#include "image/optimization/convert_to_webp_strategy.h"
+#include "image/optimization/default_codec_factory.h"
+#include "image/optimization/image_optimizer.h"
+#include "image/optimization/strategy_builder.h"
+
 using grpc::Status;
 using grpc::ServerContext;
 using grpc::ServerReaderWriter;
-using tapoc::ImageRequestPart;
-using tapoc::ImageResponsePart;
+using squim::ImageRequestPart;
+using squim::ImageResponsePart;
 
 Status ImageOptimizerService::OptimizeImage(
     ServerContext* context,
     ServerReaderWriter<ImageResponsePart, ImageRequestPart>* stream) {
+  image::StrategyBuilder builder;
+  auto strategy = builder.SetBaseStrategy<image::ConvertToWebPStrategy>(
+                             image::DefaultCodecFactory::Builder)
+                      .Build();
+  strategy->ShouldEvenBother();
   ImageRequestPart request_part;
   while (stream->Read(&request_part)) {
     ImageResponsePart response_part;

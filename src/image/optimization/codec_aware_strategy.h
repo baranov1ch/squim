@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef BASE_MEMORY_MAKE_UNIQUE_H_
-#define BASE_MEMORY_MAKE_UNIQUE_H_
+#ifndef IMAGE_OPTIMIZATION_CODEC_AWARE_STRATEGY_H_
+#define IMAGE_OPTIMIZATION_CODEC_AWARE_STRATEGY_H_
 
-#include <memory>
+#include "image/optimization/codec_configurator.h"
+#include "image/optimization/optimization_strategy.h"
 
-namespace base {
+namespace image {
 
-template <typename T, typename... Args>
-inline std::unique_ptr<T> make_unique(Args&&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
+class CodecAwareStrategy : public OptimizationStrategy,
+                           public CodecConfigurator {};
 
-}  // namespace base
+}  // namespace image
 
-#endif  // BASE_MEMORY_MAKE_UNIQUE_H_
+#endif  // IMAGE_OPTIMIZATION_CODEC_AWARE_STRATEGY_H_
