@@ -17,7 +17,9 @@
 #include <memory>
 
 #include "app/image_optimizer_service.h"
+#include "app/optimization.h"
 #include "base/logging.h"
+#include "base/memory/make_unique.h"
 #include "webp/encode.h"
 #include "gflags/gflags.h"
 #include "grpc++/grpc++.h"
@@ -30,7 +32,7 @@ int main(int argc, char** argv) {
   google::InstallFailureSignalHandler();
   LOG(INFO) << "Hello, World! " << FLAGS_do_nothing;
   std::string server_address("0.0.0.0:50051");
-  ImageOptimizerService service;
+  ImageOptimizerService service(base::make_unique<WebPOptimization>());
   grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);

@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 
-#ifndef BASE_STRINGS_STRING_UTIL_H_
-#define BASE_STRINGS_STRING_UTIL_H_
-
 #include <cstdint>
 
 #include "base/strings/string_piece.h"
 
 namespace base {
 
-base::StringPiece StringFromBytes(const uint8_t* bytes, uint64_t len);
-
-template <size_t N>
-base::StringPiece StringFromBytes(const uint8_t(&bytes)[N]) {
-  return StringFromBytes(bytes, N);
+base::StringPiece StringFromBytes(const uint8_t* bytes, uint64_t len) {
+  return base::StringPiece(reinterpret_cast<const char*>(bytes), len);
 }
 
-uint8_t* BytesFromConstChar(const char* data);
+uint8_t* BytesFromConstChar(const char* data) {
+  return reinterpret_cast<uint8_t*>(const_cast<char*>(data));
+}
 
 }  // namespace base
-
-#endif  // BASE_STRINGS_STRING_UTIL_H_

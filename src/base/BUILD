@@ -22,7 +22,8 @@ cc_library(
     "strings/string_util.h",
   ],
   srcs = [
-    "strings/string_piece.cc"
+    "strings/string_piece.cc",
+    "strings/string_util.cc",
   ],
   deps = [
     "//external:glog",

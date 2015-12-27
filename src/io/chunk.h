@@ -41,10 +41,14 @@ class Chunk {
 
   base::StringPiece ToString() const;
 
+  ChunkPtr Clone();
+  ChunkPtr Slice(size_t start, size_t len);
+
   static ChunkPtr FromString(std::string data);
   static ChunkPtr Copy(const uint8_t* data, size_t size);
   static ChunkPtr View(uint8_t* data, size_t size);
   static ChunkPtr Own(std::unique_ptr<uint8_t[]> data, size_t size);
+  static ChunkPtr New(size_t size);
 
  private:
   uint8_t* data_;

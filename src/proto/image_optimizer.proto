@@ -82,6 +82,7 @@ message ImageResponsePart {
     ENCODE_ERROR = 2;
     REJECTED = 3;
     TIMEOUT = 4;
+    CONTRACT_ERROR = 5;
   }
 
   enum ColorScheme {

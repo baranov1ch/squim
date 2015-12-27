@@ -19,6 +19,7 @@
 
 #include <memory>
 
+#include "image/image_constants.h"
 #include "image/result.h"
 
 namespace io {

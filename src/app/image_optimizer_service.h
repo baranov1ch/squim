@@ -21,11 +21,19 @@
 #include "proto/image_optimizer.grpc.pb.h"
 #include "proto/image_optimizer.pb.h"
 
+class Optimization;
+
 class ImageOptimizerService final : public squim::ImageOptimizer::Service {
+ public:
+  ImageOptimizerService(std::unique_ptr<Optimization> optimization);
+
+ private:
   grpc::Status OptimizeImage(
       grpc::ServerContext* context,
       grpc::ServerReaderWriter<squim::ImageResponsePart,
                                squim::ImageRequestPart>* stream) override;
+
+  std::unique_ptr<Optimization> optimization_;
 };
 
 #endif  // APP_IMAGE_OPTIMIZER_SERVICE_H_

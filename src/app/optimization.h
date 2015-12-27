@@ -14,27 +14,29 @@
  * limitations under the License.
  */
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#ifndef APP_OPTIMIZATION_H_
+#define APP_OPTIMIZATION_H_
 
-using testing::Return;
+#include <memory>
 
-class TestClass {
+#include "image/optimization/optimization_strategy.h"
+#include "proto/image_optimizer.pb.h"
+
+class Optimization {
  public:
-  virtual ~TestClass() {}
+  virtual std::unique_ptr<image::OptimizationStrategy>
+  CreateOptimizationStrategy(const squim::ImageRequestPart_Meta& request) = 0;
 
-  int DoStuff() { return DoStuffImpl(); }
-
-  virtual int DoStuffImpl() = 0;
+  virtual ~Optimization() {}
 };
 
-class MockTestClass : public TestClass {
+class WebPOptimization : public Optimization {
  public:
-  MOCK_METHOD0(DoStuffImpl, int());
+  WebPOptimization();
+  ~WebPOptimization() override;
+
+  std::unique_ptr<image::OptimizationStrategy> CreateOptimizationStrategy(
+      const squim::ImageRequestPart_Meta& request) override;
 };
 
-TEST(FactorialTest, Negative) {
-  MockTestClass mock;
-  EXPECT_CALL(mock, DoStuffImpl()).WillOnce(Return(5));
-  EXPECT_EQ(5, mock.DoStuff());
-}
+#endif  // APP_OPTIMIZATION_H_

@@ -23,13 +23,6 @@
 
 namespace io {
 
-Chunk::Chunk(const uint8_t* data, size_t size)
-    : data_(const_cast<uint8_t*>(data)), size_(size) {}
-
-base::StringPiece Chunk::ToString() const {
-  return base::StringFromBytes(data_, size_);
-}
-
 ChunkPtr Chunk::FromString(std::string data) {
   return base::make_unique<StringChunk>(std::move(data));
 }
@@ -46,6 +39,26 @@ ChunkPtr Chunk::View(uint8_t* data, size_t size) {
 
 ChunkPtr Chunk::Own(std::unique_ptr<uint8_t[]> data, size_t size) {
   return base::make_unique<RawChunk>(std::move(data), size);
+}
+
+ChunkPtr Chunk::New(size_t size) {
+  std::unique_ptr<uint8_t[]> owned_data(new uint8_t[size]);
+  return Own(std::move(owned_data), size);
+}
+
+Chunk::Chunk(const uint8_t* data, size_t size)
+    : data_(const_cast<uint8_t*>(data)), size_(size) {}
+
+base::StringPiece Chunk::ToString() const {
+  return base::StringFromBytes(data_, size_);
+}
+
+ChunkPtr Chunk::Clone() {
+  return Chunk::Copy(data_, size_);
+}
+
+ChunkPtr Chunk::Slice(size_t start, size_t len) {
+  return Chunk::View(data_ + start, len);
 }
 
 StringChunk::StringChunk(std::string data)

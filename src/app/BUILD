@@ -16,9 +16,11 @@ cc_library(
   name = "image_optimizer_service",
   hdrs = [
     "image_optimizer_service.h",
+    "optimization.h",
   ],
   srcs = [
-    "image_optimizer_service.cc"
+    "image_optimizer_service.cc",
+    "optimization.cc",
   ],
   deps = [
     "//base:base",
@@ -66,17 +68,5 @@ cc_test(
     "//external:gtest",
     "//test:test_main",
     ":image_optimizer_service",
-  ],
-)
-
-cc_test(
-  name = "my_test",
-  srcs = [
-    "my_test.cc"
-  ],
-  deps = [
-    "//external:gmock",
-    "//external:gtest",
-    "//test:test_main",
   ],
 )
