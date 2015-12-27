@@ -18,6 +18,46 @@
 
 namespace image {
 
+Result LayeredAdjuster::Layer::ShouldEvenBother() {
+  return Result::Ok();
+}
+
+Result LayeredAdjuster::Layer::AdjustReader(
+    ImageType image_type,
+    std::unique_ptr<ImageReader>* reader) {
+  return Result::Ok();
+}
+
+Result LayeredAdjuster::Layer::AdjustReaderAfterInfoReady(
+    std::unique_ptr<ImageReader>* reader) {
+  return Result::Ok();
+}
+
+Result LayeredAdjuster::Layer::AdjustWriter(
+    ImageReader* reader,
+    std::unique_ptr<ImageWriter>* writer) {
+  return Result::Ok();
+}
+
+bool LayeredAdjuster::Layer::ShouldWaitForMetadata() {
+  return false;
+}
+
+void LayeredAdjuster::Layer::AdjustGifDecoderParams(
+    GifDecoder::Params* params) {}
+
+void LayeredAdjuster::Layer::AdjustJpegDecoderParams(
+    JpegDecoder::Params* params) {}
+
+void LayeredAdjuster::Layer::AdjustPngDecoderParams(
+    PngDecoder::Params* params) {}
+
+void LayeredAdjuster::Layer::AdjustWebPDecoderParams(
+    WebPDecoder::Params* params) {}
+
+void LayeredAdjuster::Layer::AdjustWebPEncoderParams(
+    WebPEncoder::Params* params) {}
+
 LayeredAdjuster::LayeredAdjuster(std::unique_ptr<Layer> impl,
                                  std::unique_ptr<LayeredAdjuster> next)
     : impl_(std::move(impl)), next_(std::move(next)) {}
@@ -91,42 +131,5 @@ void LayeredAdjuster::AdjustWebPEncoderParams(WebPEncoder::Params* params) {
   if (next_)
     next_->AdjustWebPEncoderParams(params);
 }
-
-NullAdjuster::NullAdjuster() {}
-
-NullAdjuster::~NullAdjuster() {}
-
-Result NullAdjuster::ShouldEvenBother() {
-  return Result::Ok();
-}
-
-Result NullAdjuster::AdjustReader(ImageType image_type,
-                                  std::unique_ptr<ImageReader>* reader) {
-  return Result::Ok();
-}
-
-Result NullAdjuster::AdjustReaderAfterInfoReady(
-    std::unique_ptr<ImageReader>* reader) {
-  return Result::Ok();
-}
-
-Result NullAdjuster::AdjustWriter(ImageReader* reader,
-                                  std::unique_ptr<ImageWriter>* writer) {
-  return Result::Ok();
-}
-
-bool NullAdjuster::ShouldWaitForMetadata() {
-  return false;
-}
-
-void NullAdjuster::AdjustGifDecoderParams(GifDecoder::Params* params) {}
-
-void NullAdjuster::AdjustJpegDecoderParams(JpegDecoder::Params* params) {}
-
-void NullAdjuster::AdjustPngDecoderParams(PngDecoder::Params* params) {}
-
-void NullAdjuster::AdjustWebPDecoderParams(WebPDecoder::Params* params) {}
-
-void NullAdjuster::AdjustWebPEncoderParams(WebPEncoder::Params* params) {}
 
 }  // namespace image

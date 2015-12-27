@@ -25,7 +25,22 @@ namespace image {
 
 class LayeredAdjuster : public RootStrategy::Adjuster {
  public:
-  using Layer = RootStrategy::Adjuster;
+  class Layer : public RootStrategy::Adjuster {
+   public:
+    Result ShouldEvenBother() override;
+    Result AdjustReader(ImageType image_type,
+                        std::unique_ptr<ImageReader>* reader) override;
+    Result AdjustReaderAfterInfoReady(
+        std::unique_ptr<ImageReader>* reader) override;
+    Result AdjustWriter(ImageReader* reader,
+                        std::unique_ptr<ImageWriter>* writer) override;
+    bool ShouldWaitForMetadata() override;
+    void AdjustGifDecoderParams(GifDecoder::Params* params) override;
+    void AdjustJpegDecoderParams(JpegDecoder::Params* params) override;
+    void AdjustPngDecoderParams(PngDecoder::Params* params) override;
+    void AdjustWebPDecoderParams(WebPDecoder::Params* params) override;
+    void AdjustWebPEncoderParams(WebPEncoder::Params* params) override;
+  };
 
   LayeredAdjuster(std::unique_ptr<Layer> impl,
                   std::unique_ptr<LayeredAdjuster> next);
@@ -50,25 +65,7 @@ class LayeredAdjuster : public RootStrategy::Adjuster {
   std::unique_ptr<LayeredAdjuster> next_;
 };
 
-class NullAdjuster : public LayeredAdjuster::Layer {
- public:
-  NullAdjuster();
-  ~NullAdjuster() override;
-
-  Result ShouldEvenBother() override;
-  Result AdjustReader(ImageType image_type,
-                      std::unique_ptr<ImageReader>* reader) override;
-  Result AdjustReaderAfterInfoReady(
-      std::unique_ptr<ImageReader>* reader) override;
-  Result AdjustWriter(ImageReader* reader,
-                      std::unique_ptr<ImageWriter>* writer) override;
-  bool ShouldWaitForMetadata() override;
-  void AdjustGifDecoderParams(GifDecoder::Params* params) override;
-  void AdjustJpegDecoderParams(JpegDecoder::Params* params) override;
-  void AdjustPngDecoderParams(PngDecoder::Params* params) override;
-  void AdjustWebPDecoderParams(WebPDecoder::Params* params) override;
-  void AdjustWebPEncoderParams(WebPEncoder::Params* params) override;
-};
+class NullAdjuster : public LayeredAdjuster::Layer {};
 
 }  // namespace image
 
