@@ -100,6 +100,7 @@ class ImageOptimizer {
   std::unique_ptr<io::BufReader> source_;
   std::unique_ptr<io::VectorWriter> dest_;
   ImageFrame* current_frame_ = nullptr;
+  Result last_result_ = Result::Ok();
 };
 
 std::ostream& operator<<(std::ostream& os, ImageOptimizer::State state);

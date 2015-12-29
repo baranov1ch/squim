@@ -34,18 +34,6 @@ using squim::ImageResponsePart;
 
 namespace {
 
-class ProtoChunk : public io::Chunk {
- public:
-  ProtoChunk(std::unique_ptr<ImageRequestPart> chunk)
-      : Chunk(base::BytesFromConstChar(chunk->data().data()),
-              chunk->data().size()) {
-    DCHECK_EQ(ImageRequestPart::IMAGE_DATA, chunk->type());
-  }
-
- private:
-  std::unique_ptr<ImageRequestPart> chunk_;
-};
-
 class BufWriter : public io::Writer {
  public:
   BufWriter(size_t buf_size, std::unique_ptr<io::Writer> underlying)
@@ -219,15 +207,17 @@ class SyncRequestHandler {
 
         DrainOutput();
       }
-
-      auto result = optimizer_->Process();
-      DCHECK(result.finished());
-      output_->Flush();
-      DrainOutput();
-
-      ImageResponsePart stats;
-      stream_->Write(stats);
     }
+
+    auto result = optimizer_->Process();
+    DCHECK(result.finished());
+    output_->Flush();
+    DrainOutput();
+
+    ImageResponsePart stats;
+    stats.set_type(ImageResponsePart::STATS);
+    // TODO: send stats.
+    stream_->Write(stats);
 
     return Status::OK;
   }
@@ -272,7 +262,8 @@ class SyncRequestHandler {
   image::Result ProcessData(std::unique_ptr<ImageRequestPart> data) {
     DCHECK(optimizer_);
     DCHECK(input_);
-    input_->source()->AddChunk(base::make_unique<ProtoChunk>(std::move(data)));
+    std::string copy(data->data());
+    input_->source()->AddChunk(io::Chunk::FromString(std::move(copy)));
     return optimizer_->Process();
   }
 

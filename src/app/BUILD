@@ -23,10 +23,24 @@ cc_library(
     "optimization.cc",
   ],
   deps = [
-    "//base:base",
     "//external:grpc++",
     "//image:image",
-    "//io:io",
+    "//proto:image_optimizer_cc",
+  ],
+  visibility = ["//visibility:public"]
+)
+
+cc_library(
+  name = "image_optimizer_client",
+  hdrs = [
+    "image_optimizer_client.h",
+  ],
+  srcs = [
+    "image_optimizer_client.cc",
+  ],
+  deps = [
+    "//base:base",
+    "//external:grpc++",
     "//proto:image_optimizer_cc",
   ],
   visibility = ["//visibility:public"]
@@ -52,21 +66,22 @@ cc_binary(
     "client.cc",
   ],
   deps = [
-    "//base:base",
     "//external:gflags",
-    "//external:grpc++",
-    "//proto:image_optimizer_cc",
+    ":image_optimizer_client",
   ],
 )
 
 cc_test(
   name = "end_to_end_test",
+  timeout = "short",
   srcs = [
     "optimizer_end_to_end_test.cc"
   ],
   deps = [
     "//external:gtest",
     "//test:test_main",
+    ":image_optimizer_client",
     ":image_optimizer_service",
   ],
+  data = glob(["testdata/**"]),
 )

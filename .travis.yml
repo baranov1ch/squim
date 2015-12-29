@@ -1,0 +1,10 @@
+sudo: required
+dist: trusty
+
+language: c++
+
+services:
+  - docker
+
+script:
+  - build/build_docker_and_run_tests.sh

@@ -48,8 +48,8 @@ TEST_F(BufReaderTest, ReadPending) {
   EXPECT_TRUE(testee_->ReadN(&out, 100).pending());
 
   std::unique_ptr<uint8_t[]> buf(new uint8_t[20]);
-  EXPECT_TRUE(testee_->ReadNInto(out, 20).pending());
-  EXPECT_TRUE(testee_->PeekNInto(out, 20).pending());
+  EXPECT_TRUE(testee_->ReadNInto(buf.get(), 20).pending());
+  EXPECT_TRUE(testee_->PeekNInto(buf.get(), 20).pending());
 }
 
 TEST_F(BufReaderTest, ReadEOF) {
@@ -60,8 +60,8 @@ TEST_F(BufReaderTest, ReadEOF) {
   EXPECT_TRUE(testee_->ReadN(&out, 100).eof());
 
   std::unique_ptr<uint8_t[]> buf(new uint8_t[20]);
-  EXPECT_TRUE(testee_->ReadNInto(out, 20).eof());
-  EXPECT_TRUE(testee_->PeekNInto(out, 20).eof());
+  EXPECT_TRUE(testee_->ReadNInto(buf.get(), 20).eof());
+  EXPECT_TRUE(testee_->PeekNInto(buf.get(), 20).eof());
 }
 
 TEST_F(BufReaderTest, Reading) {

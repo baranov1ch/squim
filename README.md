@@ -1,5 +1,7 @@
 # squim
 
+[![Build Status](https://travis-ci.org/baranov1ch/squim.svg)](https://travis-ci.org/baranov1ch/squim)
+
 grpc service for webp image compression (SQUashing IMages).
 
 Sooo WIP.

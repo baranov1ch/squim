@@ -16,10 +16,15 @@
 
 #include "app/image_optimizer_service.h"
 
+#include <iterator>
+#include <fstream>
 #include <memory>
 #include <thread>
 
+#include "app/image_optimizer_client.h"
+#include "app/optimization.h"
 #include "base/logging.h"
+#include "base/memory/make_unique.h"
 #include "grpc++/grpc++.h"
 
 #include "gtest/gtest.h"
@@ -36,23 +41,40 @@ using squim::ImageRequestPart;
 using squim::ImageResponsePart;
 
 namespace {
+
 const char kServerAddress[] = "0.0.0.0:50051";
+
+bool ReadFile(const std::string& path, std::vector<uint8_t>* contents) {
+  DCHECK(contents);
+  contents->clear();
+  std::fstream file(path, std::ios::in | std::ios::binary);
+  if (!file.good())
+    return false;
+
+  std::vector<char> tmp((std::istreambuf_iterator<char>(file)),
+                        std::istreambuf_iterator<char>());
+  contents->reserve(tmp.size());
+  for (const auto& c : tmp)
+    contents->push_back(static_cast<uint8_t>(c));
+  return true;
 }
+
+}  // namespace
 
 class OptimizerEndToEndTest : public testing::Test {
  protected:
   void TearDown() override { StopServerIfNecessary(); }
 
-  bool StartServerAndClient() {
-    service_.reset(new ImageOptimizerService);
+  bool StartServer() {
+    service_.reset(
+        new ImageOptimizerService(base::make_unique<WebPOptimization>()));
     ServerBuilder builder;
     builder.AddListeningPort(kServerAddress, InsecureServerCredentials());
     builder.RegisterService(service_.get());
     server_ = builder.BuildAndStart();
     server_thread_ = std::thread([this]() { server_->Wait(); });
 
-    auto channel = CreateChannel(kServerAddress, InsecureCredentials());
-    stub_ = ImageOptimizer::NewStub(channel);
+    CreateChannel(kServerAddress, InsecureCredentials());
     return true;
   }
 
@@ -61,34 +83,18 @@ class OptimizerEndToEndTest : public testing::Test {
     server_thread_.join();
   }
 
-  std::shared_ptr<ClientReaderWriter<ImageRequestPart, ImageResponsePart>>
-  CreateStream() {
-    return stub_->OptimizeImage(&context_);
-  }
-
   std::unique_ptr<Server> server_;
   std::unique_ptr<ImageOptimizerService> service_;
   std::thread server_thread_;
-  std::unique_ptr<ImageOptimizer::Stub> stub_;
-  ClientContext context_;
 };
 
 TEST_F(OptimizerEndToEndTest, SimpleTest) {
-  EXPECT_TRUE(StartServerAndClient());
-  auto stream = CreateStream();
-
-  std::thread writer([stream]() {
-    for (int i = 0; i < 5; ++i) {
-      ImageRequestPart part;
-      part.set_name("world");
-      stream->Write(part);
-    }
-    stream->WritesDone();
-  });
-
-  ImageResponsePart response_part;
-  while (stream->Read(&response_part)) {
-    EXPECT_EQ("Hello, world", response_part.message());
-  }
-  writer.join();
+  ASSERT_TRUE(StartServer());
+  std::vector<uint8_t> in;
+  std::vector<uint8_t> out;
+  ASSERT_TRUE(ReadFile("app/testdata/test.jpg", &in));
+  ImageOptimizerClient client(
+      CreateChannel(kServerAddress, InsecureCredentials()));
+  EXPECT_TRUE(client.OptimizeImage(in, 512, &out));
+  EXPECT_LT(out.size(), in.size());
 }

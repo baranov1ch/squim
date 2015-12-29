@@ -132,6 +132,9 @@ Result ImageOptimizer::DoLoop(Result result) {
   if (!result.ok())
     return result;
 
+  if (state_ == State::kNone)
+    return last_result_;
+
   while (result.ok() && state_ != State::kNone) {
     switch (state_) {
       case State::kInit:
@@ -171,8 +174,10 @@ Result ImageOptimizer::DoLoop(Result result) {
         break;
     };
 
-    if (result.error() || result.finished())
+    if (result.error() || result.finished()) {
+      last_result_ = result;
       state_ = State::kNone;
+    }
   }
 
   return result;

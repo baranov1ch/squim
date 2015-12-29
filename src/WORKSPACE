@@ -98,3 +98,9 @@ bind(
   name = "libjpeg",
   actual = "//third_party/libjpeg_turbo:jpeg_turbo"
 )
+
+# Gtest main
+bind(
+  name = "gtest_main",
+  actual = "//test:test_main",
+)

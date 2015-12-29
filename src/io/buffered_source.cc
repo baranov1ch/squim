@@ -73,7 +73,7 @@ size_t BufferedSource::ReadAtMostN(uint8_t** out, size_t desired) {
     // Requested more than we have in one chunk, just read as much as we can.
     return ReadSome(out);
   } else {
-    // Otherwiase mess up with intra-chunk offsets. OTOH we're certailly
+    // Otherwise mess up with intra-chunk offsets. OTOH we're certailly
     // reading |desired| bytes.
     *out = chunk->data() + offset_in_chunk_;
     offset_in_chunk_ += desired;

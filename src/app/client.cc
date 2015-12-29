@@ -14,79 +14,71 @@
  * limitations under the License.
  */
 
-#include <chrono>
+#include <iterator>
+#include <iostream>
+#include <fstream>
 #include <memory>
-#include <random>
-#include <thread>
 
+#include "app/image_optimizer_client.h"
 #include "base/logging.h"
 #include "gflags/gflags.h"
 #include "grpc++/grpc++.h"
-#include "proto/image_optimizer.grpc.pb.h"
-#include "proto/image_optimizer.pb.h"
 
-using squim::ImageOptimizer;
-using squim::ImageRequestPart;
-using squim::ImageResponsePart;
+namespace {
 
-ImageRequestPart MakeImageRequestPart(const std::string& name) {
-  ImageRequestPart p;
-  p.set_name(name);
-  return p;
+bool ReadFile(const std::string& path, std::vector<uint8_t>* contents) {
+  DCHECK(contents);
+  contents->clear();
+  std::fstream file(path, std::ios::in | std::ios::binary);
+  if (!file.good())
+    return false;
+
+  std::vector<char> tmp((std::istreambuf_iterator<char>(file)),
+                        std::istreambuf_iterator<char>());
+  contents->reserve(tmp.size());
+  for (const auto& c : tmp)
+    contents->push_back(static_cast<uint8_t>(c));
+  return true;
 }
 
-class OptimizerClient {
- public:
-  OptimizerClient(std::shared_ptr<grpc::Channel> channel)
-      : stub_(squim::ImageOptimizer::NewStub(channel)) {}
+bool WriteFile(const std::string& path, const std::vector<uint8_t>& data) {
+  std::vector<char> hack;
+  hack.reserve(data.size());
+  for (auto c : data)
+    hack.push_back(static_cast<char>(c));
+  std::ofstream output_file(path);
+  std::ostreambuf_iterator<char> out(output_file);
+  std::copy(hack.begin(), hack.end(), out);
+  return true;
+}
 
-  // Assambles the client's payload, sends it and presents the response back
-  // from the server.
-  void OptimizeImage() {
-    grpc::ClientContext context;
+DEFINE_string(in, "test.png", "input image file");
+DEFINE_string(out, "test.webp", "output file");
 
-    std::shared_ptr<
-        grpc::ClientReaderWriter<ImageRequestPart, ImageResponsePart>>
-        stream(stub_->OptimizeImage(&context));
-
-    std::thread writer([stream]() {
-      auto seed = std::chrono::system_clock::now().time_since_epoch().count();
-      std::default_random_engine generator(seed);
-      std::uniform_int_distribution<int> delay_distribution(500, 1500);
-      std::vector<ImageRequestPart> parts{
-          MakeImageRequestPart("First message"),
-          MakeImageRequestPart("Second message"),
-          MakeImageRequestPart("Third message"),
-          MakeImageRequestPart("Fourth message")};
-      for (const auto& part : parts) {
-        LOG(INFO) << "Sending message " << part.name();
-        stream->Write(part);
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(delay_distribution(generator)));
-      }
-      stream->WritesDone();
-    });
-
-    ImageResponsePart response_part;
-    while (stream->Read(&response_part)) {
-      LOG(INFO) << "Got message " << response_part.message();
-    }
-    writer.join();
-    auto status = stream->Finish();
-    if (!status.ok()) {
-      LOG(ERROR) << "ImageOptimizer rpc failed.";
-    }
-  }
-
- private:
-  std::unique_ptr<ImageOptimizer::Stub> stub_;
-};
+}  // namespace
 
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
-  OptimizerClient optimizer_client(
+  google::InstallFailureSignalHandler();
+  std::vector<uint8_t> in;
+  std::vector<uint8_t> out;
+  if (!ReadFile(FLAGS_in, &in)) {
+    LOG(ERROR) << "Cannot read input file " << FLAGS_in;
+    return 1;
+  }
+
+  LOG(INFO) << "Sending picture, size=" << in.size();
+
+  ImageOptimizerClient client(
       grpc::CreateChannel("localhost:50051", grpc::InsecureCredentials()));
-  optimizer_client.OptimizeImage();
+  if (!client.OptimizeImage(in, 1024, &out)) {
+    LOG(ERROR) << "Optimization failed";
+    return 1;
+  }
+
+  LOG(INFO) << "Optimized picture received, size=" << out.size();
+
+  WriteFile(FLAGS_out, out);
   return 0;
 }

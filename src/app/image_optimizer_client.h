@@ -14,29 +14,27 @@
  * limitations under the License.
  */
 
-#ifndef APP_IMAGE_OPTIMIZER_SERVICE_H_
-#define APP_IMAGE_OPTIMIZER_SERVICE_H_
+#ifndef APP_IMAGE_OPTIMIZER_CLIENT_H_
+#define APP_IMAGE_OPTIMIZER_CLIENT_H_
+
+#include <memory>
 
 #include "base/make_noncopyable.h"
 #include "grpc++/grpc++.h"
 #include "proto/image_optimizer.grpc.pb.h"
-#include "proto/image_optimizer.pb.h"
 
-class Optimization;
-
-class ImageOptimizerService final : public squim::ImageOptimizer::Service {
-  MAKE_NONCOPYABLE(ImageOptimizerService);
+class ImageOptimizerClient {
+  MAKE_NONCOPYABLE(ImageOptimizerClient);
 
  public:
-  ImageOptimizerService(std::unique_ptr<Optimization> optimization);
+  ImageOptimizerClient(std::shared_ptr<grpc::Channel> channel);
+
+  bool OptimizeImage(const std::vector<uint8_t>& image_data,
+                     size_t chunk_size,
+                     std::vector<uint8_t>* webp_data);
 
  private:
-  grpc::Status OptimizeImage(
-      grpc::ServerContext* context,
-      grpc::ServerReaderWriter<squim::ImageResponsePart,
-                               squim::ImageRequestPart>* stream) override;
-
-  std::unique_ptr<Optimization> optimization_;
+  std::unique_ptr<squim::ImageOptimizer::Stub> stub_;
 };
 
-#endif  // APP_IMAGE_OPTIMIZER_SERVICE_H_
+#endif  // APP_IMAGE_OPTIMIZER_CLIENT_H_
