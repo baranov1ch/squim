@@ -16,6 +16,8 @@ cc_library(
   name = "image",
   hdrs = [
     "codecs/decode_params.h",
+    "codecs/gif/lzw_reader.h",
+    "codecs/gif/lzw_writer.h",
     "codecs/gif_decoder.h",
     "codecs/jpeg_decoder.h",
     "codecs/png_decoder.h",
@@ -47,6 +49,8 @@ cc_library(
     "single_frame_writer.h",
   ],
   srcs = [
+    "codecs/gif/lzw_reader.cc",
+    "codecs/gif/lzw_writer.cc",
     "codecs/gif_decoder.cc",
     "codecs/jpeg_decoder.cc",
     "codecs/png_decoder.cc",
@@ -99,6 +103,7 @@ cc_test(
   name = "image_test",
   timeout = "short",
   srcs = [
+    "codecs/gif/lzw_reader_test.cc",
     "codecs/gif_decoder_test.cc",
     "codecs/jpeg_decoder_test.cc",
     "codecs/png_decoder_test.cc",
