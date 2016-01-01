@@ -25,13 +25,16 @@ namespace image {
 
 class LZWReaderTest : public testing::Test {
  protected:
-  void CheckEncodeDecodeCycle(const std::vector<uint8_t>& input, size_t data_size, size_t chunk_size) {
+  void CheckEncodeDecodeCycle(const std::vector<uint8_t>& input,
+                              size_t data_size,
+                              size_t chunk_size) {
     std::vector<uint8_t> encoded;
     LZWWriter writer;
-    ASSERT_TRUE(writer.Init(data_size, chunk_size, [&encoded](uint8_t* data, size_t len) -> bool {
-      encoded.insert(encoded.end(), data, data + len);
-      return true;
-    }));
+    ASSERT_TRUE(writer.Init(data_size, chunk_size,
+                            [&encoded](uint8_t* data, size_t len) -> bool {
+                              encoded.insert(encoded.end(), data, data + len);
+                              return true;
+                            }));
     auto result = writer.Write(&input[0], input.size());
     EXPECT_TRUE(result.ok());
     EXPECT_EQ(input.size(), result.n());
@@ -40,10 +43,11 @@ class LZWReaderTest : public testing::Test {
 
     std::vector<uint8_t> decoded;
     LZWReader reader;
-    ASSERT_TRUE(reader.Init(data_size, chunk_size, [&decoded](uint8_t* data, size_t len) -> bool {
-      decoded.insert(decoded.end(), data, data + len);
-      return true;
-    }));
+    ASSERT_TRUE(reader.Init(data_size, chunk_size,
+                            [&decoded](uint8_t* data, size_t len) -> bool {
+                              decoded.insert(decoded.end(), data, data + len);
+                              return true;
+                            }));
     result = reader.Decode(&encoded[0], encoded.size());
     EXPECT_TRUE(result.ok());
     EXPECT_EQ(encoded.size(), result.n());
@@ -55,9 +59,9 @@ class LZWReaderTest : public testing::Test {
 };
 
 TEST_F(LZWReaderTest, SuccessReference) {
-  // Image from http://www.matthewflickinger.com/lab/whatsinagif/lzw_image_data.asp.
-  std::vector<uint8_t> input{
-    {
+  // Image from
+  // http://www.matthewflickinger.com/lab/whatsinagif/lzw_image_data.asp.
+  std::vector<uint8_t> input{{
       1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
       1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
       1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
@@ -68,8 +72,7 @@ TEST_F(LZWReaderTest, SuccessReference) {
       1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
       1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
       1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
-    }
-  };
+  }};
   CheckEncodeDecodeCycle(input, 2, 32);
 }
 

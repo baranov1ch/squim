@@ -112,7 +112,9 @@ LZWReader::LZWReader() {}
 
 LZWReader::~LZWReader() {}
 
-bool LZWReader::Init(size_t data_size, size_t output_chunk_size, std::function<bool(uint8_t*, size_t)> output_cb) {
+bool LZWReader::Init(size_t data_size,
+                     size_t output_chunk_size,
+                     std::function<bool(uint8_t*, size_t)> output_cb) {
   if (data_size > kMaxCodeSize)
     return false;
 
@@ -126,7 +128,7 @@ bool LZWReader::Init(size_t data_size, size_t output_chunk_size, std::function<b
 
   // Fill trivial codes, i.e colors.
   for (size_t i = 0; i < clear_code_; ++i)
-    dictionary_[i] = { kNoCode, static_cast<uint8_t>(i) };
+    dictionary_[i] = {kNoCode, static_cast<uint8_t>(i)};
 
   const size_t kMaxBytes = kMaxDictionarySize - 1;
   output_chunk_size_ = output_chunk_size;
@@ -186,7 +188,8 @@ io::IoResult LZWReader::Decode(const uint8_t* data, size_t size) {
 
     // Output to the client as much as we can by chunks of |output_chunk_size_|.
     auto chunk_start = output_.begin();
-    for (; chunk_start + output_chunk_size_ <= output_it_; chunk_start += output_chunk_size_) {
+    for (; chunk_start + output_chunk_size_ <= output_it_;
+         chunk_start += output_chunk_size_) {
       if (!output_cb_(&(*chunk_start), output_chunk_size_))
         return io::IoResult::Error();
     }
@@ -248,7 +251,7 @@ bool LZWReader::OutputCodeToStream(uint16_t code) {
 void LZWReader::UpdateDictionary() {
   // Add |prev_code_| + |prev_code_first_byte_| to the code table.
   if (next_entry_idx_ < kMaxDictionarySize && prev_code_ != kNoCode)
-    dictionary_[next_entry_idx_++] = { prev_code_, prev_code_first_byte_ };
+    dictionary_[next_entry_idx_++] = {prev_code_, prev_code_first_byte_};
 }
 
 }  // namespace image

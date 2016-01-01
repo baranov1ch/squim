@@ -29,7 +29,8 @@ class Chunk;
 }
 
 namespace std {
-template <> struct hash<std::vector<uint8_t>> {
+template <>
+struct hash<std::vector<uint8_t>> {
   size_t operator()(const std::vector<uint8_t>& x) const {
     // FNV-1a hash
     const size_t kFNV32Prime = 0x01000193;
@@ -53,7 +54,9 @@ class LZWWriter {
   LZWWriter();
   ~LZWWriter();
 
-  bool Init(size_t data_size, size_t output_chunk_size, std::function<bool(uint8_t*, size_t)> output_cb);
+  bool Init(size_t data_size,
+            size_t output_chunk_size,
+            std::function<bool(uint8_t*, size_t)> output_cb);
 
   io::IoResult Write(io::Chunk* chunk);
   io::IoResult Write(const uint8_t* data, size_t len);
@@ -67,7 +70,9 @@ class LZWWriter {
    public:
     CodeStream();
 
-    void Init(size_t data_size, size_t output_chunk_size, std::function<bool(uint8_t*, size_t)> output_cb);
+    void Init(size_t data_size,
+              size_t output_chunk_size,
+              std::function<bool(uint8_t*, size_t)> output_cb);
 
     bool Write(uint16_t code);
     bool Finish();

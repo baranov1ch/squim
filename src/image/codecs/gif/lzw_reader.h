@@ -36,7 +36,9 @@ class LZWReader {
   LZWReader();
   ~LZWReader();
 
-  bool Init(size_t data_size, size_t output_chunk_size, std::function<bool(uint8_t*, size_t)> output_cb);
+  bool Init(size_t data_size,
+            size_t output_chunk_size,
+            std::function<bool(uint8_t*, size_t)> output_cb);
 
   io::IoResult Decode(io::Chunk* chunk);
   io::IoResult Decode(const uint8_t* data, size_t size);

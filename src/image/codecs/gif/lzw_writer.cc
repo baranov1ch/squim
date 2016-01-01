@@ -27,7 +27,7 @@
 namespace image {
 
 namespace {
-template<typename N>
+template <typename N>
 std::string PrintBits(N val) {
   auto bits = sizeof(val) << 3;
   std::stringstream ss;
@@ -40,7 +40,10 @@ std::string PrintBits(N val) {
 
 LZWWriter::CodeStream::CodeStream() {}
 
-void LZWWriter::CodeStream::Init(size_t data_size, size_t output_chunk_size, std::function<bool(uint8_t*, size_t)> output_cb) {
+void LZWWriter::CodeStream::Init(
+    size_t data_size,
+    size_t output_chunk_size,
+    std::function<bool(uint8_t*, size_t)> output_cb) {
   output_chunk_size_ = output_chunk_size;
   output_.resize(output_chunk_size);
   output_it_ = output_.begin();
@@ -57,7 +60,8 @@ bool LZWWriter::CodeStream::Write(uint16_t code) {
     bits_in_buffer_ -= 8;
     buffer_ >>= 8;
     *output_it_++ = byte;
-    if (static_cast<size_t>(output_it_ - output_.begin()) == output_chunk_size_) {
+    if (static_cast<size_t>(output_it_ - output_.begin()) ==
+        output_chunk_size_) {
       if (!output_cb_(&output_[0], output_chunk_size_))
         return false;
       output_it_ = output_.begin();
@@ -91,7 +95,9 @@ LZWWriter::LZWWriter() {}
 
 LZWWriter::~LZWWriter() {}
 
-bool LZWWriter::Init(size_t data_size, size_t output_chunk_size, std::function<bool(uint8_t*, size_t)> output_cb) {
+bool LZWWriter::Init(size_t data_size,
+                     size_t output_chunk_size,
+                     std::function<bool(uint8_t*, size_t)> output_cb) {
   if (data_size > kMaxCodeSize)
     return false;
 
@@ -115,7 +121,7 @@ void LZWWriter::Clear() {
   for (size_t i = 0; i < clear_code_; ++i) {
     IndexBuffer buf;
     buf.push_back(i);
-    code_table_.insert({ buf, i });
+    code_table_.insert({buf, i});
   }
 }
 
