@@ -26,7 +26,7 @@ namespace image {
 
 LZWReader::CodeStream::CodeStream() {}
 
-void LZWReader::CodeStream::SetupBuffer(uint8_t* buffer, size_t size) {
+void LZWReader::CodeStream::SetupBuffer(const uint8_t* buffer, size_t size) {
   input_ = buffer;
   input_size_ = size;
 }
@@ -96,11 +96,11 @@ bool LZWReader::CodeStream::ReadNext(uint16_t* code) {
 }
 
 bool LZWReader::CodeStream::CodeFitsCurrentCodesize(size_t code) const {
-  return !(code & codemask_);
+  return code >> codesize_ == 0;
 }
 
 void LZWReader::CodeStream::IncreaseCodesize() {
-  ResetCodesize(codesize_ + 1);
+  ResetCodesize(codesize_);
 }
 
 void LZWReader::CodeStream::ResetCodesize(size_t data_size) {
@@ -117,20 +117,20 @@ bool LZWReader::Init(size_t data_size, size_t output_chunk_size, std::function<b
     return false;
 
   data_size_ = data_size;
-  dictionary_.reserve(kMaxDictionarySize);
+  dictionary_.resize(kMaxDictionarySize);
 
   clear_code_ = 1 << data_size_;
   eoi_ = clear_code_ + 1;
 
   Clear();
 
-  // Fill trivial codes.
+  // Fill trivial codes, i.e colors.
   for (size_t i = 0; i < clear_code_; ++i)
-    dictionary_[i] = { kNoCode, 1, static_cast<uint8_t>(i) };
+    dictionary_[i] = { kNoCode, static_cast<uint8_t>(i) };
 
   const size_t kMaxBytes = kMaxDictionarySize - 1;
   output_chunk_size_ = output_chunk_size;
-  output_.reserve(output_chunk_size_ - 1 + kMaxBytes);
+  output_.resize(output_chunk_size_ - 1 + kMaxBytes);
   output_cb_ = output_cb;
   output_it_ = output_.begin();
   return true;
@@ -147,7 +147,10 @@ io::IoResult LZWReader::Decode(io::Chunk* chunk) {
   return Decode(chunk->data(), chunk->size());
 }
 
-io::IoResult LZWReader::Decode(uint8_t* data, size_t size) {
+io::IoResult LZWReader::Decode(const uint8_t* data, size_t size) {
+  if (eoi_seen_) {
+    return io::IoResult::Eof();
+  }
   code_stream_.SetupBuffer(data, size);
   uint16_t code;
   while (code_stream_.ReadNext(&code)) {
@@ -160,11 +163,17 @@ io::IoResult LZWReader::Decode(uint8_t* data, size_t size) {
 
     // End of information, i.e. image. Signal to the client.
     if (code == eoi_) {
-      return io::IoResult::Eof();
+      if (!output_cb_(&output_[0], output_it_ - output_.begin()))
+        return io::IoResult::Error();
+
+      output_it_ = output_.begin();
+      eoi_seen_ = true;
+      break;
     }
 
-    if (!OutputCodeToStream(code))
+    if (!OutputCodeToStream(code)) {
       return io::IoResult::Error();
+    }
 
     UpdateDictionary();
 
@@ -190,107 +199,34 @@ io::IoResult LZWReader::Decode(uint8_t* data, size_t size) {
       output_it_ = output_.begin() + to_copy;
     }
   }
-  return io::IoResult::Read(size);
+  return io::IoResult::Read(size - code_stream_.available());
 }
 
 bool LZWReader::OutputCodeToStream(uint16_t code) {
-  // Output works from right-to-left. We start from the last byte in sequence
-  // coded by |code|, and follow prefix references from the dictionary to
-  // reconstruct entire byte sequence (remember that every byte string stored in
-  // LZW dictionary is some another string of that dictionary + one byte and
-  // dictionary is stored as a collection of prefix references + |value| byte).
-  // Example:
-  // Here is our dictionary, |data_size_| = 2, thus we have 4 static entries:
-  // [
-  //   {X, 1, '0'}, - X means no prefix code, 1 - length, '0' - value
-  //   {X, 1, '1'}, - same for the rest 3 static codes, incrementing value
-  //   {X, 1, '2'}, - yada-yada
-  //   {X, 1, '3'}, - ah, at last.
-  //   {X, X, X}, - placeholder, clear-code
-  //   {X, X, X}, - placeholder, end-of-information code.
-  // ]
-  // |next_entry_idx_| = 6, |prev_code_| empty, |prev_code_first_byte_| empty.
-  // We get first code, which is '1' for example and set |prev_code_| Nothing
-  // is added to the dictionary, since |prev_code_| was empty. But now it's
-  // not:)
-  // |next_entry_idx_| = 6, |prev_code_| = 1, which points to {X, 1, '1'},
-  // |prev_code_first_byte_| = '1'
-  //
-  // Next code in stream is '6'. It is not in the dictionary, thus we should
-  // output |prev_code_| value plus its first byte. Luckily, |prev_code_|
-  // encodes single byte ('1'), an we can just put '11' to output.
-  // UpdateDictionary() will append {1, 2, '1'} entry to the end of the
-  // |dictionary_|:
-  // [
-  //   {X, 1, '0'}, - X means no prefix code, 1 - length, 0 - value
-  //   {X, 1, '1'}, - same for the rest 3 static codes, incrementing value
-  //   {X, 1, '2'}, - yada-yada
-  //   {X, 1, '3'}, - ah, at last.
-  //   {X, X, X}, - placeholder, clear-code
-  //   {X, X, X}, - placeholder, end-of-information code.
-  //   {1, 2, '1'}, - code of 2 symbols ('1', '1')
-  // ]
-  // |next_entry_idx_| = 7, |prev_code_| = 6, meaning it points to {1, 2, '1'}.
-  // |prev_code_first_byte_| = '1' 
-  //
-  // Incoming 7! Again, it is not in our dictionary. |prev_code_| is 6, so we
-  // should output '111'. How we do it? First, move |output_it_| to the end of
-  // assumed output sequence, i.e. for 3 positions
-  //   |   output_it_               output_it_ |
-  //   v                    ===>               v
-  // [..][..][..][..][..]         [..][..][..][..][..]
-  // Output |prev_code_first_byte_| to the last position:
-  //           | output_it_ 
-  //           v
-  // [..][..]['1'][..][..]
-  // Next, we have to putput |prev_code_| which is 6, which is ('11')
-  // we look at {1, 2, '1'}, and see that its |suffix| is '1', so output it:
-  //       | output_it_ 
-  //       v
-  // [..]['1']['1'][..][..]
-  // Then, we follow |prefix_code| of the 6-th entry, which is 1, so we end up
-  // in trivial code {X, 1, '1'}, output it and stop:
-  //   | output_it_ 
-  //   v
-  // ['1']['1']['1'][..][..]
-  // Finally, we move |output_it_| to the next free position:
-  //                  | output_it_ 
-  //                  v
-  // ['1']['1']['1'][..][..]
-  // At last, we add new entry {6, 3, '1'} to the |dictionary_|, and update state:
-  // |next_entry_idx_| = 8, |prev_code_| = 7, meaning it points to {6, 3, '1'}.
-  // |prev_code_first_byte_| = '1'
-  // Now, we're ready to proceed with the next code.
-  size_t code_length = 0;
-  if (code < next_entry_idx_) {
-    // The code is already in the dictionary - just output it.
-    code_length = dictionary_[code].length;
-
-    // Move iterator to the end of the assumed output.
-    output_it_ += code_length;
-  } else if (code == next_entry_idx_ && prev_code_ != kNoCode) {
-    // New code - output previous code value + first its byte.
-    code_length = dictionary_[prev_code_].length + 1;
-
-    // Move iterator to the end of the assumed output.
-    output_it_ += code_length;
-
-    // Write first byte of the previous symbol's coded sequence to the end of
-    // the output and move reference to the previous code.
-    *--output_it_ = prev_code_first_byte_;
+  // We start from the last byte in sequence coded by |code|, and follow prefix
+  // references from the dictionary to reconstruct entire byte sequence
+  // (remember that every byte string stored in LZW dictionary is some another
+  // string from that dictionary + one byte and dictionary is stored as a
+  // collection of prefix references + |value| byte). When we follow prefix
+  // references, we get bytes in reverse order, but thanks to stack, when we pop
+  // them later into output, they're back in normal order (LIFO FTW)!
+  if (code == next_entry_idx_ && prev_code_ != kNoCode) {
+    // New code - output previous code value + its first byte.
+    byte_sequence_.push(prev_code_first_byte_);
     code = prev_code_;
-  } else {
+  } else if (code > next_entry_idx_) {
     // This is an invalid code. The dictionary is just initialized
     // and the code is incomplete. We don't know how to handle
     // this case.
     return false;
   }
+  // Otherwise it was a code already in dictionary, so just output it.
 
   // Follow backreferences and reconstruct the output until we hit
   // trivial code (i.e. |code| is less than |clear_code_|).
   while (code >= clear_code_) {
     auto& entry = dictionary_[code];
-    *--output_it_ = entry.suffix;
+    byte_sequence_.push(entry.suffix);
     code = entry.prefix_code;
   }
 
@@ -298,21 +234,21 @@ bool LZWReader::OutputCodeToStream(uint16_t code) {
   // code).
   DCHECK_LT(code, clear_code_);
   auto& entry = dictionary_[code];
-  *--output_it_ = entry.suffix;
   prev_code_first_byte_ = entry.suffix;
+  byte_sequence_.push(entry.suffix);
 
-  // Return iterator back to the end of written byte sequence.
-  output_it_ += code_length;
+  while (!byte_sequence_.empty()) {
+    *output_it_++ = byte_sequence_.top();
+    byte_sequence_.pop();
+  }
 
   return true;
 }
 
 void LZWReader::UpdateDictionary() {
   // Add |prev_code_| + |prev_code_first_byte_| to the code table.
-  if (next_entry_idx_ < kMaxDictionarySize && prev_code_ != kNoCode) {
-    uint16_t new_len = dictionary_[prev_code_].length + 1;
-    dictionary_[next_entry_idx_++] = { prev_code_, new_len, prev_code_first_byte_ };
-  }
+  if (next_entry_idx_ < kMaxDictionarySize && prev_code_ != kNoCode)
+    dictionary_[next_entry_idx_++] = { prev_code_, prev_code_first_byte_ };
 }
 
 }  // namespace image

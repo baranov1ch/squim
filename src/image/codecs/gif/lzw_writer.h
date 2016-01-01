@@ -18,8 +18,6 @@
 #define IMAGE_CODECS_GIF_LZW_WRITER_H_
 
 #include <functional>
-#include <list>
-#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -30,48 +28,13 @@ namespace io {
 class Chunk;
 }
 
-namespace image {
-class IndexBuffer {
- public:
-  void push_back(uint8_t c) {
-    data_.push_back(c);
-  }
-
-  size_t size() const {
-    return data_.size();
-  }
-
-  void clear() {
-    data_.clear();
-  }
-
-  bool operator==(const IndexBuffer& other) const {
-    return data_ == other.data_;
-  }
-
-  const std::vector<uint8_t>& data() const {
-    return data_;
-  }
-
- private:
-  std::vector<uint8_t> data_;
-};
-}  // namespace image
-
-struct MyLess {
-bool operator()(const image::IndexBuffer& lhs, const image::IndexBuffer& rhs) {
-  LOG(INFO) << lhs.data().size(); LOG(INFO) << rhs.data().size();
-  return lhs.data() < rhs.data();
-}
-};
-
 namespace std {
-template <> struct hash<image::IndexBuffer> {
-  size_t operator()(const image::IndexBuffer& x) const {
+template <> struct hash<std::vector<uint8_t>> {
+  size_t operator()(const std::vector<uint8_t>& x) const {
     // FNV-1a hash
     const size_t kFNV32Prime = 0x01000193;
     size_t hval = 0x811c9dc5;
-    for (uint8_t c : x.data()) {
+    for (uint8_t c : x) {
       hval ^= static_cast<size_t>(c);
       hval *= kFNV32Prime;
     }
@@ -93,16 +56,16 @@ class LZWWriter {
   bool Init(size_t data_size, size_t output_chunk_size, std::function<bool(uint8_t*, size_t)> output_cb);
 
   io::IoResult Write(io::Chunk* chunk);
-  io::IoResult Write(uint8_t* data, size_t len);
+  io::IoResult Write(const uint8_t* data, size_t len);
   io::IoResult Finish();
 
  private:
   static const size_t kMaxCodeSize = 12;
   static constexpr size_t kMaxDictionarySize = 1 << kMaxCodeSize;  // 4096
 
-  class CodeWriter {
+  class CodeStream {
    public:
-    CodeWriter();
+    CodeStream();
 
     void Init(size_t data_size, size_t output_chunk_size, std::function<bool(uint8_t*, size_t)> output_cb);
 
@@ -116,9 +79,7 @@ class LZWWriter {
    private:
     uint32_t buffer_ = 0;
     size_t bits_in_buffer_ = 0;
-
     size_t codesize_ = 0;
-    uint32_t codemask_ = 0;
 
     size_t output_chunk_size_ = 0;
     std::function<bool(uint8_t*, size_t)> output_cb_;
@@ -126,16 +87,20 @@ class LZWWriter {
     std::vector<uint8_t>::iterator output_it_;
   };
 
+  void Clear();
+
+  using IndexBuffer = std::vector<uint8_t>;
+  using CodeTable = std::unordered_map<IndexBuffer, uint16_t>;
   IndexBuffer index_buffer_;
-  std::map<IndexBuffer, uint16_t, MyLess> code_table_;
-  CodeWriter out_;
+  CodeTable code_table_;
+  CodeStream code_stream_;
 
-  uint16_t last_code_in_index_buffer_;
-  uint16_t next_code_;
-  uint16_t clear_code_;
-  uint16_t eoi_;
+  uint16_t last_code_in_index_buffer_ = 0;
+  uint16_t next_code_ = 0;
+  uint16_t clear_code_ = 0;
+  uint16_t eoi_ = 0;
 
-  size_t data_size_;
+  size_t data_size_ = 0;
   bool started_ = false;
 };
 

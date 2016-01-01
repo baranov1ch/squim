@@ -16,22 +16,39 @@
 
 #include "image/codecs/gif/lzw_writer.h"
 
+#include <algorithm>
+#include <sstream>
+
+#include <netinet/in.h>
+
 #include "base/logging.h"
 #include "io/chunk.h"
 
 namespace image {
 
-LZWWriter::CodeWriter::CodeWriter() {}
+namespace {
+template<typename N>
+std::string PrintBits(N val) {
+  auto bits = sizeof(val) << 3;
+  std::stringstream ss;
+  for (size_t i = bits - 1; i >= 0; --i)
+    ss << static_cast<uint32_t>(((val & (1 << i)) >> i));
 
-void LZWWriter::CodeWriter::Init(size_t data_size, size_t output_chunk_size, std::function<bool(uint8_t*, size_t)> output_cb) {
+  return ss.str();
+}
+}
+
+LZWWriter::CodeStream::CodeStream() {}
+
+void LZWWriter::CodeStream::Init(size_t data_size, size_t output_chunk_size, std::function<bool(uint8_t*, size_t)> output_cb) {
   output_chunk_size_ = output_chunk_size;
-  output_.reserve(output_chunk_size);
+  output_.resize(output_chunk_size);
   output_it_ = output_.begin();
   output_cb_ = output_cb;
   ResetCodesize(data_size);
 }
 
-bool LZWWriter::CodeWriter::Write(uint16_t code) {
+bool LZWWriter::CodeStream::Write(uint16_t code) {
   DCHECK_GT(8, bits_in_buffer_);
   buffer_ |= static_cast<uint32_t>(code) << bits_in_buffer_;
   bits_in_buffer_ += codesize_;
@@ -40,7 +57,7 @@ bool LZWWriter::CodeWriter::Write(uint16_t code) {
     bits_in_buffer_ -= 8;
     buffer_ >>= 8;
     *output_it_++ = byte;
-    if (output_.size() == output_chunk_size_) {
+    if (static_cast<size_t>(output_it_ - output_.begin()) == output_chunk_size_) {
       if (!output_cb_(&output_[0], output_chunk_size_))
         return false;
       output_it_ = output_.begin();
@@ -49,27 +66,25 @@ bool LZWWriter::CodeWriter::Write(uint16_t code) {
   return true;
 }
 
-bool LZWWriter::CodeWriter::Finish() {
+bool LZWWriter::CodeStream::Finish() {
   DCHECK_GT(8, bits_in_buffer_);
   if (bits_in_buffer_ > 0) {
-    size_t reminder = 8 - bits_in_buffer_;
-    auto byte = static_cast<uint8_t>((buffer_ & 0xFF) << reminder);
+    auto byte = static_cast<uint8_t>((buffer_ & 0xFF));
     *output_it_++ = byte;
   }
   return output_cb_(&output_[0], output_it_ - output_.begin());
 }
 
-bool LZWWriter::CodeWriter::CodeFitsCurrentCodesize(size_t code) const {
-  return !(code & codemask_);
+bool LZWWriter::CodeStream::CodeFitsCurrentCodesize(size_t code) const {
+  return code >> codesize_ == 0;
 }
 
-void LZWWriter::CodeWriter::IncreaseCodesize() {
-  ResetCodesize(codesize_ + 1);
+void LZWWriter::CodeStream::IncreaseCodesize() {
+  ResetCodesize(codesize_);
 }
 
-void LZWWriter::CodeWriter::ResetCodesize(size_t data_size) {
+void LZWWriter::CodeStream::ResetCodesize(size_t data_size) {
   codesize_ = data_size + 1;
-  codemask_ = (1 << codesize_) - 1;
 }
 
 LZWWriter::LZWWriter() {}
@@ -83,80 +98,77 @@ bool LZWWriter::Init(size_t data_size, size_t output_chunk_size, std::function<b
   data_size_ = data_size;
   clear_code_ = 1 << data_size_;
   eoi_ = clear_code_ + 1;
-  next_code_ = eoi_ + 1;
+  code_table_.reserve(kMaxDictionarySize);
 
-  out_.Init(data_size_, output_chunk_size, output_cb);
-  for (size_t i = 0; i < clear_code_; ++i) {
-    IndexBuffer buf;
-    buf.push_back(static_cast<uint8_t>(i));
-    code_table_[buf] = i;
-  }
+  code_stream_.Init(data_size_, output_chunk_size, output_cb);
+  Clear();
 
   return true;
+}
+
+void LZWWriter::Clear() {
+  code_table_.clear();
+  next_code_ = eoi_ + 1;
+  code_stream_.ResetCodesize(data_size_);
+
+  // Fill trivial codes, i.e. colors.
+  for (size_t i = 0; i < clear_code_; ++i) {
+    IndexBuffer buf;
+    buf.push_back(i);
+    code_table_.insert({ buf, i });
+  }
 }
 
 io::IoResult LZWWriter::Write(io::Chunk* chunk) {
   return Write(chunk->data(), chunk->size());
 }
 
-io::IoResult LZWWriter::Write(uint8_t* data, size_t len) {
-  uint8_t* end = data + len;
+io::IoResult LZWWriter::Write(const uint8_t* data, size_t len) {
+  const uint8_t* end = data + len;
   if (!started_) {
     started_ = true;
-    if (!out_.Write(clear_code_))
+    if (!code_stream_.Write(clear_code_))
       return io::IoResult::Error();
 
     index_buffer_.push_back(*data++);
-  }
-
-  DCHECK_GT(kMaxDictionarySize, code_table_.size());
-
-  while (data < end) {
-    auto index = *data++;
-    LOG(INFO) << "index=" << static_cast<size_t>(index)  << " index_buffer " << index_buffer_.size() << " code_t " << code_table_.size();
     auto it = code_table_.find(index_buffer_);
     DCHECK(it != code_table_.end());
     last_code_in_index_buffer_ = it->second;
+  }
+
+  DCHECK_GT(kMaxDictionarySize, code_table_.size());
+  while (data < end) {
+    auto index = *data++;
     index_buffer_.push_back(index);
     if (code_table_.find(index_buffer_) == code_table_.end()) {
-      IndexBuffer copy(index_buffer_);
-      code_table_.insert({copy, next_code_++});
-      code_table_.find(index_buffer_);
-      code_table_.find(index_buffer_);
-      code_table_.find(index_buffer_);
-      index_buffer_.clear();
-
-      if (!out_.Write(last_code_in_index_buffer_))
+      if (!code_stream_.Write(last_code_in_index_buffer_))
         return io::IoResult::Error();
 
-      if (!out_.CodeFitsCurrentCodesize(next_code_)) {
-        out_.IncreaseCodesize();
-      }
-      if (code_table_.size() == kMaxDictionarySize) {
-        LOG(INFO) << "Clearing...";
-        if (!out_.Write(clear_code_))
-          return io::IoResult::Error();
+      if (!code_stream_.CodeFitsCurrentCodesize(next_code_))
+        code_stream_.IncreaseCodesize();
 
-        out_.ResetCodesize(data_size_);
-        code_table_.clear();
-      }
-      if (code_table_.size() == 96) {
-        LOG(INFO) << "KEKEKE1 ";
-        code_table_.find(index_buffer_);
+      code_table_.insert({std::move(index_buffer_), next_code_++});
+      index_buffer_.clear();
+      if (next_code_ == kMaxDictionarySize) {
+        if (!code_stream_.Write(clear_code_))
+          return io::IoResult::Error();
+        Clear();
       }
       index_buffer_.push_back(index);
-      if (code_table_.size() == 96) {
-        LOG(INFO) << "KEKEKE2 ";
-        code_table_.find(index_buffer_);
-      }
     }
+
+    auto it = code_table_.find(index_buffer_);
+    DCHECK(it != code_table_.end());
+    last_code_in_index_buffer_ = it->second;
   }
+  if (!code_stream_.Write(last_code_in_index_buffer_))
+    return io::IoResult::Error();
 
   return io::IoResult::Write(len);
 }
 
 io::IoResult LZWWriter::Finish() {
-  if (!out_.Write(eoi_) || !out_.Finish())
+  if (!code_stream_.Write(eoi_) || !code_stream_.Finish())
     return io::IoResult::Error();
 
   return io::IoResult::Write(0);
