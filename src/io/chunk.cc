@@ -46,6 +46,10 @@ ChunkPtr Chunk::New(size_t size) {
   return Own(std::move(owned_data), size);
 }
 
+ChunkPtr Chunk::Wrap(ChunkPtr to_wrap, size_t start, size_t size) {
+  return base::make_unique<WrappingChunk>(std::move(to_wrap), start, size);
+}
+
 Chunk::Chunk(const uint8_t* data, size_t size)
     : data_(const_cast<uint8_t*>(data)), size_(size) {}
 
@@ -57,8 +61,8 @@ ChunkPtr Chunk::Clone() {
   return Chunk::Copy(data_, size_);
 }
 
-ChunkPtr Chunk::Slice(size_t start, size_t len) {
-  return Chunk::View(data_ + start, len);
+ChunkPtr Chunk::Slice(size_t start, size_t size) {
+  return Chunk::View(data_ + start, size);
 }
 
 StringChunk::StringChunk(std::string data)
@@ -71,5 +75,10 @@ RawChunk::RawChunk(std::unique_ptr<uint8_t[]> data, size_t size)
     : Chunk(data.get(), size), data_(std::move(data)) {}
 
 RawChunk::~RawChunk() {}
+
+WrappingChunk::WrappingChunk(ChunkPtr wrapped, size_t start, size_t size)
+    : Chunk(wrapped->data() + start, size), wrapped_(std::move(wrapped)) {}
+
+WrappingChunk::~WrappingChunk() {}
 
 }  // namespace io

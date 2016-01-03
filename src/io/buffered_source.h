@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef IO_IO_BUFFERED_SOURCE_H_
-#define IO_IO_BUFFERED_SOURCE_H_
+#ifndef IO_BUFFERED_SOURCE_H_
+#define IO_BUFFERED_SOURCE_H_
 
 #include <list>
 #include <memory>
@@ -84,4 +84,4 @@ class BufferedSource {
 
 }  // namespace io
 
-#endif  // IO_IO_BUFFERED_SOURCE_H_
+#endif  // IO_BUFFERED_SOURCE_H_

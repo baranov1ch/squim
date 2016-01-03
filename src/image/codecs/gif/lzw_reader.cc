@@ -206,13 +206,15 @@ io::IoResult LZWReader::Decode(const uint8_t* data, size_t size) {
 }
 
 bool LZWReader::OutputCodeToStream(uint16_t code) {
+  DCHECK(byte_sequence_.empty());
+
   // We start from the last byte in sequence coded by |code|, and follow prefix
   // references from the dictionary to reconstruct entire byte sequence
   // (remember that every byte string stored in LZW dictionary is some another
   // string from that dictionary + one byte and dictionary is stored as a
   // collection of prefix references + |value| byte). When we follow prefix
   // references, we get bytes in reverse order, but thanks to stack, when we pop
-  // them later into output, they're back in normal order (LIFO FTW)!
+  // them later into output, they're back to normal order (LIFO FTW)!
   if (code == next_entry_idx_ && prev_code_ != kNoCode) {
     // New code - output previous code value + its first byte.
     byte_sequence_.push(prev_code_first_byte_);
@@ -240,6 +242,7 @@ bool LZWReader::OutputCodeToStream(uint16_t code) {
   prev_code_first_byte_ = entry.suffix;
   byte_sequence_.push(entry.suffix);
 
+  // Writing into output is as simple as popping items from stack.
   while (!byte_sequence_.empty()) {
     *output_it_++ = byte_sequence_.top();
     byte_sequence_.pop();

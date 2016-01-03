@@ -42,13 +42,14 @@ class Chunk {
   base::StringPiece ToString() const;
 
   ChunkPtr Clone();
-  ChunkPtr Slice(size_t start, size_t len);
+  ChunkPtr Slice(size_t start, size_t size);
 
   static ChunkPtr FromString(std::string data);
   static ChunkPtr Copy(const uint8_t* data, size_t size);
   static ChunkPtr View(uint8_t* data, size_t size);
   static ChunkPtr Own(std::unique_ptr<uint8_t[]> data, size_t size);
   static ChunkPtr New(size_t size);
+  static ChunkPtr Wrap(ChunkPtr to_wrap, size_t start, size_t size);
 
  private:
   uint8_t* data_;
@@ -71,6 +72,15 @@ class RawChunk : public Chunk {
 
  private:
   std::unique_ptr<uint8_t[]> data_;
+};
+
+class WrappingChunk : public Chunk {
+ public:
+  WrappingChunk(ChunkPtr wrapped, size_t start, size_t size);
+  ~WrappingChunk() override;
+
+ private:
+  ChunkPtr wrapped_;
 };
 
 }  // namespace io

@@ -16,6 +16,7 @@ cc_library(
   name = "io",
   hdrs = [
     "buf_reader.h",
+    "buffer_writer.h",
     "buffered_source.h",
     "chunk.h",
     "io_result.h",
@@ -23,6 +24,7 @@ cc_library(
   ],
   srcs = [
     "buf_reader.cc",
+    "buffer_writer.cc",
     "buffered_source.cc",
     "chunk.cc",
     "io_result.cc",
@@ -39,6 +41,7 @@ cc_test(
   timeout = "short",
   srcs = [
     "buf_reader_test.cc",
+    "buffer_writer_test.cc",
     "buffered_source_test.cc",
     "chunk_test.cc",
   ],

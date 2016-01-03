@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef IO_IO_BUF_READER_H_
-#define IO_IO_BUF_READER_H_
+#ifndef IO_BUF_READER_H_
+#define IO_BUF_READER_H_
 
 #include <cstdint>
 #include <memory>
@@ -83,4 +83,4 @@ class BufReader {
 
 }  // namespace io
 
-#endif  // IO_IO_BUF_READER_H_
+#endif  // IO_BUF_READER_H_

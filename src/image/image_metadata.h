@@ -19,17 +19,36 @@
 
 #include <map>
 
+#include "base/make_noncopyable.h"
 #include "io/chunk.h"
 
 namespace image {
 
 class ImageMetadata {
+  MAKE_NONCOPYABLE(ImageMetadata);
+
  public:
   // Supported types of image metadata.
   enum class Type { kICC, kEXIF, kXMP };
 
+  ImageMetadata();
+
+  bool IsCompleted(Type type) const;
+  bool IsAllCompleted() const;
+  const io::ChunkList& Get(Type type) const;
+  bool Has(Type type) const;
+
+  void Append(Type type, io::ChunkPtr data);
+  void Freeze(Type type);
+  void FreezeAll();
+
+ private:
   class Holder {
+    MAKE_NONCOPYABLE(Holder);
+
    public:
+    Holder() {}
+
     void AddChunk(io::ChunkPtr chunk);
     void Freeze();
 
@@ -41,20 +60,12 @@ class ImageMetadata {
     bool frozen_ = false;
   };
 
-  using Data = std::map<Type, Holder>;
+  Holder& GetHolder(Type type);
+  const Holder& GetHolder(Type type) const;
 
-  const Data& data() const { return data_; }
-  bool IsCompleted(Type type) const;
-  bool IsAllCompleted() const;
-  const io::ChunkList& Get(Type type) const;
-  bool Has(Type type) const;
-
-  void Append(Type type, io::ChunkPtr data);
-  void Freeze(Type type);
-  void FreezeAll();
-
- private:
-  Data data_;
+  Holder exif_;
+  Holder icc_;
+  Holder xmp_;
 };
 
 }  // namespace image
