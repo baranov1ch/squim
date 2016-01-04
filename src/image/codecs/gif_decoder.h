@@ -84,12 +84,14 @@ class GifDecoder : public ImageDecoder {
   }
 
   std::vector<std::unique_ptr<ImageFrame>> image_frames_;
-  ImageMetadata metadata_;
   std::unique_ptr<io::BufReader> source_;
   std::unique_ptr<Impl> impl_;
   ColorScheme color_scheme_ = ColorScheme::kUnknown;
   uint32_t width_ = 0;
   uint32_t height_ = 0;
+  size_t loop_count_ = 0;
+  std::array<uint8_t, 4> bg_color_ = {
+      {0xFF, 0xFF, 0xFF, 0xFF}};  // opaque white.
   bool is_progressive_ = false;
   Result decode_error_ = Result::Ok();
   Params params_;

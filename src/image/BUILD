@@ -49,6 +49,10 @@ cc_library(
   srcs = [
     "codecs/gif/gif_image.cc",
     "codecs/gif/gif_image.h",
+    "codecs/gif/gif_image_frame_parser.cc",
+    "codecs/gif/gif_image_frame_parser.h",
+    "codecs/gif/gif_image_parser.cc",
+    "codecs/gif/gif_image_parser.h",
     "codecs/gif/lzw_reader.cc",
     "codecs/gif/lzw_reader.h",
     "codecs/gif/lzw_writer.cc",
@@ -106,7 +110,7 @@ cc_test(
   name = "image_test",
   timeout = "short",
   srcs = [
-    "codecs/gif/gif_image_test.cc",
+    "codecs/gif/gif_image_parser_test.cc",
     "codecs/gif/lzw_reader_test.cc",
     "codecs/gif_decoder_test.cc",
     "codecs/jpeg_decoder_test.cc",

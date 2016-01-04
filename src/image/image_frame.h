@@ -20,6 +20,7 @@
 #include <memory>
 #include <cstdint>
 
+#include "base/logging.h"
 #include "base/make_noncopyable.h"
 #include "image/image_constants.h"
 
@@ -44,10 +45,19 @@ class ImageFrame {
   void set_status(Status status) { status_ = status; }
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
+  uint32_t x_offset() const { return x_offset_; }
+  uint32_t y_offset() const { return y_offset_; }
   size_t bpp() const { return bpp_; }
   uint32_t stride() const { return width_ * bpp_; }
   uint32_t duration() const { return duration_; }
+  void set_duration(uint32_t value) { duration_ = value; }
   ColorScheme color_scheme() const { return color_scheme_; }
+  bool should_dispose_to_background() const {
+    return should_dispose_to_background_;
+  }
+  void set_should_dispose_to_background(bool value) {
+    should_dispose_to_background_ = value;
+  }
 
   bool has_alpha() const {
     return color_scheme_ == ColorScheme::kRGBA ||
@@ -70,10 +80,6 @@ class ImageFrame {
            color_scheme_ == ColorScheme::kYUVA;
   }
 
-  size_t required_previous_frame_index() const {
-    return required_previous_frame_index_;
-  }
-
   uint8_t* GetPixel(uint32_t x, uint32_t y) {
     return GetData(stride() * y + bpp() * x);
   }
@@ -86,16 +92,23 @@ class ImageFrame {
 
   const uint8_t* GetData(size_t offset) const { return GetData(offset); }
 
+  void set_offset(uint32_t x, uint32_t y) {
+    x_offset_ = x;
+    y_offset_ = y;
+  }
+
   void Init(uint32_t width, uint32_t height, ColorScheme color_scheme);
 
  private:
   Status status_ = Status::kEmpty;
   uint32_t width_ = 0;
   uint32_t height_ = 0;
+  uint32_t x_offset_ = 0;
+  uint32_t y_offset_ = 0;
   uint32_t duration_ = 0;
   size_t bpp_ = 0;
   ColorScheme color_scheme_ = ColorScheme::kUnknown;
-  size_t required_previous_frame_index_ = kNoPreviousFrameIndex;
+  bool should_dispose_to_background_ = false;
   std::unique_ptr<uint8_t[]> data_;
 };
 

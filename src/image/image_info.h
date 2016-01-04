@@ -32,6 +32,8 @@ struct ImageInfo {
   bool multiframe;
   bool is_progressive;
   uint32_t quality;
+  size_t loop_count;
+  uint32_t bg_color;
 };
 
 }  // namespace image

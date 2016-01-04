@@ -18,7 +18,6 @@
 #define IMAGE_CODECS_GIF_GIF_IMAGE_H_
 
 #include <array>
-#include <functional>
 #include <memory>
 #include <vector>
 
@@ -26,14 +25,7 @@
 #include "image/pixel.h"
 #include "image/result.h"
 
-namespace io {
-class BufferWriter;
-class BufReader;
-}
-
 namespace image {
-
-class LZWReader;
 
 class GifImage {
  public:
@@ -45,6 +37,8 @@ class GifImage {
   };
 
   static const size_t kInifiniteLoop = 0xFFFFFFFF;
+  static const size_t kNoTransparentPixel = 0xFFFFFFFF;
+  static const size_t kNoBackgroundColor = 0xFFFFFFFF;
 
   class ColorTable {
    public:
@@ -66,34 +60,8 @@ class GifImage {
 
   class Frame {
    public:
-    class Builder {
-     public:
-      Builder();
-      ~Builder();
-
-      void SetGlobalColorTable(const ColorTable* global_color_table);
-      void SetFrameGeometry(uint16_t x_offset,
-                            uint16_t y_offset,
-                            uint16_t width,
-                            uint16_t height);
-      void SetProgressive(bool progressive);
-      void SetTransparentPixel(size_t value);
-      void SetDuration(size_t duration);
-      void SetDisposalMethod(DisposalMethod method);
-      bool InitDecoder(uint8_t minimum_code_size);
-      Result ProcessImageData(uint8_t* data, size_t size);
-
-      void CreateLocalColorTable(size_t size);
-      ColorTable* GetLocalColorTable();
-
-      std::unique_ptr<Frame> Build();
-
-     private:
-      std::unique_ptr<Frame> frame_;
-      std::unique_ptr<LZWReader> lzw_reader_;
-      uint16_t current_row_;
-      size_t interlace_pass_;
-    };
+    class Parser;
+    class Builder;
 
     Frame();
     ~Frame();
@@ -113,70 +81,28 @@ class GifImage {
    private:
     void SetRow(uint16_t nrow, uint8_t* row_data);
 
-    uint16_t width_;
-    uint16_t height_;
-    uint16_t x_offset_;
-    uint16_t y_offset_;
-    size_t transparent_pixel_;
-    size_t duration_;
-    DisposalMethod disposal_method_;
-    bool is_progressive_;
+    uint16_t width_ = 0;
+    uint16_t height_ = 0;
+    uint16_t x_offset_ = 0;
+    uint16_t y_offset_ = 0;
+    size_t transparent_pixel_ = kNoTransparentPixel;
+    size_t duration_ = 0;
+    DisposalMethod disposal_method_ = DisposalMethod::kNotSpecified;
+    bool is_progressive_ = false;
 
     std::unique_ptr<uint8_t[]> data_;
 
     std::unique_ptr<ColorTable> local_color_table_;
-    const ColorTable* global_color_table_;
+    const ColorTable* global_color_table_ = nullptr;
   };
 
-  class Parser {
-   public:
-    Parser(io::BufReader* source, GifImage* image);
-    ~Parser();
+  class Parser;
+  class Builder;
 
-    Result ParseHeader();
-    Result Parse();
+  using FrameList = std::vector<std::unique_ptr<Frame>>;
 
-   private:
-    using Handler = std::function<Result()>;
-
-    Result ParseVersion();
-    Result ParseLogicalScreenDescriptor();
-    Result ParseGlobalColorTable();
-    Result ParseBlockType();
-    Result ParseExtensionType();
-    Result ParseControlExtension();
-    Result ParseApplicationExtension();
-    Result ParseSubBlockLength(Handler block_handler);
-    Result SkipBlock();
-    Result ParseImageDescriptor();
-    Result ParseLocalColorTable();
-    Result ParseMinimumCodeSize();
-    Result ReadLZWData();
-    Result ParseNetscapeApplicationExtension();
-    Result ParseICCPApplicationExtension();
-    Result ParseXMPApplicationExtension();
-
-    Result BuildColorTable(ColorTable* color_table);
-    Result ConsumeMetadata();
-    Result SkipSubBlockHandler(Handler handler);
-    Frame::Builder* GetFrameBuilder();
-    Handler BlockHandler(Handler handler);
-
-    void SetupHandlers(Handler start_of_subblock,
-                       Handler data_handler,
-                       Handler end_of_block);
-
-    Handler handler_;
-    Handler end_of_block_handler_;
-    Handler start_of_subblock_handler_;
-    io::BufReader* source_;
-    GifImage* image_;
-    bool header_only_ = false;
-    bool header_complete_ = false;
-    size_t remaining_block_length_ = 0;
-    std::unique_ptr<Frame::Builder> active_frame_builder_;
-    std::unique_ptr<io::BufferWriter> metadata_writer_;
-  };
+  GifImage();
+  ~GifImage();
 
   const ColorTable* global_color_table() const {
     return global_color_table_.get();
@@ -190,15 +116,18 @@ class GifImage {
   size_t background_color_index() const { return background_color_index_; }
   size_t loop_count() const { return loop_count_; }
 
+  const FrameList& frames() const { return frames_; }
+  ImageMetadata* GetMetadata() { return &metadata_; }
+
  private:
-  std::vector<std::unique_ptr<Frame>> frames_;
+  FrameList frames_;
   std::unique_ptr<ColorTable> global_color_table_;
-  uint16_t screen_width_;
-  uint16_t screen_height_;
-  size_t loop_count_;
-  int version_;
-  uint8_t color_resolution_;
-  size_t background_color_index_;
+  uint16_t screen_width_ = 0;
+  uint16_t screen_height_ = 0;
+  size_t loop_count_ = 0;
+  int version_ = 0;
+  uint8_t color_resolution_ = 0;
+  size_t background_color_index_ = kNoBackgroundColor;
   ImageMetadata metadata_;
 };
 

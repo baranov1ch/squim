@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "image/codecs/gif/gif_image.h"
+#include "image/codecs/gif/gif_image_parser.h"
 
 #include "base/logging.h"
 #include "base/memory/make_unique.h"
@@ -30,9 +30,9 @@ namespace {
 const char kPngSuiteGifDir[] = "pngsuite/gif";
 }
 
-class GifImageTest : public ::testing::Test {
+class GifImageParserTest : public ::testing::Test {
  public:
-  GifImageTest() {
+  GifImageParserTest() {
     reader_ = io::BufReader::CreateEmpty();
     parser_ = base::make_unique<GifImage::Parser>(reader_.get(), &image_);
   }
@@ -43,11 +43,12 @@ class GifImageTest : public ::testing::Test {
   std::unique_ptr<GifImage::Parser> parser_;
 };
 
-TEST_F(GifImageTest, ParseHeader) {
+TEST_F(GifImageParserTest, ParseOneImage) {
   std::vector<uint8_t> data;
   ASSERT_TRUE(ReadTestFile(kPngSuiteGifDir, "basi0g01", "gif", &data));
   reader_->source()->AddChunk(io::Chunk::View(&data[0], data.size()));
-  EXPECT_TRUE(parser_->Parse().ok());
+  auto result = parser_->Parse();
+  EXPECT_TRUE(result.ok());
   EXPECT_EQ(87, image_.version());
   EXPECT_EQ(32, image_.screen_width());
   EXPECT_EQ(32, image_.screen_height());
@@ -62,6 +63,12 @@ TEST_F(GifImageTest, ParseHeader) {
   EXPECT_EQ(255, pixel2.r());
   EXPECT_EQ(255, pixel2.g());
   EXPECT_EQ(255, pixel2.b());
+
+  const auto& frames = image_.frames();
+  EXPECT_EQ(1, frames.size());
+  const auto& frame = frames[0];
+  EXPECT_EQ(32, frame->width());
+  EXPECT_EQ(32, frame->height());
 }
 
 }  // namespace image

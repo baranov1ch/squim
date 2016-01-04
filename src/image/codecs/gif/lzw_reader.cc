@@ -165,7 +165,8 @@ io::IoResult LZWReader::Decode(const uint8_t* data, size_t size) {
 
     // End of information, i.e. image. Signal to the client.
     if (code == eoi_) {
-      if (!output_cb_(&output_[0], output_it_ - output_.begin()))
+      auto left = output_it_ - output_.begin();
+      if (left > 0 && !output_cb_(&output_[0], left))
         return io::IoResult::Error();
 
       output_it_ = output_.begin();
