@@ -93,7 +93,7 @@ bool GifImage::Frame::Parser::OutputRow(uint8_t* data, size_t size) {
   if (!frame_->data_) {
     frame_->data_.reset(new uint8_t[frame_->width() * frame_->height()]);
   }
-  LOG(INFO) << "OutputRow " << current_row_;
+
   frame_->SetRow(current_row_, data);
   if (!frame_->is_progressive()) {
     current_row_++;

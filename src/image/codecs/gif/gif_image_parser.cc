@@ -95,10 +95,15 @@ Result GifImage::Parser::BuildColorTable(ColorTable* color_table) {
 
 Result GifImage::Parser::ParseHeader() {
   header_only_ = true;
-  return Parse();
+  return ParseInternal();
 }
 
 Result GifImage::Parser::Parse() {
+  header_only_ = false;
+  return ParseInternal();
+}
+
+Result GifImage::Parser::ParseInternal() {
   if (!parser_error_.ok())
     return parser_error_;
 
@@ -174,7 +179,6 @@ Result GifImage::Parser::ParseGlobalColorTable() {
 Result GifImage::Parser::ParseBlockType() {
   uint8_t* data;
   auto result = source_->ReadN(&data, 1);
-  LOG(INFO) << "ParseBlockType " << static_cast<uint32_t>(*data);
   if (!result.ok()) {
     if (!image_->frames_.empty() && result.eof()) {
       // End of block is valid EOF if at least one frame present.
@@ -215,6 +219,7 @@ Result GifImage::Parser::ParseExtensionType() {
   auto result = source_->ReadN(&data, 1);
   if (!result.ok())
     return Result::FromIoResult(result, false);
+
   switch (*data) {
     case 0xF9:
       handler_ = BlockHandler(HANDLER(ParseControlExtension));
@@ -252,7 +257,6 @@ Result GifImage::Parser::ParseSubBlockLength(Handler block_handler) {
     return Result::FromIoResult(io_result, false);
   remaining_block_length_ = *data;
   if (remaining_block_length_ == 0) {
-    LOG(INFO) << "Block ended";
     if (end_of_block_handler_) {
       auto result = end_of_block_handler_();
       end_of_block_handler_ = Handler();
@@ -263,7 +267,6 @@ Result GifImage::Parser::ParseSubBlockLength(Handler block_handler) {
     // 0-length means end of the block. Start reading new one.
     handler_ = HANDLER(ParseBlockType);
   } else {
-    LOG(INFO) << "New subblock " << remaining_block_length_;
     if (start_of_subblock_handler_) {
       auto result = start_of_subblock_handler_();
       if (!result.ok())
@@ -287,8 +290,6 @@ Result GifImage::Parser::ParseControlExtension() {
         Result::Code::kDecodeError,
         "Graphics Control Extension MUST be at least 4 bytes long");
   }
-
-  LOG(INFO) << "ParseControlExtension";
 
   uint8_t* data;
   auto result = source_->ReadN(&data, kLength);
@@ -320,8 +321,6 @@ Result GifImage::Parser::ParseControlExtension() {
 
   remaining_block_length_ -= kLength;
 
-  LOG(INFO) << "Control Ended: " << remaining_block_length_;
-
   return SkipSubBlockHandler(HANDLER(SkipBlock));
 }
 
@@ -345,7 +344,6 @@ Result GifImage::Parser::ParseApplicationExtension() {
   } else if (std::memcmp(data, "ICCRGBG1012", kLength) &&
              !image_->metadata_.Has(ImageMetadata::Type::kICC)) {
     // Store only first metadata chunk of each type.
-    LOG(INFO) << "ICC";
     SetupHandlers(
         [this]() -> Result {
           if (!metadata_writer_)
@@ -365,7 +363,6 @@ Result GifImage::Parser::ParseApplicationExtension() {
   } else if (std::memcmp(data, "XMP DataXMP", kLength) &&
              !image_->metadata_.Has(ImageMetadata::Type::kXMP)) {
     // Store only first metadata chunk of each type.
-    LOG(INFO) << "XMP";
     SetupHandlers(
         [this]() -> Result {
           if (!metadata_writer_)
@@ -398,10 +395,8 @@ Result GifImage::Parser::ParseApplicationExtension() {
   } else {
     LOG(WARNING) << "Unsupported Application Extension";
     handler_ = BlockHandler(HANDLER(SkipBlock));
-    return Result::Ok();
   }
 
-  handler_ = FinishParse;
   return Result::Ok();
 }
 
@@ -418,6 +413,8 @@ Result GifImage::Parser::ParseNetscapeApplicationExtension() {
   auto result = source_->ReadN(&data, kLength);
   if (!result.ok())
     return Result::FromIoResult(result, false);
+
+  remaining_block_length_ -= kLength;
 
   Reader reader(data);
   int netscape_extension = reader.ReadByte() & 0x07;
@@ -481,7 +478,6 @@ Result GifImage::Parser::SkipBlock() {
 }
 
 Result GifImage::Parser::ParseImageDescriptor() {
-  LOG(INFO) << "ParseImageDescriptor";
   const size_t kLength = 9;
   uint8_t* data;
   auto result = source_->ReadN(&data, kLength);
@@ -570,8 +566,6 @@ Result GifImage::Parser::ReadLZWData() {
     if (!io_result.ok())
       return Result::FromIoResult(io_result, false);
 
-    LOG(INFO) << "ReadLZWData: " << io_result.n();
-
     auto result = GetFrameParser()->ProcessImageData(data, io_result.n());
     if (!result.ok())
       return result;
@@ -589,7 +583,6 @@ Result GifImage::Parser::ParseMinimumCodeSize() {
   auto result = source_->ReadN(&data, kLength);
   if (!result.ok())
     return Result::FromIoResult(result, false);
-  LOG(INFO) << "ParseMinimumCodeSize " << static_cast<uint32_t>(*data);
   if (!GetFrameParser()->InitDecoder(*data))
     return Result::Error(Result::Code::kDecodeError,
                          "Too big minimum code size");

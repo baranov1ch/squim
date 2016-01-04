@@ -44,6 +44,8 @@ class GifImage::Parser {
  private:
   using Handler = std::function<Result()>;
 
+  Result ParseInternal();
+
   Result ParseVersion();
   Result ParseLogicalScreenDescriptor();
   Result ParseGlobalColorTable();

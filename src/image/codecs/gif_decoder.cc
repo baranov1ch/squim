@@ -60,6 +60,7 @@ class GifDecoder::Impl {
       header_complete_reported_ = true;
       decoder_->width_ = gif_image_.screen_width();
       decoder_->height_ = gif_image_.screen_height();
+      decoder_->color_scheme_ = ColorScheme::kRGB;
       // is_progressive_ can change over time, since every frame interlaced on
       // its own.
     }
@@ -81,14 +82,15 @@ class GifDecoder::Impl {
       if (num_frames_ready_ == 0) {
         const auto* global_color_table = gif_image_.global_color_table();
         auto bg_color_idx = gif_image_.background_color_index();
-        if (bg_color_idx == GifImage::kNoBackgroundColor ||
-            bg_color_idx > global_color_table->size() - 1) {
-          LOG(WARNING) << "Missing/invalid background color, fallback to white";
-        } else {
+        if (global_color_table && bg_color_idx < global_color_table->size()) {
           auto color = global_color_table->GetColor(bg_color_idx);
-          decoder_->bg_color_ =
-              std::array<uint8_t, 4>({color.r(), color.g(), color.b(), 0xFF});
+          decoder_->bg_color_ = {{color.r(), color.g(), color.b(), 0xFF}};
         }
+      } else if (num_frames_ready_ == 1 &&
+                 gif_image_.background_color_index() ==
+                     GifImage::kNoBackgroundColor) {
+        // Just to write warning.
+        LOG(WARNING) << "No background color for animated image";
       }
 
       auto frame = base::make_unique<ImageFrame>();
@@ -135,6 +137,7 @@ class GifDecoder::Impl {
         }
       }
 
+      frame->set_status(ImageFrame::Status::kComplete);
       decoder_->image_frames_.push_back(std::move(frame));
       num_frames_ready_++;
     }
