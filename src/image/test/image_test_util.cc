@@ -223,7 +223,6 @@ void CheckImageInfo(const std::string& image_file,
   EXPECT_EQ(ref.height, image_info.height) << image_file;
   EXPECT_EQ(ref.multiframe, image_info.multiframe) << image_file;
   EXPECT_EQ(ref.loop_count, image_info.loop_count) << image_file;
-  // EXPECT_EQ(ref.bg_color, image_info.bg_color) << image_file;
 }
 
 void CheckDecodedFrame(const std::string& image_file,

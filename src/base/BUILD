@@ -18,6 +18,7 @@ cc_library(
     "logging.h",
     "make_noncopyable.h",
     "memory/make_unique.h",
+    "optional.h",
     "strings/string_piece.h",
     "strings/string_util.h",
   ],

@@ -72,6 +72,7 @@ class GifDecoderTest : public testing::Test {
       bool result =
           LoadReferencePngExpandGray(filename, png_data, true, info, frame);
       info->multiframe = true;
+      // info->bg_color = {{0xFF, 0xFF, 0xFF, 0xFF}};
       return result;
     };
     ValidateDecodeWithReadSpec(filename, gif_data, CreateDecoder, ref_reader,
@@ -144,12 +145,18 @@ TEST_F(GifDecoderTest, ReadInterlaced) {
 }
 
 TEST_F(GifDecoderTest, ReadAnimated) {
-  const char* kAnimated[] = {
-      "animated", "animated_interlaced",
+  struct TestCase {
+    const char* filename;
+    size_t frame_count;
+    base::optional<std::array<uint8_t, 4>> bg_color;
+    size_t loop_count;
+  } kCases[] = {
+      {"animated", 8, base::optional<std::array<uint8_t, 4>>(), 5},
+      {"animated_interlaced", 8, {{0xFF, 0xFF, 0xFF, 0xFF}}, 0},
   };
-  for (auto pic : kAnimated) {
+  for (const auto& tc : kCases) {
     std::vector<uint8_t> data;
-    ASSERT_TRUE(ReadTestFile(kGifTestDir, pic, "gif", &data));
+    ASSERT_TRUE(ReadTestFile(kGifTestDir, tc.filename, "gif", &data));
     auto source = base::make_unique<io::BufReader>(
         base::make_unique<io::BufferedSource>());
     source->source()->AddChunk(
@@ -159,7 +166,10 @@ TEST_F(GifDecoderTest, ReadAnimated) {
                                                 std::move(source));
     auto result = testee->Decode();
     EXPECT_TRUE(result.ok());
-    EXPECT_EQ(8, testee->GetFrameCount());
+    EXPECT_EQ(tc.frame_count, testee->GetFrameCount());
+    auto info = testee->GetImageInfo();
+    EXPECT_EQ(tc.bg_color, info.bg_color);
+    EXPECT_EQ(tc.loop_count, info.loop_count);
   }
 }
 

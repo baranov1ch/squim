@@ -20,6 +20,7 @@
 #include <array>
 #include <cstdint>
 
+#include "base/optional.h"
 #include "image/image_constants.h"
 
 namespace image {
@@ -31,7 +32,7 @@ struct ImageInfo {
   ImageType type = ImageType::kUnknown;
   bool multiframe = false;
   size_t loop_count = 0;
-  std::array<uint8_t, 4> bg_color;
+  base::optional<std::array<uint8_t, 4>> bg_color;
 };
 
 }  // namespace image
