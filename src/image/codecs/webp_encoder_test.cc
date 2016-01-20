@@ -34,6 +34,7 @@ namespace image {
 namespace {
 
 const char kWebPTestDir[] = "webp";
+const char kGifTestDir[] = "gif";
 
 const char* kValidImages[] = {"alpha_32x32", "opaque_32x20",
                               "pagespeed_32x32_gray"};
@@ -118,6 +119,23 @@ class WebPEncoderTest : public testing::Test {
 TEST_F(WebPEncoderTest, Success) {
   for (auto pic : kValidImages)
     ValidateEncoding(pic);
+}
+
+TEST_F(WebPEncoderTest, EncodeMultiframe) {
+  /*  std::vector<uint8_t> gif_image;
+    ASSERT_TRUE(ReadTestFile(kGifTestDir, "animated", "gif", &data));
+    auto source = base::make_unique<io::BufReader>(
+        base::make_unique<io::BufferedSource>());
+    source->source()->AddChunk(
+        base::make_unique<io::Chunk>(&data[0], data.size()));
+    source->source()->SendEof();
+    auto gif_decoder =
+    base::make_unique<GifDecoder>(GifDecoder::Params::Default(),
+                                                     std::move(source));
+    auto result = gif_decoder->Decode();
+    EXPECT_TRUE(result.ok());
+    auto writer = base::make_unique<TestWriter>();
+    auto* writer_raw = writer.get();*/
 }
 
 }  // namespace image

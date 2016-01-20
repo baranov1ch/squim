@@ -21,6 +21,7 @@
 #include "google/libwebp/upstream/src/webp/encode.h"
 #include "google/libwebp/upstream/examples/gif2webp_util.h"
 #include "image/image_frame.h"
+#include "image/image_info.h"
 #include "image/pixel.h"
 #include "io/writer.h"
 
@@ -61,6 +62,21 @@ WebPPreset PresetToWebPPreset(WebPEncoder::Preset preset) {
     default:
       NOTREACHED() << "Unknown WebP preset: " << static_cast<int>(preset);
       return WEBP_PRESET_DEFAULT;
+  }
+}
+
+FrameDisposeMethod DisposalMethodToWebPDisposal(
+    ImageFrame::DisposalMethod disposal) {
+  switch (disposal) {
+    case ImageFrame::DisposalMethod::kBackground:
+      return FRAME_DISPOSE_BACKGROUND;
+    case ImageFrame::DisposalMethod::kRestorePrevious:
+      return FRAME_DISPOSE_RESTORE_PREVIOUS;
+    case ImageFrame::DisposalMethod::kNone:
+      return FRAME_DISPOSE_NONE;
+    default:
+      NOTREACHED();
+      return FRAME_DISPOSE_NONE;
   }
 }
 
@@ -261,13 +277,15 @@ class WebPEncoder::Impl {
  public:
   Impl(WebPEncoder* encoder) : encoder_(encoder) {}
   ~Impl() {
-    // WebPFrameCacheDelete(webp_frame_cache_);
-    // WebPMuxDelete(webp_mux_);
+    if (mode_ == Mode::kMultiFrame) {
+      WebPFrameCacheDelete(webp_frame_cache_);
+      WebPMuxDelete(webp_mux_);
+    }
   }
 
   Result EncodeSingle(ImageFrame* frame) {
-    CHECK(idle_);
-    idle_ = false;
+    CHECK_EQ(Mode::kNotDecidedYet, mode_);
+    mode_ = Mode::kSingleFrame;
 
     WebPConfig config;
     const auto& params = encoder_->params_;
@@ -290,92 +308,55 @@ class WebPEncoder::Impl {
     picture.webp_picture()->progress_hook = ProgressHook;
     picture.webp_picture()->user_data = this;
 
-    // Now we need to take picture and WebP encode it.
+    // Now take picture and WebP encode it.
     bool result = WebPEncode(&config, picture.webp_picture());
 
     return result ? Result::Ok() : Result::Error(Result::Code::kEncodeError);
   }
 
   Result EncodeNextFrame(ImageFrame* frame) {
-    /*
-    if (idle_) {
-      webp_mux_ = WebPMuxNew();
-      if (!webp_mux_)
-        return Result::Error(Result::Code::kEncodeError);
-
-      const auto& params = encoder_->params_;
-
-      auto preset = PresetToWebPPreset(params.preset);
-      if (!WebPConfigPreset(&webp_config_, preset, params.quality))
-        return Result::Error(Result::Code::kEncodeError);
-
-      webp_config_.method = params.method;
-      webp_config_.allow_mixed = params.compression == Compression::kMixed;
-
-      if (!WebPValidateConfig(&webp_config_))
-        return Result::Error(Result::Code::kEncodeError);
-
-      if (WebPPictureInit(&webp_image_))
-        return Result::Error(Result::Code::kEncodeError);
-
-      // TODO overall values should be used.
-      // Separate Initialize method required.
-      webp_image_->width = frame->width();
-      webp_image_->height = frame->height();
-      webp_image_->use_argb = true;
-
-      if (!WebPPictureAlloc(&webp_image_))
-        return Result::Error(Result::Code::kEncodeError);
-
-      WebPUtilClearPic(&webp_image_, nullptr);
-
-      webp_image_.progress_hook = ProgressHook;
-      webp_image_.user_data = this;
-
-      // Key frame parameters: do not insert unnecessary key frames.
-      static const size_t kMax = ~0;
-      static const size_t kMin = kMax -1;
-      webp_frame_cache_ = WebPFrameCacheNew(
-          frame->width(), frame->height(), kMin, kMax,
-          webp_config_->allow_mixed);
-
-      idle_ = false;
+    if (mode_ == Mode::kNotDecidedYet) {
+      auto result = InitMuxer();
+      if (!result.ok())
+        return result;
     }
 
+    CHECK_EQ(Mode::kMultiFrame, mode_);
+
     if (!WebPPictureView(&webp_image_, frame->x_offset(), frame->y_offset(),
-    frame->width(), frame->height(), &webp_frame_))
+                         frame->width(), frame->height(), &webp_frame_))
       return Result::Error(Result::Code::kEncodeError);
 
     auto* where = webp_frame_.argb;
     Bitmap bitmap(frame);
     switch (frame->color_scheme()) {
-      case kGrayScale:
-        for (auto y = 0; y < frame->height(); ++y) {
-          for (auto x = 0; x < frame->width(); ++x) {
+      case ColorScheme::kGrayScale:
+        for (uint32_t y = 0; y < frame->height(); ++y) {
+          for (uint32_t x = 0; x < frame->width(); ++x) {
             auto px = bitmap.GetPixel<GrayScalePixel>(x, y);
             *where++ = PackAsARGB(px.g(), px.g(), px.g(), 0xFF);
           }
         }
         break;
-      case kGrayScaleAlpha:
-        for (auto y = 0; y < frame->height(); ++y) {
-          for (auto x = 0; x < frame->width(); ++x) {
+      case ColorScheme::kGrayScaleAlpha:
+        for (uint32_t y = 0; y < frame->height(); ++y) {
+          for (uint32_t x = 0; x < frame->width(); ++x) {
             auto px = bitmap.GetPixel<GrayScaleAlphaPixel>(x, y);
             *where++ = PackAsARGB(px.g(), px.g(), px.g(), px.a());
           }
         }
         break;
-      case kRGB:
-        for (auto y = 0; y < frame->height(); ++y) {
-          for (auto x = 0; x < frame->width(); ++x) {
+      case ColorScheme::kRGB:
+        for (uint32_t y = 0; y < frame->height(); ++y) {
+          for (uint32_t x = 0; x < frame->width(); ++x) {
             auto px = bitmap.GetPixel<RGBPixel>(x, y);
             *where++ = PackAsARGB(px.r(), px.g(), px.b(), 0xFF);
           }
         }
         break;
-      case kRGBA:
-        for (auto y = 0; y < frame->height(); ++y) {
-          for (auto x = 0; x < frame->width(); ++x) {
+      case ColorScheme::kRGBA:
+        for (uint32_t y = 0; y < frame->height(); ++y) {
+          for (uint32_t x = 0; x < frame->width(); ++x) {
             auto px = bitmap.GetPixel<RGBAPixel>(x, y);
             *where++ = PackAsARGB(px.r(), px.g(), px.b(), px.a());
           }
@@ -385,65 +366,63 @@ class WebPEncoder::Impl {
         return Result::Error(Result::Code::kEncodeError);
     }
 
-    struct WebPMuxFrameInfo webp_frame_info;
-    memset(&webp_frame_info, 0, sizeof(webp_frame_info));
-    webp_frame_info.id = WEBP_CHUNK_ANMF;
-    webp_frame_info.dispose_method = frame->should_dispose_to_background() ?
-    WEBP_MUX_DISPOSE_BACKGROUND : WEBP_MUX_DISPOSE_NONE;
-    webp_frame_info.blend_method = WEBP_MUX_BLEND;
-    webp_frame_info.duration = frame->duration();
-
     // We need to pass image to add frame.
-    WebPFrameRect frame_rect = {
-      static_cast<int>(frame->x_offset()),
-      static_cast<int>(frame->y_offset()),
-      static_cast<int>(frame->width()),
-      static_cast<int>(frame->height())
-    };
+    WebPFrameRect frame_rect = {static_cast<int>(frame->x_offset()),
+                                static_cast<int>(frame->y_offset()),
+                                static_cast<int>(frame->width()),
+                                static_cast<int>(frame->height())};
+    auto disposal_method =
+        DisposalMethodToWebPDisposal(frame->disposal_method());
 
     if (!WebPFrameCacheAddFrame(webp_frame_cache_, &webp_config_, &frame_rect,
-                                &webp_image_, &webp_frame_info)) {
+                                disposal_method, frame->duration(),
+                                &webp_image_)) {
       return Result::Error(Result::Code::kEncodeError);
-    }*/
+    }
 
-    // if (WebPFrameCacheFlush(webp_frame_cache_, false /*verbose*/, webp_mux_)
-    // != WEBP_MUX_OK)
-    //  return Result::Error(Result::Code::kEncodeError);
+    if (WebPFrameCacheFlush(webp_frame_cache_, false /*verbose*/, webp_mux_) !=
+        WEBP_MUX_OK)
+      return Result::Error(Result::Code::kEncodeError);
+
+    next_frame_idx_++;
 
     return Result::Ok();
   }
 
   Result FinishEncoding() {
-    idle_ = false;
+    if (mode_ != Mode::kMultiFrame)
+      return Result::Ok();
 
-    // if (WebPFrameCacheFlushAll(webp_frame_cache_, false /*verbose*/,
-    // webp_mux_) != WEBP_MUX_OK)
-    /*  return Result::Error(Result::Code::kEncodeError);
+    if (WebPFrameCacheFlushAll(webp_frame_cache_, false /*verbose*/,
+                               webp_mux_) != WEBP_MUX_OK)
+      return Result::Error(Result::Code::kEncodeError);
 
-    if (next_frame_ > 1) {
+    if (next_frame_idx_ > 1) {
+      RGBAPixel bg(const_cast<uint8_t*>(image_info_->bg_color->data()));
       // This was an animated image.
-      WebPMuxAnimParams anim = {
-        RgbaToPackedArgb(image_spec_->bg_color),
-        static_cast<int>(image_spec_->loop_count - 1)
-      };
+      WebPMuxAnimParams anim = {PackAsARGB(bg.r(), bg.g(), bg.b(), bg.a()),
+                                static_cast<int>(image_info_->loop_count - 1)};
       if (WebPMuxSetAnimationParams(webp_mux_, &anim) != WEBP_MUX_OK)
         return Result::Error(Result::Code::kEncodeError);
     }
 
-    WebPData webp_data = { NULL, 0 };
+    WebPData webp_data = {NULL, 0};
     if (WebPMuxAssemble(webp_mux_, &webp_data) != WEBP_MUX_OK)
       return Result::Error(Result::Code::kEncodeError);
 
     auto chunk = io::Chunk::Copy(webp_data.bytes, webp_data.size);
     encoder_->output_.push_back(std::move(chunk));
-    WebPDataClear(&webp_data);*/
+    WebPDataClear(&webp_data);
 
     return Result::Ok();
   }
 
-  bool idle() const { return idle_; }
+  bool idle() const { return mode_ == Mode::kNotDecidedYet; }
+  void set_image_info(const ImageInfo* image_info) { image_info_ = image_info; }
 
  private:
+  enum Mode { kNotDecidedYet, kSingleFrame, kMultiFrame };
+
   static int ProgressHook(int percent, const WebPPicture* picture) {
     // TODO: handle timeouts.
     return 1;
@@ -458,14 +437,60 @@ class WebPEncoder::Impl {
     return 1;
   }
 
-  bool idle_ = true;
-  WebPEncoder* encoder_;
+  Result InitMuxer() {
+    CHECK_EQ(Mode::kNotDecidedYet, mode_);
+    CHECK(image_info_);
 
-  // Muxer API stuff.
+    webp_mux_ = WebPMuxNew();
+    if (!webp_mux_)
+      return Result::Error(Result::Code::kEncodeError);
+
+    const auto& params = encoder_->params_;
+
+    auto preset = PresetToWebPPreset(params.preset);
+    if (!WebPConfigPreset(&webp_config_, preset, params.quality))
+      return Result::Error(Result::Code::kEncodeError);
+
+    webp_config_.method = params.method;
+
+    if (!WebPValidateConfig(&webp_config_))
+      return Result::Error(Result::Code::kEncodeError);
+
+    if (WebPPictureInit(&webp_image_))
+      return Result::Error(Result::Code::kEncodeError);
+
+    webp_image_.width = image_info_->width;
+    webp_image_.height = image_info_->height;
+    webp_image_.use_argb = true;
+
+    if (!WebPPictureAlloc(&webp_image_))
+      return Result::Error(Result::Code::kEncodeError);
+
+    WebPUtilClearPic(&webp_image_, nullptr);
+
+    webp_image_.progress_hook = ProgressHook;
+    webp_image_.user_data = this;
+
+    // Key frame parameters: do not insert unnecessary key frames.
+    static const size_t kMax = ~0;
+    static const size_t kMin = kMax - 1;
+    webp_frame_cache_ =
+        WebPFrameCacheNew(image_info_->width, image_info_->height, kMin, kMax,
+                          params.compression == Compression::kMixed);
+
+    mode_ = Mode::kMultiFrame;
+
+    return Result::Ok();
+  }
+
+  WebPEncoder* encoder_;
+  Mode mode_ = Mode::kNotDecidedYet;
+  const ImageInfo* image_info_ = nullptr;
+  size_t next_frame_idx_ = 0;
   WebPPicture webp_image_;
   WebPPicture webp_frame_;
-  WebPFrameCache* webp_frame_cache_;
-  WebPMux* webp_mux_;
+  WebPFrameCache* webp_frame_cache_ = nullptr;
+  WebPMux* webp_mux_ = nullptr;
   WebPConfig webp_config_;
 };
 
@@ -477,6 +502,7 @@ WebPEncoder::WebPEncoder(Params params, std::unique_ptr<io::VectorWriter> dst)
 WebPEncoder::~WebPEncoder() {}
 
 Result WebPEncoder::Initialize(const ImageInfo* image_info) {
+  impl_->set_image_info(image_info);
   return Result::Ok();
 }
 

@@ -23,6 +23,25 @@
 
 namespace image {
 
+namespace {
+
+ImageFrame::DisposalMethod GifDisposalToDisposalMethod(
+    GifImage::DisposalMethod gif_disposal) {
+  switch (gif_disposal) {
+    case GifImage::DisposalMethod::kOverwriteBgcolor:
+      return ImageFrame::DisposalMethod::kBackground;
+    case GifImage::DisposalMethod::kOverwritePrevious:
+      return ImageFrame::DisposalMethod::kRestorePrevious;
+    case GifImage::DisposalMethod::kKeep:
+    case GifImage::DisposalMethod::kNotSpecified:
+      return ImageFrame::DisposalMethod::kNone;
+    default:
+      NOTREACHED();
+      return ImageFrame::DisposalMethod::kNone;
+  }
+}
+}
+
 // static
 GifDecoder::Params GifDecoder::Params::Default() {
   Params params;
@@ -83,8 +102,9 @@ class GifDecoder::Impl {
 
       if (num_frames_ready_ == 1 &&
           gif_image_.background_color_index() == GifImage::kNoBackgroundColor) {
-        // Just to write warning.
         LOG(WARNING) << "No background color for animated image";
+        // Fall back to opaque white.
+        decoder_->image_info_.bg_color = {{0xFF, 0xFF, 0xFF, 0xFF}};
       }
 
       auto frame = base::make_unique<ImageFrame>();
@@ -96,14 +116,8 @@ class GifDecoder::Impl {
       } else {
         frame->set_color_scheme(ColorScheme::kRGB);
       }
-      if (gif_frame->disposal_method() ==
-          GifImage::DisposalMethod::kOverwriteBgcolor) {
-        frame->set_should_dispose_to_background(true);
-      } else if (gif_frame->disposal_method() ==
-                 GifImage::DisposalMethod::kOverwritePrevious) {
-        LOG(WARNING) << "Previous: unsupported frame disposal method";
-        frame->set_should_dispose_to_background(true);
-      }
+      frame->set_disposal_method(
+          GifDisposalToDisposalMethod(gif_frame->disposal_method()));
       frame->set_duration(gif_frame->duration());
       frame->set_status(ImageFrame::Status::kHeaderComplete);
 

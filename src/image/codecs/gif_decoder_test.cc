@@ -151,7 +151,7 @@ TEST_F(GifDecoderTest, ReadAnimated) {
     base::optional<std::array<uint8_t, 4>> bg_color;
     size_t loop_count;
   } kCases[] = {
-      {"animated", 8, base::optional<std::array<uint8_t, 4>>(), 5},
+      {"animated", 8, {{0xFF, 0xFF, 0xFF, 0xFF}}, 5},
       {"animated_interlaced", 8, {{0xFF, 0xFF, 0xFF, 0xFF}}, 0},
   };
   for (const auto& tc : kCases) {

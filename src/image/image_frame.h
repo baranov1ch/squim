@@ -39,6 +39,12 @@ class ImageFrame {
     kComplete,
   };
 
+  enum class DisposalMethod {
+    kNone,
+    kBackground,
+    kRestorePrevious,
+  };
+
   class Header {
    public:
   };
@@ -75,12 +81,8 @@ class ImageFrame {
     bpp_ = GetBytesPerPixel(color_scheme_);
   }
 
-  bool should_dispose_to_background() const {
-    return should_dispose_to_background_;
-  }
-  void set_should_dispose_to_background(bool value) {
-    should_dispose_to_background_ = value;
-  }
+  DisposalMethod disposal_method() const { return disposal_method_; }
+  void set_disposal_method(DisposalMethod value) { disposal_method_ = value; }
 
   bool is_progressive() const { return is_progressive_; }
   void set_is_progressive(bool progressive) { is_progressive_ = progressive; }
@@ -129,7 +131,7 @@ class ImageFrame {
   uint32_t duration_ = 0;
   size_t bpp_ = 0;
   ColorScheme color_scheme_ = ColorScheme::kUnknown;
-  bool should_dispose_to_background_ = false;
+  DisposalMethod disposal_method_ = DisposalMethod::kNone;
   bool is_progressive_ = false;
   uint32_t quality_ = 100;
   std::unique_ptr<uint8_t[]> data_;
