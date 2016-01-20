@@ -19,6 +19,7 @@
 #include "base/logging.h"
 #include "base/memory/make_unique.h"
 #include "google/libwebp/upstream/src/webp/encode.h"
+#include "google/libwebp/upstream/examples/gif2webp_util.h"
 #include "image/image_frame.h"
 #include "image/pixel.h"
 #include "io/writer.h"
@@ -63,23 +64,59 @@ WebPPreset PresetToWebPPreset(WebPEncoder::Preset preset) {
   }
 }
 
+uint32_t PackAsARGB(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+  return (static_cast<uint32_t>(a) << 24) | (r << 16) | (g << 8) | (b << 0);
+}
+
+void ConvertGrayToRGBA(ImageFrame* in, ImageFrame* out) {
+  Bitmap from(in);
+  Bitmap to(out);
+  auto width = in->width();
+  auto height = in->height();
+  out->set_size(width, height);
+  out->set_offset(in->x_offset(), in->y_offset());
+  out->set_color_scheme(ColorScheme::kRGBA);
+  out->Init();
+  if (in->has_alpha()) {
+    for (uint32_t y = 0; y < height; ++y) {
+      for (uint32_t x = 0; x < width; ++x) {
+        const auto gray = from.GetPixel<GrayScaleAlphaPixel>(x, y);
+        auto rgba = to.GetPixel<RGBAPixel>(x, y);
+        rgba.set(gray.g(), gray.g(), gray.g(), gray.a());
+      }
+    }
+  } else {
+    for (uint32_t y = 0; y < height; ++y) {
+      for (uint32_t x = 0; x < width; ++x) {
+        const auto gray = from.GetPixel<GrayScalePixel>(x, y);
+        auto rgba = to.GetPixel<RGBAPixel>(x, y);
+        rgba.set(gray.g(), gray.g(), gray.g(), 0xFF);
+      }
+    }
+  }
+}
+
 void ConvertGrayToRGB(ImageFrame* in, ImageFrame* out) {
   Bitmap from(in);
   Bitmap to(out);
   auto width = in->width();
   auto height = in->height();
+  out->set_size(width, height);
+  out->set_offset(in->x_offset(), in->y_offset());
 
   if (in->has_alpha()) {
-    out->Init(width, height, ColorScheme::kRGBA);
+    out->set_color_scheme(ColorScheme::kRGBA);
+    out->Init();
     for (uint32_t y = 0; y < height; ++y) {
       for (uint32_t x = 0; x < width; ++x) {
         const auto gray = from.GetPixel<GrayScaleAlphaPixel>(x, y);
-        auto rgb = to.GetPixel<RGBAPixel>(x, y);
-        rgb.set(gray.g(), gray.g(), gray.g(), gray.a());
+        auto rgba = to.GetPixel<RGBAPixel>(x, y);
+        rgba.set(gray.g(), gray.g(), gray.g(), gray.a());
       }
     }
   } else {
-    out->Init(width, height, ColorScheme::kRGB);
+    out->set_color_scheme(ColorScheme::kRGB);
+    out->Init();
     for (uint32_t y = 0; y < height; ++y) {
       for (uint32_t x = 0; x < width; ++x) {
         const auto gray = from.GetPixel<GrayScalePixel>(x, y);
@@ -223,7 +260,10 @@ WebPEncoder::Params WebPEncoder::Params::Default() {
 class WebPEncoder::Impl {
  public:
   Impl(WebPEncoder* encoder) : encoder_(encoder) {}
-  ~Impl() {}
+  ~Impl() {
+    // WebPFrameCacheDelete(webp_frame_cache_);
+    // WebPMuxDelete(webp_mux_);
+  }
 
   Result EncodeSingle(ImageFrame* frame) {
     CHECK(idle_);
@@ -257,12 +297,147 @@ class WebPEncoder::Impl {
   }
 
   Result EncodeNextFrame(ImageFrame* frame) {
-    idle_ = false;
+    /*
+    if (idle_) {
+      webp_mux_ = WebPMuxNew();
+      if (!webp_mux_)
+        return Result::Error(Result::Code::kEncodeError);
+
+      const auto& params = encoder_->params_;
+
+      auto preset = PresetToWebPPreset(params.preset);
+      if (!WebPConfigPreset(&webp_config_, preset, params.quality))
+        return Result::Error(Result::Code::kEncodeError);
+
+      webp_config_.method = params.method;
+      webp_config_.allow_mixed = params.compression == Compression::kMixed;
+
+      if (!WebPValidateConfig(&webp_config_))
+        return Result::Error(Result::Code::kEncodeError);
+
+      if (WebPPictureInit(&webp_image_))
+        return Result::Error(Result::Code::kEncodeError);
+
+      // TODO overall values should be used.
+      // Separate Initialize method required.
+      webp_image_->width = frame->width();
+      webp_image_->height = frame->height();
+      webp_image_->use_argb = true;
+
+      if (!WebPPictureAlloc(&webp_image_))
+        return Result::Error(Result::Code::kEncodeError);
+
+      WebPUtilClearPic(&webp_image_, nullptr);
+
+      webp_image_.progress_hook = ProgressHook;
+      webp_image_.user_data = this;
+
+      // Key frame parameters: do not insert unnecessary key frames.
+      static const size_t kMax = ~0;
+      static const size_t kMin = kMax -1;
+      webp_frame_cache_ = WebPFrameCacheNew(
+          frame->width(), frame->height(), kMin, kMax,
+          webp_config_->allow_mixed);
+
+      idle_ = false;
+    }
+
+    if (!WebPPictureView(&webp_image_, frame->x_offset(), frame->y_offset(),
+    frame->width(), frame->height(), &webp_frame_))
+      return Result::Error(Result::Code::kEncodeError);
+
+    auto* where = webp_frame_.argb;
+    Bitmap bitmap(frame);
+    switch (frame->color_scheme()) {
+      case kGrayScale:
+        for (auto y = 0; y < frame->height(); ++y) {
+          for (auto x = 0; x < frame->width(); ++x) {
+            auto px = bitmap.GetPixel<GrayScalePixel>(x, y);
+            *where++ = PackAsARGB(px.g(), px.g(), px.g(), 0xFF);
+          }
+        }
+        break;
+      case kGrayScaleAlpha:
+        for (auto y = 0; y < frame->height(); ++y) {
+          for (auto x = 0; x < frame->width(); ++x) {
+            auto px = bitmap.GetPixel<GrayScaleAlphaPixel>(x, y);
+            *where++ = PackAsARGB(px.g(), px.g(), px.g(), px.a());
+          }
+        }
+        break;
+      case kRGB:
+        for (auto y = 0; y < frame->height(); ++y) {
+          for (auto x = 0; x < frame->width(); ++x) {
+            auto px = bitmap.GetPixel<RGBPixel>(x, y);
+            *where++ = PackAsARGB(px.r(), px.g(), px.b(), 0xFF);
+          }
+        }
+        break;
+      case kRGBA:
+        for (auto y = 0; y < frame->height(); ++y) {
+          for (auto x = 0; x < frame->width(); ++x) {
+            auto px = bitmap.GetPixel<RGBAPixel>(x, y);
+            *where++ = PackAsARGB(px.r(), px.g(), px.b(), px.a());
+          }
+        }
+        break;
+      default:
+        return Result::Error(Result::Code::kEncodeError);
+    }
+
+    struct WebPMuxFrameInfo webp_frame_info;
+    memset(&webp_frame_info, 0, sizeof(webp_frame_info));
+    webp_frame_info.id = WEBP_CHUNK_ANMF;
+    webp_frame_info.dispose_method = frame->should_dispose_to_background() ?
+    WEBP_MUX_DISPOSE_BACKGROUND : WEBP_MUX_DISPOSE_NONE;
+    webp_frame_info.blend_method = WEBP_MUX_BLEND;
+    webp_frame_info.duration = frame->duration();
+
+    // We need to pass image to add frame.
+    WebPFrameRect frame_rect = {
+      static_cast<int>(frame->x_offset()),
+      static_cast<int>(frame->y_offset()),
+      static_cast<int>(frame->width()),
+      static_cast<int>(frame->height())
+    };
+
+    if (!WebPFrameCacheAddFrame(webp_frame_cache_, &webp_config_, &frame_rect,
+                                &webp_image_, &webp_frame_info)) {
+      return Result::Error(Result::Code::kEncodeError);
+    }*/
+
+    // if (WebPFrameCacheFlush(webp_frame_cache_, false /*verbose*/, webp_mux_)
+    // != WEBP_MUX_OK)
+    //  return Result::Error(Result::Code::kEncodeError);
+
     return Result::Ok();
   }
 
   Result FinishEncoding() {
     idle_ = false;
+
+    // if (WebPFrameCacheFlushAll(webp_frame_cache_, false /*verbose*/,
+    // webp_mux_) != WEBP_MUX_OK)
+    /*  return Result::Error(Result::Code::kEncodeError);
+
+    if (next_frame_ > 1) {
+      // This was an animated image.
+      WebPMuxAnimParams anim = {
+        RgbaToPackedArgb(image_spec_->bg_color),
+        static_cast<int>(image_spec_->loop_count - 1)
+      };
+      if (WebPMuxSetAnimationParams(webp_mux_, &anim) != WEBP_MUX_OK)
+        return Result::Error(Result::Code::kEncodeError);
+    }
+
+    WebPData webp_data = { NULL, 0 };
+    if (WebPMuxAssemble(webp_mux_, &webp_data) != WEBP_MUX_OK)
+      return Result::Error(Result::Code::kEncodeError);
+
+    auto chunk = io::Chunk::Copy(webp_data.bytes, webp_data.size);
+    encoder_->output_.push_back(std::move(chunk));
+    WebPDataClear(&webp_data);*/
+
     return Result::Ok();
   }
 
@@ -285,6 +460,13 @@ class WebPEncoder::Impl {
 
   bool idle_ = true;
   WebPEncoder* encoder_;
+
+  // Muxer API stuff.
+  WebPPicture webp_image_;
+  WebPPicture webp_frame_;
+  WebPFrameCache* webp_frame_cache_;
+  WebPMux* webp_mux_;
+  WebPConfig webp_config_;
 };
 
 WebPEncoder::WebPEncoder(Params params, std::unique_ptr<io::VectorWriter> dst)
@@ -293,6 +475,10 @@ WebPEncoder::WebPEncoder(Params params, std::unique_ptr<io::VectorWriter> dst)
 }
 
 WebPEncoder::~WebPEncoder() {}
+
+Result WebPEncoder::Initialize(const ImageInfo* image_info) {
+  return Result::Ok();
+}
 
 Result WebPEncoder::EncodeFrame(ImageFrame* frame, bool last_frame) {
   if (impl_->idle() && last_frame && frame) {
@@ -326,7 +512,7 @@ Result WebPEncoder::EncodeFrame(ImageFrame* frame, bool last_frame) {
 
 void WebPEncoder::SetMetadata(const ImageMetadata* metadata) {}
 
-Result WebPEncoder::FinishWrite() {
+Result WebPEncoder::FinishWrite(ImageWriter::Stats* stats) {
   return Result::Ok();
 }
 

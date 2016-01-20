@@ -18,16 +18,20 @@
 #define IMAGE_IMAGE_ENCODER_H_
 
 #include "image/image_constants.h"
+#include "image/image_writer.h"
 #include "image/result.h"
 
 namespace image {
 
 class ImageFrame;
+class ImageInfo;
 class ImageMetadata;
 
 // General encoder interface.
 class ImageEncoder {
  public:
+  virtual Result Initialize(const ImageInfo* image_info) = 0;
+
   // Encodes single frame. |frame| can be null iff |last_frame| is true.
   virtual Result EncodeFrame(ImageFrame* frame, bool last_frame) = 0;
 
@@ -37,7 +41,7 @@ class ImageEncoder {
   virtual void SetMetadata(const ImageMetadata* metadata) = 0;
 
   // Writes the rest of the stuff (metadata) or flushes output if necessary.
-  virtual Result FinishWrite() = 0;
+  virtual Result FinishWrite(ImageWriter::Stats* stats) = 0;
 
   virtual ~ImageEncoder() {}
 };

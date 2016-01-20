@@ -43,7 +43,6 @@ std::unique_ptr<ImageDecoder> CreateDecoder(
     std::unique_ptr<io::BufReader> source) {
   auto decoder = base::make_unique<GifDecoder>(GifDecoder::Params::Default(),
                                                std::move(source));
-  EXPECT_EQ(ImageType::kGif, decoder->GetImageType());
   return std::move(decoder);
 }
 
@@ -70,7 +69,10 @@ class GifDecoderTest : public testing::Test {
     auto read_spec = GenerateFuzzyReads(gif_data.size(), max_chunk_size);
     auto ref_reader = [&png_data, filename](ImageInfo* info,
                                             ImageFrame* frame) -> bool {
-      return LoadReferencePngExpandGray(filename, png_data, true, info, frame);
+      bool result =
+          LoadReferencePngExpandGray(filename, png_data, true, info, frame);
+      info->multiframe = true;
+      return result;
     };
     ValidateDecodeWithReadSpec(filename, gif_data, CreateDecoder, ref_reader,
                                read_spec, read_type);

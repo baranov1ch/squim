@@ -76,9 +76,10 @@ class WebPEncoder : public ImageEncoder {
   ~WebPEncoder() override;
 
   // ImageEncoder implementation:
+  Result Initialize(const ImageInfo* image_info) override;
   Result EncodeFrame(ImageFrame* frame, bool last_frame) override;
   void SetMetadata(const ImageMetadata* metadata) override;
-  Result FinishWrite() override;
+  Result FinishWrite(ImageWriter::Stats* stats) override;
 
  private:
   class Impl;

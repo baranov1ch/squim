@@ -26,6 +26,7 @@
 
 using testing::InSequence;
 using testing::Return;
+using testing::ReturnRef;
 
 namespace image {
 
@@ -35,24 +36,22 @@ class DecodingReaderTest : public testing::Test {
     auto decoder = base::make_unique<MockDecoder>();
     decoder_ = decoder.get();
     testee_ = base::make_unique<DecodingReader>(std::move(decoder));
+    image_info_.width = 640;
+    image_info_.height = 480;
+    image_info_.size = 6666666;
+    image_info_.type = ImageType::kGif;
+    image_info_.multiframe = true;
   }
 
-  void SetmageInfoExpectations() {
+  void SetImageInfoExpectations() {
     EXPECT_CALL(*decoder_, IsImageInfoComplete()).WillOnce(Return(false));
     EXPECT_CALL(*decoder_, DecodeImageInfo()).WillOnce(Return(Result::Ok()));
-    EXPECT_CALL(*decoder_, GetColorScheme())
-        .WillOnce(Return(ColorScheme::kRGBA));
-    EXPECT_CALL(*decoder_, GetWidth()).WillOnce(Return(640));
-    EXPECT_CALL(*decoder_, GetHeight()).WillOnce(Return(480));
-    EXPECT_CALL(*decoder_, GetSize()).WillOnce(Return(6666666));
-    EXPECT_CALL(*decoder_, GetImageType()).WillOnce(Return(ImageType::kGif));
-    EXPECT_CALL(*decoder_, IsMultiFrame()).WillOnce(Return(true));
-    EXPECT_CALL(*decoder_, IsProgressive()).WillOnce(Return(true));
-    EXPECT_CALL(*decoder_, GetEstimatedQuality()).WillOnce(Return(75));
+    EXPECT_CALL(*decoder_, GetImageInfo()).WillOnce(ReturnRef(image_info_));
   }
 
   std::unique_ptr<DecodingReader> testee_;
   MockDecoder* decoder_;
+  ImageInfo image_info_;
 };
 
 TEST_F(DecodingReaderTest, ReadingImageInfoPend) {
@@ -76,23 +75,20 @@ TEST_F(DecodingReaderTest, ReadingImageInfoError) {
 }
 
 TEST_F(DecodingReaderTest, ReadingImageInfoSuccess) {
-  SetmageInfoExpectations();
+  SetImageInfoExpectations();
   const ImageInfo* image_info;
   auto result = testee_->GetImageInfo(&image_info);
   EXPECT_TRUE(result.ok());
-  EXPECT_EQ(ColorScheme::kRGBA, image_info->color_scheme);
   EXPECT_EQ(640, image_info->width);
   EXPECT_EQ(480, image_info->height);
   EXPECT_EQ(6666666, image_info->size);
   EXPECT_EQ(ImageType::kGif, image_info->type);
   EXPECT_EQ(true, image_info->multiframe);
-  EXPECT_EQ(true, image_info->is_progressive);
-  EXPECT_EQ(75, image_info->quality);
 }
 
 TEST_F(DecodingReaderTest, ReadOneFrame) {
   InSequence seq;
-  SetmageInfoExpectations();
+  SetImageInfoExpectations();
   EXPECT_CALL(*decoder_, Decode()).WillOnce(Return(Result::Pending()));
   EXPECT_CALL(*decoder_, IsFrameCompleteAtIndex(0)).WillOnce(Return(true));
   ImageFrame frame;
@@ -109,7 +105,7 @@ TEST_F(DecodingReaderTest, HasMoreFrames) {
   EXPECT_TRUE(testee_->HasMoreFrames());
 
   InSequence seq;
-  SetmageInfoExpectations();
+  SetImageInfoExpectations();
   auto result = testee_->GetImageInfo(nullptr);
   EXPECT_TRUE(result.ok());
 
@@ -124,7 +120,7 @@ TEST_F(DecodingReaderTest, HasMoreFrames) {
 
 TEST_F(DecodingReaderTest, HasNoMoreFrames) {
   InSequence seq;
-  SetmageInfoExpectations();
+  SetImageInfoExpectations();
   auto result = testee_->GetImageInfo(nullptr);
   EXPECT_TRUE(result.ok());
   EXPECT_CALL(*decoder_, IsAllFramesComplete()).WillOnce(Return(true));
@@ -146,7 +142,7 @@ TEST_F(DecodingReaderTest, HasNoMoreFrames) {
 
 TEST_F(DecodingReaderTest, ReadingManyFrames) {
   InSequence seq;
-  SetmageInfoExpectations();
+  SetImageInfoExpectations();
   auto result = testee_->GetImageInfo(nullptr);
   EXPECT_TRUE(result.ok());
 
@@ -219,7 +215,7 @@ TEST_F(DecodingReaderTest, ReadingManyFrames) {
 TEST_F(DecodingReaderTest, ReadTillTheEnd) {
   InSequence seq;
   EXPECT_CALL(*decoder_, IsImageComplete()).WillOnce(Return(false));
-  SetmageInfoExpectations();
+  SetImageInfoExpectations();
   EXPECT_CALL(*decoder_, Decode()).WillOnce(Return(Result::Ok()));
   EXPECT_CALL(*decoder_, IsImageComplete()).WillOnce(Return(false));
   EXPECT_CALL(*decoder_, Decode()).WillOnce(Return(Result::Pending()));
@@ -238,7 +234,7 @@ TEST_F(DecodingReaderTest, ReadTillTheEnd) {
 TEST_F(DecodingReaderTest, ReadTillTheError) {
   InSequence seq;
   EXPECT_CALL(*decoder_, IsImageComplete()).WillOnce(Return(false));
-  SetmageInfoExpectations();
+  SetImageInfoExpectations();
   EXPECT_CALL(*decoder_, Decode()).WillOnce(Return(Result::Ok()));
   EXPECT_CALL(*decoder_, IsImageComplete()).WillOnce(Return(false));
   EXPECT_CALL(*decoder_, Decode())

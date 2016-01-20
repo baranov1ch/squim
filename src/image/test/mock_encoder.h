@@ -25,9 +25,10 @@ namespace image {
 
 class MockEncoder : public ImageEncoder {
  public:
+  MOCK_METHOD1(Initialize, Result(const ImageInfo*));
   MOCK_METHOD2(EncodeFrame, Result(ImageFrame*, bool));
   MOCK_METHOD1(SetMetadata, void(const ImageMetadata*));
-  MOCK_METHOD0(FinishWrite, Result());
+  MOCK_METHOD1(FinishWrite, Result(ImageWriter::Stats*));
 };
 
 }  // namespace image

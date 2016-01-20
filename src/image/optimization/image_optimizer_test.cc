@@ -73,9 +73,10 @@ class MockStrategy : public OptimizationStrategy {
 
 class MockWriter : public ImageWriter {
  public:
+  MOCK_METHOD1(Initialize, Result(const ImageInfo*));
   MOCK_METHOD1(SetMetadata, void(const ImageMetadata*));
   MOCK_METHOD1(WriteFrame, Result(ImageFrame*));
-  MOCK_METHOD0(FinishWrite, Result());
+  MOCK_METHOD1(FinishWrite, Result(ImageWriter::Stats*));
 };
 
 Result TestImageTypeSelector(io::BufReader* reader, ImageType* image_type) {
@@ -175,13 +176,13 @@ class ImageOptimizerTest : public testing::Test {
         case Stage::kReadImageInfo:
           ASSERT_TRUE(image_reader_);
           if (current_stage < int_stage) {
-            EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))
+            EXPECT_CALL(*image_reader_, GetImageInfo(_))
                 .WillOnce(Return(Result::Ok()));
           } else if (code == Result::Code::kPending) {
-            EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))
+            EXPECT_CALL(*image_reader_, GetImageInfo(_))
                 .WillOnce(Return(Result::Pending()));
           } else {
-            EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))
+            EXPECT_CALL(*image_reader_, GetImageInfo(_))
                 .WillOnce(Return(Result::Error(Result::Code::kDecodeError)));
           }
           break;
@@ -199,6 +200,8 @@ class ImageOptimizerTest : public testing::Test {
           }
           break;
         case Stage::kReadFrame:
+          EXPECT_CALL(*image_writer_, Initialize(_))
+              .WillOnce(Return(Result::Ok()));
           EXPECT_CALL(*image_reader_, GetMetadata()).WillOnce(Return(&meta));
           EXPECT_CALL(*image_writer_, SetMetadata(&meta));
           EXPECT_CALL(*image_reader_, HasMoreFrames()).WillOnce(Return(true));
@@ -249,13 +252,13 @@ class ImageOptimizerTest : public testing::Test {
           break;
         case Stage::kFinish:
           if (code == Result::Code::kOk) {
-            EXPECT_CALL(*image_writer_, FinishWrite())
+            EXPECT_CALL(*image_writer_, FinishWrite(_))
                 .WillOnce(Return(Result::Ok()));
           } else if (code == Result::Code::kPending) {
-            EXPECT_CALL(*image_writer_, FinishWrite())
+            EXPECT_CALL(*image_writer_, FinishWrite(_))
                 .WillOnce(Return(Result::Pending()));
           } else {
-            EXPECT_CALL(*image_writer_, FinishWrite())
+            EXPECT_CALL(*image_writer_, FinishWrite(_))
                 .WillOnce(Return(Result::Error(Result::Code::kIoErrorOther)));
           }
           break;
@@ -435,17 +438,17 @@ TEST_F(ImageOptimizerTest, ShouldTolerateMultilePendingCalls) {
   image_reader_ = new MockImageReader();
   EXPECT_CALL(*strategy_, CreateImageReaderImpl(ImageType::kJpeg, source_, _))
       .WillOnce(Invoke(this, &ImageOptimizerTest::CreateReader));
-  EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))
+  EXPECT_CALL(*image_reader_, GetImageInfo(_))
       .WillRepeatedly(Return(Result::Pending()));
   auto result = testee_->Process();
   EXPECT_TRUE(result.pending());
   result = testee_->Process();
   EXPECT_TRUE(result.pending());
-  EXPECT_CALL(*image_reader_, GetImageInfo(nullptr))
-      .WillOnce(Return(Result::Ok()));
+  EXPECT_CALL(*image_reader_, GetImageInfo(_)).WillOnce(Return(Result::Ok()));
   image_writer_ = new MockWriter();
   EXPECT_CALL(*strategy_, CreateImageWriterImpl(dest_, image_reader_, _))
       .WillOnce(Invoke(this, &ImageOptimizerTest::CreateWriter));
+  EXPECT_CALL(*image_writer_, Initialize(_)).WillOnce(Return(Result::Ok()));
   ImageMetadata meta;
   EXPECT_CALL(*image_reader_, GetMetadata()).WillOnce(Return(&meta));
   EXPECT_CALL(*image_writer_, SetMetadata(&meta));
@@ -492,7 +495,7 @@ TEST_F(ImageOptimizerTest, ShouldTolerateMultilePendingCalls) {
   EXPECT_TRUE(result.pending());
 
   EXPECT_CALL(*image_reader_, ReadTillTheEnd()).WillOnce(Return(Result::Ok()));
-  EXPECT_CALL(*image_writer_, FinishWrite())
+  EXPECT_CALL(*image_writer_, FinishWrite(_))
       .WillOnce(Return(Result::Pending()));
   result = testee_->Process();
   EXPECT_TRUE(result.pending());

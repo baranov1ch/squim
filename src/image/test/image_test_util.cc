@@ -180,33 +180,33 @@ bool LoadReferencePngExpandGray(const std::string& filename,
   image_info->height = height;
   image_info->type = ImageType::kPng;
   image_info->multiframe = false;
-  image_info->is_progressive = interlace_type == PNG_INTERLACE_ADAM7;
+  image_frame->set_size(width, height);
+  image_frame->set_is_progressive(interlace_type == PNG_INTERLACE_ADAM7);
   switch (color_type) {
     case PNG_COLOR_TYPE_GRAY:
       if (has_trns) {
-        image_info->color_scheme = ColorScheme::kGrayScaleAlpha;
+        image_frame->set_color_scheme(ColorScheme::kGrayScaleAlpha);
       } else {
-        image_info->color_scheme = ColorScheme::kGrayScale;
+        image_frame->set_color_scheme(ColorScheme::kGrayScale);
       }
       break;
     case PNG_COLOR_TYPE_GRAY_ALPHA:
-      image_info->color_scheme = ColorScheme::kGrayScaleAlpha;
+      image_frame->set_color_scheme(ColorScheme::kGrayScaleAlpha);
       break;
     case PNG_COLOR_TYPE_PALETTE:
     case PNG_COLOR_TYPE_RGB:
       if (has_trns) {
-        image_info->color_scheme = ColorScheme::kRGBA;
+        image_frame->set_color_scheme(ColorScheme::kRGBA);
       } else {
-        image_info->color_scheme = ColorScheme::kRGB;
+        image_frame->set_color_scheme(ColorScheme::kRGB);
       }
       break;
     case PNG_COLOR_TYPE_RGB_ALPHA:
-      image_info->color_scheme = ColorScheme::kRGBA;
+      image_frame->set_color_scheme(ColorScheme::kRGBA);
       break;
   }
 
-  image_frame->Init(image_info->width, image_info->height,
-                    image_info->color_scheme);
+  image_frame->Init();
   ScanlineReader scanlines(image_frame);
   int i = 0;
   for (auto it = scanlines.begin(); it != scanlines.end(); ++it, ++i) {
@@ -218,11 +218,12 @@ bool LoadReferencePngExpandGray(const std::string& filename,
 
 void CheckImageInfo(const std::string& image_file,
                     const ImageInfo& ref,
-                    ImageDecoder* decoder) {
-  EXPECT_TRUE(decoder->IsImageInfoComplete()) << image_file;
-  EXPECT_EQ(ref.width, decoder->GetWidth()) << image_file;
-  EXPECT_EQ(ref.height, decoder->GetHeight()) << image_file;
-  EXPECT_EQ(ref.color_scheme, decoder->GetColorScheme()) << image_file;
+                    const ImageInfo& image_info) {
+  EXPECT_EQ(ref.width, image_info.width) << image_file;
+  EXPECT_EQ(ref.height, image_info.height) << image_file;
+  EXPECT_EQ(ref.multiframe, image_info.multiframe) << image_file;
+  EXPECT_EQ(ref.loop_count, image_info.loop_count) << image_file;
+  // EXPECT_EQ(ref.bg_color, image_info.bg_color) << image_file;
 }
 
 void CheckDecodedFrame(const std::string& image_file,
@@ -230,6 +231,11 @@ void CheckDecodedFrame(const std::string& image_file,
                        ImageDecoder* decoder) {
   ASSERT_TRUE(decoder->IsFrameCompleteAtIndex(0)) << image_file;
   auto* frame = decoder->GetFrameAtIndex(0);
+  EXPECT_EQ(reference->width(), frame->width()) << image_file;
+  EXPECT_EQ(reference->height(), frame->height()) << image_file;
+  EXPECT_EQ(reference->x_offset(), frame->x_offset()) << image_file;
+  EXPECT_EQ(reference->y_offset(), frame->y_offset()) << image_file;
+  EXPECT_EQ(reference->color_scheme(), frame->color_scheme()) << image_file;
   EXPECT_EQ(reference->bpp(), frame->bpp()) << image_file;
   EXPECT_EQ(reference->has_alpha(), frame->has_alpha()) << image_file;
   CheckImageFrame(image_file, reference, frame);
@@ -343,7 +349,8 @@ void ValidateDecodeWithReadSpec(
       ASSERT_TRUE(result.pending() || result.ok()) << filename;
       if (result.ok()) {
         header_read = true;
-        CheckImageInfo(filename, ref_info, testee.get());
+        EXPECT_TRUE(testee->IsImageInfoComplete()) << filename;
+        CheckImageInfo(filename, ref_info, testee->GetImageInfo());
         if (read_type == ReadType::kReadHeaderOnly) {
           ASSERT_FALSE(testee->IsFrameCompleteAtIndex(0));
           return;
@@ -372,8 +379,10 @@ void ValidateDecodeWithReadSpec(
   // Nothing should happen here.
   EXPECT_TRUE(testee->Decode().ok()) << filename;
 
-  if (!header_read)
-    CheckImageInfo(filename, ref_info, testee.get());
+  if (!header_read) {
+    EXPECT_TRUE(testee->IsImageInfoComplete()) << filename;
+    CheckImageInfo(filename, ref_info, testee->GetImageInfo());
+  }
 
   CheckDecodedFrame(filename, &ref_frame, testee.get());
 }

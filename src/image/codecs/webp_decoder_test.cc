@@ -35,7 +35,6 @@ std::unique_ptr<ImageDecoder> CreateDecoder(
     std::unique_ptr<io::BufReader> source) {
   auto decoder = base::make_unique<WebPDecoder>(WebPDecoder::Params::Default(),
                                                 std::move(source));
-  EXPECT_EQ(ImageType::kWebP, decoder->GetImageType());
   return std::move(decoder);
 }
 

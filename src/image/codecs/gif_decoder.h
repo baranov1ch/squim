@@ -24,6 +24,7 @@
 #include "image/codecs/decode_params.h"
 #include "image/image_decoder.h"
 #include "image/image_frame.h"
+#include "image/image_info.h"
 #include "image/image_metadata.h"
 
 namespace io {
@@ -44,18 +45,12 @@ class GifDecoder : public ImageDecoder {
   ~GifDecoder() override;
 
   // ImageDecoder implementation:
-  uint32_t GetWidth() const override;
-  uint32_t GetHeight() const override;
-  uint64_t GetSize() const override;
-  ImageType GetImageType() const override;
-  ColorScheme GetColorScheme() const override;
-  bool IsProgressive() const override;
   bool IsImageInfoComplete() const override;
-  size_t GetFrameCount() const override;
-  bool IsMultiFrame() const override;
-  uint32_t GetEstimatedQuality() const override;
+  const ImageInfo& GetImageInfo() const override;
+  bool IsFrameHeaderCompleteAtIndex(size_t index) const override;
   bool IsFrameCompleteAtIndex(size_t index) const override;
   ImageFrame* GetFrameAtIndex(size_t index) override;
+  size_t GetFrameCount() const override;
   ImageMetadata* GetMetadata() override;
   bool IsAllMetadataComplete() const override;
   bool IsAllFramesComplete() const override;
@@ -72,27 +67,11 @@ class GifDecoder : public ImageDecoder {
 
   io::BufReader* source() { return source_.get(); }
 
-  void set_size(uint32_t width, uint32_t height) {
-    width_ = width;
-    height_ = height;
-  }
-
-  void set_is_progressive(bool value) { is_progressive_ = value; }
-
-  void set_color_space(ColorScheme color_scheme) {
-    color_scheme_ = color_scheme;
-  }
-
+  ImageInfo image_info_;
   std::vector<std::unique_ptr<ImageFrame>> image_frames_;
+  ImageMetadata metadata_;
   std::unique_ptr<io::BufReader> source_;
   std::unique_ptr<Impl> impl_;
-  ColorScheme color_scheme_ = ColorScheme::kUnknown;
-  uint32_t width_ = 0;
-  uint32_t height_ = 0;
-  size_t loop_count_ = 0;
-  std::array<uint8_t, 4> bg_color_ = {
-      {0xFF, 0xFF, 0xFF, 0xFF}};  // opaque white.
-  bool is_progressive_ = false;
   Result decode_error_ = Result::Ok();
   Params params_;
 };

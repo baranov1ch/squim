@@ -17,6 +17,7 @@
 #ifndef IMAGE_IMAGE_INFO_H_
 #define IMAGE_IMAGE_INFO_H_
 
+#include <array>
 #include <cstdint>
 
 #include "image/image_constants.h"
@@ -24,16 +25,13 @@
 namespace image {
 
 struct ImageInfo {
-  ColorScheme color_scheme;
-  uint32_t width;
-  uint32_t height;
-  uint64_t size;
-  ImageType type;
-  bool multiframe;
-  bool is_progressive;
-  uint32_t quality;
-  size_t loop_count;
-  uint32_t bg_color;
+  uint32_t width = 0;
+  uint32_t height = 0;
+  uint64_t size = 0;
+  ImageType type = ImageType::kUnknown;
+  bool multiframe = false;
+  size_t loop_count = 0;
+  std::array<uint8_t, 4> bg_color;
 };
 
 }  // namespace image

@@ -74,7 +74,6 @@ std::unique_ptr<ImageDecoder> CreateDecoder(
     std::unique_ptr<io::BufReader> source) {
   auto decoder = base::make_unique<PngDecoder>(PngDecoder::Params::Default(),
                                                std::move(source));
-  EXPECT_EQ(ImageType::kPng, decoder->GetImageType());
   return std::move(decoder);
 }
 
@@ -167,7 +166,6 @@ TEST_F(PngDecoderTest, ReadExpandGray) {
     params.allowed_color_schemes.insert(ColorScheme::kRGB);
     params.allowed_color_schemes.insert(ColorScheme::kRGBA);
     auto decoder = base::make_unique<PngDecoder>(params, std::move(source));
-    EXPECT_EQ(ImageType::kPng, decoder->GetImageType());
     return std::move(decoder);
   };
   const char* kSomeGrayImages[] = {

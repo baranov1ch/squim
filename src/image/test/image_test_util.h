@@ -78,7 +78,7 @@ bool LoadReferencePngExpandGray(const std::string& filename,
 // Compares all image properties with provided |reference|.
 void CheckImageInfo(const std::string& image_file,
                     const ImageInfo& reference,
-                    ImageDecoder* decoder);
+                    const ImageInfo& image_info);
 
 // Checks single frame read from |decoder|.
 void CheckDecodedFrame(const std::string& image_file,

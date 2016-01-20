@@ -22,13 +22,19 @@
 namespace image {
 
 class ImageFrame;
+class ImageInfo;
 class ImageMetadata;
 
 class ImageWriter {
  public:
+  struct Stats {
+    double psnr = 0;
+  };
+
+  virtual Result Initialize(const ImageInfo* image_info) = 0;
   virtual void SetMetadata(const ImageMetadata* metadata) = 0;
   virtual Result WriteFrame(ImageFrame* metadata) = 0;
-  virtual Result FinishWrite() = 0;
+  virtual Result FinishWrite(Stats* stats) = 0;
 
   virtual ~ImageWriter() {}
 };

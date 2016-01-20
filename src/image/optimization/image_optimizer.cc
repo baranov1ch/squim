@@ -228,12 +228,18 @@ Result ImageOptimizer::DoReadImageInfo() {
   CHECK(!source_);
   CHECK(dest_);
 
-  auto result = reader_->GetImageInfo(nullptr);
+  const ImageInfo* image_info;
+  auto result = reader_->GetImageInfo(&image_info);
   if (!result.ok())
     return result;
 
   result =
       strategy_->CreateImageWriter(std::move(dest_), reader_.get(), &writer_);
+  DCHECK(!result.pending());
+  if (!result.ok())
+    return result;
+
+  result = writer_->Initialize(image_info);
   DCHECK(!result.pending());
   if (!result.ok())
     return result;
@@ -289,7 +295,7 @@ Result ImageOptimizer::DoDrain() {
 Result ImageOptimizer::DoFinish() {
   CHECK_EQ(State::kFinish, state_);
   state_ = State::kComplete;
-  return writer_->FinishWrite();
+  return writer_->FinishWrite(&stats_);
 }
 
 Result ImageOptimizer::DoComplete() {

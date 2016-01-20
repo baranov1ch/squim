@@ -62,7 +62,9 @@ bool ReadWebP(const std::vector<uint8_t>& data,
   if (!WebPInitDecoderConfig(&config))
     return false;
 
-  frame->Init(width, height, color_scheme);
+  frame->set_size(width, height);
+  frame->set_color_scheme(color_scheme);
+  frame->Init();
 
   if (color_scheme == ColorScheme::kRGB) {
     config.output.colorspace = MODE_RGB;
@@ -100,7 +102,7 @@ class WebPEncoderTest : public testing::Test {
     auto result = testee->EncodeFrame(&ref_frame, true);
     EXPECT_EQ(Result::Code::kOk, result.code());
     ImageFrame webp_frame;
-    auto webp_color_scheme = info.color_scheme;
+    auto webp_color_scheme = ref_frame.color_scheme();
     if (webp_color_scheme == ColorScheme::kGrayScale) {
       webp_color_scheme = ColorScheme::kRGB;
     } else if (webp_color_scheme == ColorScheme::kGrayScaleAlpha) {

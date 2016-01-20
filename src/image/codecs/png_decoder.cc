@@ -114,7 +114,11 @@ class PngDecoder::Impl {
       return;
     }
 
-    decoder_->set_size(width, height);
+    auto* frame = decoder_->frame();
+
+    frame->set_size(width, height);
+    decoder_->image_info_.width = width;
+    decoder_->image_info_.height = height;
 
     int bit_depth, color_type, interlace_type, compression_type, filter_type;
     png_get_IHDR(png_, info_, &width, &height, &bit_depth, &color_type,
@@ -140,34 +144,34 @@ class PngDecoder::Impl {
     if (color_type == PNG_COLOR_TYPE_GRAY) {
       if (!decoder_->params_.color_scheme_allowed(ColorScheme::kGrayScale)) {
         png_set_gray_to_rgb(png_);
-        decoder_->set_color_space(ColorScheme::kRGB);
+        frame->set_color_scheme(ColorScheme::kRGB);
       } else {
         if (!has_trns) {
-          decoder_->set_color_space(ColorScheme::kGrayScale);
+          frame->set_color_scheme(ColorScheme::kGrayScale);
         } else {
-          decoder_->set_color_space(ColorScheme::kGrayScaleAlpha);
+          frame->set_color_scheme(ColorScheme::kGrayScaleAlpha);
         }
       }
     } else if (color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
       if (!decoder_->params_.color_scheme_allowed(
               ColorScheme::kGrayScaleAlpha)) {
         png_set_gray_to_rgb(png_);
-        decoder_->set_color_space(ColorScheme::kRGBA);
+        frame->set_color_scheme(ColorScheme::kRGBA);
       } else {
-        decoder_->set_color_space(ColorScheme::kGrayScaleAlpha);
+        frame->set_color_scheme(ColorScheme::kGrayScaleAlpha);
       }
     } else if (color_type == PNG_COLOR_TYPE_PALETTE ||
                color_type == PNG_COLOR_TYPE_RGB) {
       if (!has_trns) {
-        decoder_->set_color_space(ColorScheme::kRGB);
+        frame->set_color_scheme(ColorScheme::kRGB);
       } else {
-        decoder_->set_color_space(ColorScheme::kRGBA);
+        frame->set_color_scheme(ColorScheme::kRGBA);
       }
     } else if (color_type == PNG_COLOR_TYPE_RGB_ALPHA) {
-      decoder_->set_color_space(ColorScheme::kRGBA);
+      frame->set_color_scheme(ColorScheme::kRGBA);
     }
 
-    if (decoder_->GetColorScheme() == ColorScheme::kUnknown) {
+    if (frame->color_scheme() == ColorScheme::kUnknown) {
       decoder_->Fail(Result::Error(Result::Code::kDecodeError,
                                    "Unsupported color scheme"));
       longjmp(png_jmpbuf(png_), 1);
@@ -201,15 +205,16 @@ class PngDecoder::Impl {
     // Tell libpng to send us rows for interlaced pngs.
     if (interlace_type == PNG_INTERLACE_ADAM7) {
       png_set_interlace_handling(png_);
-      decoder_->set_is_progressive(true);
+      frame->set_is_progressive(true);
     }
 
     // Update our info now.
     png_read_update_info(png_, info_);
     num_color_channels_ = png_get_channels(png_, info_);
 
-    // TODO: extract other metadata.
+    frame->set_status(ImageFrame::Status::kHeaderComplete);
 
+    // TODO: extract other metadata.
     if (header_only_)
       decoder_->source()->UnreadN(png_process_data_pause(png_, 0));
 
@@ -217,15 +222,14 @@ class PngDecoder::Impl {
   }
 
   void OnRowAvailable(png_bytep row, png_uint_32 row_index, int state) {
-    auto* frame = &decoder_->image_frame_;
+    auto* frame = decoder_->frame();
     if (state_ == State::kStartDecompress) {
-      frame->Init(decoder_->GetWidth(), decoder_->GetHeight(),
-                  decoder_->GetColorScheme());
-      decoder_->frame()->set_status(ImageFrame::Status::kPartial);
+      frame->Init();
+      frame->set_status(ImageFrame::Status::kPartial);
       state_ = State::kDecompress;
     }
 
-    if (decoder_->IsProgressive() && !interlace_buffer_) {
+    if (frame->is_progressive() && !interlace_buffer_) {
       auto size = frame->stride() * frame->height();
       interlace_buffer_.reset(new uint8_t[size]);
     }
@@ -249,7 +253,7 @@ class PngDecoder::Impl {
       return;
 
     auto y = row_index;
-    if (y >= decoder_->GetHeight())
+    if (y >= frame->height())
       return;
 
     /* libpng comments (continued).
@@ -276,7 +280,7 @@ class PngDecoder::Impl {
       png_progressive_combine_row(png_, row_buf, row);
     }
 
-    auto scanline = ScanlineReader(&decoder_->image_frame_).at(y);
+    auto scanline = ScanlineReader(frame).at(y);
     CHECK_EQ(num_color_channels_, scanline.frame()->bpp());
     scanline.WritePixels(row_buf);
   }
@@ -332,64 +336,34 @@ class PngDecoder::Impl {
 PngDecoder::PngDecoder(Params params, std::unique_ptr<io::BufReader> source)
     : source_(std::move(source)), params_(params) {
   impl_ = base::make_unique<Impl>(this);
+  image_info_.type = ImageType::kPng;
 }
 
 PngDecoder::~PngDecoder() {}
-
-uint32_t PngDecoder::GetWidth() const {
-  return width_;
-}
-
-uint32_t PngDecoder::GetHeight() const {
-  return height_;
-}
-
-uint64_t PngDecoder::GetSize() const {
-  // TODO:
-  return 0;
-}
-
-ImageType PngDecoder::GetImageType() const {
-  return ImageType::kPng;
-}
-
-ColorScheme PngDecoder::GetColorScheme() const {
-  return color_scheme_;
-}
-
-bool PngDecoder::IsProgressive() const {
-  return is_progressive_;
-}
 
 bool PngDecoder::IsImageInfoComplete() const {
   return impl_->HeaderComplete();
 }
 
-size_t PngDecoder::GetFrameCount() const {
-  if (!impl_->DecodingComplete())
-    return 0;
-
-  return 1;
+const ImageInfo& PngDecoder::GetImageInfo() const {
+  return image_info_;
 }
 
-bool PngDecoder::IsMultiFrame() const {
-  return false;
-}
-
-uint32_t PngDecoder::GetEstimatedQuality() const {
-  return 100;
+bool PngDecoder::IsFrameHeaderCompleteAtIndex(size_t index) const {
+  return index == 0 && impl_->HeaderComplete();
 }
 
 bool PngDecoder::IsFrameCompleteAtIndex(size_t index) const {
-  if (index != 0)
-    return false;
-
-  return impl_->DecodingComplete();
+  return index == 0 && impl_->DecodingComplete();
 }
 
 ImageFrame* PngDecoder::GetFrameAtIndex(size_t index) {
   CHECK_EQ(0, index);
   return &image_frame_;
+}
+
+size_t PngDecoder::GetFrameCount() const {
+  return impl_->DecodingComplete() ? 1 : 0;
 }
 
 ImageMetadata* PngDecoder::GetMetadata() {

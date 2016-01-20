@@ -25,6 +25,7 @@
 
 #include "base/make_noncopyable.h"
 #include "image/image_constants.h"
+#include "image/image_writer.h"
 #include "image/result.h"
 
 namespace io {
@@ -36,7 +37,6 @@ namespace image {
 
 class ImageFrame;
 class ImageReader;
-class ImageWriter;
 class ImageReaderWriterFactory;
 class OptimizationStrategy;
 
@@ -62,6 +62,7 @@ class ImageOptimizer {
 
   Result Process();
   bool Finished() const;
+  const ImageWriter::Stats& stats() const { return stats_; }
 
  private:
   enum class State {
@@ -101,6 +102,7 @@ class ImageOptimizer {
   std::unique_ptr<io::VectorWriter> dest_;
   ImageFrame* current_frame_ = nullptr;
   Result last_result_ = Result::Ok();
+  ImageWriter::Stats stats_;
 };
 
 std::ostream& operator<<(std::ostream& os, ImageOptimizer::State state);

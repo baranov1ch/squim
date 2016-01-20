@@ -34,8 +34,13 @@ class ImageFrame {
 
   enum class Status {
     kEmpty,
+    kHeaderComplete,
     kPartial,
     kComplete,
+  };
+
+  class Header {
+   public:
   };
 
   ImageFrame();
@@ -43,21 +48,45 @@ class ImageFrame {
 
   Status status() const { return status_; }
   void set_status(Status status) { status_ = status; }
+
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
+  void set_size(uint32_t width, uint32_t height) {
+    width_ = width;
+    height_ = height;
+  }
+
   uint32_t x_offset() const { return x_offset_; }
   uint32_t y_offset() const { return y_offset_; }
+  void set_offset(uint32_t x, uint32_t y) {
+    x_offset_ = x;
+    y_offset_ = y;
+  }
+
   size_t bpp() const { return bpp_; }
   uint32_t stride() const { return width_ * bpp_; }
+
   uint32_t duration() const { return duration_; }
   void set_duration(uint32_t value) { duration_ = value; }
+
   ColorScheme color_scheme() const { return color_scheme_; }
+  void set_color_scheme(ColorScheme color_scheme) {
+    color_scheme_ = color_scheme;
+    bpp_ = GetBytesPerPixel(color_scheme_);
+  }
+
   bool should_dispose_to_background() const {
     return should_dispose_to_background_;
   }
   void set_should_dispose_to_background(bool value) {
     should_dispose_to_background_ = value;
   }
+
+  bool is_progressive() const { return is_progressive_; }
+  void set_is_progressive(bool progressive) { is_progressive_ = progressive; }
+
+  uint32_t quality() const { return quality_; }
+  void set_quality(uint32_t quality) { quality_ = quality; }
 
   bool has_alpha() const {
     return color_scheme_ == ColorScheme::kRGBA ||
@@ -83,21 +112,13 @@ class ImageFrame {
   uint8_t* GetPixel(uint32_t x, uint32_t y) {
     return GetData(stride() * y + bpp() * x);
   }
-
   const uint8_t* GetPixel(uint32_t x, uint32_t y) const {
     return GetPixel(x, y);
   }
-
   uint8_t* GetData(size_t offset) { return data_.get() + offset; }
-
   const uint8_t* GetData(size_t offset) const { return GetData(offset); }
 
-  void set_offset(uint32_t x, uint32_t y) {
-    x_offset_ = x;
-    y_offset_ = y;
-  }
-
-  void Init(uint32_t width, uint32_t height, ColorScheme color_scheme);
+  void Init();
 
  private:
   Status status_ = Status::kEmpty;
@@ -109,6 +130,8 @@ class ImageFrame {
   size_t bpp_ = 0;
   ColorScheme color_scheme_ = ColorScheme::kUnknown;
   bool should_dispose_to_background_ = false;
+  bool is_progressive_ = false;
+  uint32_t quality_ = 100;
   std::unique_ptr<uint8_t[]> data_;
 };
 

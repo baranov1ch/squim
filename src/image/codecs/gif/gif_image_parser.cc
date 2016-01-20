@@ -280,6 +280,8 @@ Result GifImage::Parser::ParseSubBlockLength(Handler block_handler) {
 
 Result GifImage::Parser::ParseControlExtension() {
   const size_t kLength = 4;
+  // From blink GIFImageReader.cpp:
+  //
   // The GIF spec mandates that the GIFControlExtension header block length is 4
   // bytes, and the parser for this block reads 4 bytes, so we must enforce that
   // the buffer contains at least this many bytes. If the GIF specifies a
@@ -296,27 +298,27 @@ Result GifImage::Parser::ParseControlExtension() {
   if (!result.ok())
     return Result::FromIoResult(result, false);
 
-  auto* builder = GetFrameParser();
+  auto* parser = GetFrameParser();
   Reader reader(data);
   auto packed = reader.ReadByte();
   int disposal_method = (packed >> 2) & 0x07;
   if (disposal_method < 4) {
     // NOTE: This relies on the values in the GifImage::DisposalMethod enum
     // matching those in the GIF spec!
-    builder->SetDisposalMethod(static_cast<DisposalMethod>(disposal_method));
+    parser->SetDisposalMethod(static_cast<DisposalMethod>(disposal_method));
   } else if (disposal_method == 4) {
-    builder->SetDisposalMethod(DisposalMethod::kOverwritePrevious);
+    parser->SetDisposalMethod(DisposalMethod::kOverwritePrevious);
   }
   auto frame_duration = reader.ReadUint16();
 
   // |frame_duration| is the number of hundredths of a second to wait before
   // moving on to the next frame.
   // Thus multiply by 10 to get milliseconds.
-  builder->SetDuration(frame_duration * 10);
+  parser->SetDuration(frame_duration * 10);
 
   if (packed & 0x01) {
     size_t transparency_pixel = reader.ReadByte();
-    builder->SetTransparentPixel(transparency_pixel);
+    parser->SetTransparentPixel(transparency_pixel);
   }
 
   remaining_block_length_ -= kLength;
@@ -427,8 +429,9 @@ Result GifImage::Parser::ParseNetscapeApplicationExtension() {
     }
   } else if (netscape_extension == 2) {
     // From blink GIFImageReader.cpp:
+    //
     // Wait for specified # of bytes to enter buffer.
-
+    //
     // Don't do this, this extension doesn't exist (isn't used at all)
     // and doesn't do anything, as streaming/buffering takes care of it all...
     // See: http://semmix.pl/color/exgraf/eeg24.htm

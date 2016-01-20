@@ -23,35 +23,23 @@
 namespace image {
 
 class ImageFrame;
+class ImageInfo;
 class ImageMetadata;
 
 // Decoder interface.
 class ImageDecoder {
  public:
-  // Some geometry for the decoded image.
-  virtual uint32_t GetWidth() const = 0;
-  virtual uint32_t GetHeight() const = 0;
-
-  // Image size in bytes.
-  virtual uint64_t GetSize() const = 0;
-
-  virtual ImageType GetImageType() const = 0;
-  virtual ColorScheme GetColorScheme() const = 0;
-  virtual bool IsProgressive() const = 0;
-
   // Should return true if image header (containing width, height, and stuff)
   // has been parsed and client can call any of the methods above.
   virtual bool IsImageInfoComplete() const = 0;
 
-  // Returns number of frames *decoded so far*. 1 does not generally mean that
-  // image is single frame, other may not be decoded yet
-  virtual size_t GetFrameCount() const = 0;
+  // Returns ImageInfo info for image being decoded. returned structure is valid
+  // iff IsImageInfoComplete() return true.
+  virtual const ImageInfo& GetImageInfo() const = 0;
 
-  // Returns true if image could be multiframe (like gif/webp).
-  virtual bool IsMultiFrame() const = 0;
-
-  // Estimated quality of the image in percents. 100 for lossless.
-  virtual uint32_t GetEstimatedQuality() const = 0;
+  // Should return true iff frame header at |index| has been successfully
+  // parsed.
+  virtual bool IsFrameHeaderCompleteAtIndex(size_t index) const = 0;
 
   // Should return true iff frame at |index| has been successfully decoded
   // so far.
@@ -61,6 +49,10 @@ class ImageDecoder {
   // may assume that |index| refers to a decoded frame - it's up to the client
   // to ensure it using IsFrameCompleteAtIndex().
   virtual ImageFrame* GetFrameAtIndex(size_t index) = 0;
+
+  // Returns number of frames *decoded so far*. 1 does not generally mean that
+  // image is single frame, other may not be decoded yet
+  virtual size_t GetFrameCount() const = 0;
 
   // Returns image metadata.
   virtual ImageMetadata* GetMetadata() = 0;

@@ -58,11 +58,17 @@ class GifDecoder::Impl {
 
     if (!header_complete_reported_ && HeaderComplete()) {
       header_complete_reported_ = true;
-      decoder_->width_ = gif_image_.screen_width();
-      decoder_->height_ = gif_image_.screen_height();
-      decoder_->color_scheme_ = ColorScheme::kRGB;
-      // is_progressive_ can change over time, since every frame interlaced on
-      // its own.
+      decoder_->image_info_.width = gif_image_.screen_width();
+      decoder_->image_info_.height = gif_image_.screen_height();
+      decoder_->image_info_.multiframe = true;
+      const auto* global_color_table = gif_image_.global_color_table();
+      auto bg_color_idx = gif_image_.background_color_index();
+      if (global_color_table && bg_color_idx < global_color_table->size()) {
+        auto color = global_color_table->GetColor(bg_color_idx);
+        decoder_->image_info_.bg_color = {
+            {color.r(), color.g(), color.b(), 0xFF}};
+      }
+      decoder_->image_info_.loop_count = gif_image_.loop_count();
     }
 
     const auto& frames = gif_image_.frames();
@@ -75,33 +81,21 @@ class GifDecoder::Impl {
         return false;
       }
 
-      if (!decoder_->is_progressive_ && gif_frame->is_progressive()) {
-        decoder_->is_progressive_ = true;
-      }
-
-      if (num_frames_ready_ == 0) {
-        const auto* global_color_table = gif_image_.global_color_table();
-        auto bg_color_idx = gif_image_.background_color_index();
-        if (global_color_table && bg_color_idx < global_color_table->size()) {
-          auto color = global_color_table->GetColor(bg_color_idx);
-          decoder_->bg_color_ = {{color.r(), color.g(), color.b(), 0xFF}};
-        }
-      } else if (num_frames_ready_ == 1 &&
-                 gif_image_.background_color_index() ==
-                     GifImage::kNoBackgroundColor) {
+      if (num_frames_ready_ == 1 &&
+          gif_image_.background_color_index() == GifImage::kNoBackgroundColor) {
         // Just to write warning.
         LOG(WARNING) << "No background color for animated image";
       }
 
       auto frame = base::make_unique<ImageFrame>();
       frame->set_offset(gif_frame->x_offset(), gif_frame->y_offset());
+      frame->set_size(gif_frame->width(), gif_frame->height());
+      frame->set_is_progressive(gif_frame->is_progressive());
       if (gif_frame->transparent_pixel() != GifImage::kNoTransparentPixel) {
-        frame->Init(gif_frame->width(), gif_frame->height(),
-                    ColorScheme::kRGBA);
+        frame->set_color_scheme(ColorScheme::kRGBA);
       } else {
-        frame->Init(gif_frame->width(), gif_frame->height(), ColorScheme::kRGB);
+        frame->set_color_scheme(ColorScheme::kRGB);
       }
-
       if (gif_frame->disposal_method() ==
           GifImage::DisposalMethod::kOverwriteBgcolor) {
         frame->set_should_dispose_to_background(true);
@@ -111,7 +105,9 @@ class GifDecoder::Impl {
         frame->set_should_dispose_to_background(true);
       }
       frame->set_duration(gif_frame->duration());
+      frame->set_status(ImageFrame::Status::kHeaderComplete);
 
+      frame->Init();
       Bitmap bitmap(frame.get());
       for (auto y = 0; y < gif_frame->height(); ++y) {
         for (auto x = 0; x < gif_frame->width(); ++x) {
@@ -164,49 +160,24 @@ class GifDecoder::Impl {
 GifDecoder::GifDecoder(Params params, std::unique_ptr<io::BufReader> source)
     : source_(std::move(source)), params_(params) {
   impl_ = base::make_unique<Impl>(this);
+  image_info_.type = ImageType::kGif;
 }
 
 GifDecoder::~GifDecoder() {}
 
-uint32_t GifDecoder::GetWidth() const {
-  return width_;
-}
-
-uint32_t GifDecoder::GetHeight() const {
-  return height_;
-}
-
-uint64_t GifDecoder::GetSize() const {
-  // TODO:
-  return 0;
-}
-
-ImageType GifDecoder::GetImageType() const {
-  return ImageType::kGif;
-}
-
-ColorScheme GifDecoder::GetColorScheme() const {
-  return color_scheme_;
-}
-
-bool GifDecoder::IsProgressive() const {
-  return is_progressive_;
+const ImageInfo& GifDecoder::GetImageInfo() const {
+  return image_info_;
 }
 
 bool GifDecoder::IsImageInfoComplete() const {
   return impl_->HeaderComplete();
 }
 
-size_t GifDecoder::GetFrameCount() const {
-  return image_frames_.size();
-}
+bool GifDecoder::IsFrameHeaderCompleteAtIndex(size_t index) const {
+  if (index >= image_frames_.size())
+    return false;
 
-bool GifDecoder::IsMultiFrame() const {
-  return true;
-}
-
-uint32_t GifDecoder::GetEstimatedQuality() const {
-  return 100;
+  return image_frames_[index]->status() == ImageFrame::Status::kHeaderComplete;
 }
 
 bool GifDecoder::IsFrameCompleteAtIndex(size_t index) const {
@@ -219,6 +190,10 @@ bool GifDecoder::IsFrameCompleteAtIndex(size_t index) const {
 ImageFrame* GifDecoder::GetFrameAtIndex(size_t index) {
   CHECK_GE(image_frames_.size(), index);
   return image_frames_[index].get();
+}
+
+size_t GifDecoder::GetFrameCount() const {
+  return image_frames_.size();
 }
 
 ImageMetadata* GifDecoder::GetMetadata() {

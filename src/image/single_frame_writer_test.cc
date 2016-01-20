@@ -19,6 +19,7 @@
 #include "base/memory/make_unique.h"
 #include "image/image_frame.h"
 #include "image/image_metadata.h"
+#include "image/image_writer.h"
 #include "test/mock_encoder.h"
 
 #include "gmock/gmock.h"
@@ -47,8 +48,9 @@ TEST_F(SingleFrameWriterTest, ShouldAskEncoderToSetMetadata) {
 }
 
 TEST_F(SingleFrameWriterTest, ShouldAskEncoderToFinish) {
-  EXPECT_CALL(*encoder_, FinishWrite()).WillOnce(Return(Result::Ok()));
-  auto result = testee_->FinishWrite();
+  ImageWriter::Stats stats;
+  EXPECT_CALL(*encoder_, FinishWrite(&stats)).WillOnce(Return(Result::Ok()));
+  auto result = testee_->FinishWrite(&stats);
   EXPECT_TRUE(result.ok());
 }
 

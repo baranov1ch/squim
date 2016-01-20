@@ -76,14 +76,7 @@ Result DecodingReader::AdvanceDecode(bool header_only) {
     if (!result.ok())
       return result;
 
-    image_info_.color_scheme = decoder_->GetColorScheme();
-    image_info_.width = decoder_->GetWidth();
-    image_info_.height = decoder_->GetHeight();
-    image_info_.size = decoder_->GetSize();
-    image_info_.type = decoder_->GetImageType();
-    image_info_.multiframe = decoder_->IsMultiFrame();
-    image_info_.is_progressive = decoder_->IsProgressive();
-    image_info_.quality = decoder_->GetEstimatedQuality();
+    image_info_ = decoder_->GetImageInfo();
     image_info_read_ = true;
   }
 

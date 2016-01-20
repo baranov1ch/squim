@@ -60,50 +60,24 @@ class WebPDecoder::Impl {
 WebPDecoder::WebPDecoder(Params params, std::unique_ptr<io::BufReader> source)
     : source_(std::move(source)), params_(params) {
   impl_ = base::make_unique<Impl>(this);
+  image_info_.type = ImageType::kWebP;
 }
 
 WebPDecoder::~WebPDecoder() {}
-
-uint32_t WebPDecoder::GetWidth() const {
-  return width_;
-}
-
-uint32_t WebPDecoder::GetHeight() const {
-  return height_;
-}
-
-uint64_t WebPDecoder::GetSize() const {
-  // TODO:
-  return 0;
-}
-
-ImageType WebPDecoder::GetImageType() const {
-  return ImageType::kWebP;
-}
-
-ColorScheme WebPDecoder::GetColorScheme() const {
-  return color_scheme_;
-}
-
-bool WebPDecoder::IsProgressive() const {
-  return is_progressive_;
-}
 
 bool WebPDecoder::IsImageInfoComplete() const {
   return impl_->HeaderComplete();
 }
 
-size_t WebPDecoder::GetFrameCount() const {
-  return image_frames_.size();
+const ImageInfo& WebPDecoder::GetImageInfo() const {
+  return image_info_;
 }
 
-bool WebPDecoder::IsMultiFrame() const {
-  return true;
-}
+bool WebPDecoder::IsFrameHeaderCompleteAtIndex(size_t index) const {
+  if (index >= image_frames_.size())
+    return false;
 
-uint32_t WebPDecoder::GetEstimatedQuality() const {
-  // TODO:
-  return 0;
+  return image_frames_[index]->status() == ImageFrame::Status::kHeaderComplete;
 }
 
 bool WebPDecoder::IsFrameCompleteAtIndex(size_t index) const {
@@ -116,6 +90,10 @@ bool WebPDecoder::IsFrameCompleteAtIndex(size_t index) const {
 ImageFrame* WebPDecoder::GetFrameAtIndex(size_t index) {
   CHECK_GE(image_frames_.size(), index);
   return image_frames_[index].get();
+}
+
+size_t WebPDecoder::GetFrameCount() const {
+  return image_frames_.size();
 }
 
 ImageMetadata* WebPDecoder::GetMetadata() {

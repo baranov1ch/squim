@@ -33,9 +33,10 @@ class SingleFrameWriter : public ImageWriter {
   SingleFrameWriter(std::unique_ptr<ImageEncoder> encoder);
   ~SingleFrameWriter() override;
 
+  Result Initialize(const ImageInfo* image_info) override;
   void SetMetadata(const ImageMetadata* metadata) override;
   Result WriteFrame(ImageFrame* frame) override;
-  Result FinishWrite() override;
+  Result FinishWrite(Stats* stats) override;
 
  private:
   std::unique_ptr<ImageEncoder> encoder_;

@@ -97,31 +97,32 @@ class JpegDecoder::Impl {
     }
 
     switch (state_) {
-      case State::kHeader:
+      case State::kHeader: {
         if (jpeg_read_header(&decompress_, true) == JPEG_SUSPENDED)
           return false;  // I/O suspension.
 
+        auto* frame = decoder_->frame();
         switch (decompress_.jpeg_color_space) {
           case JCS_YCbCr:
             if (decoder_->params_.color_scheme_allowed(ColorScheme::kYUV)) {
               decompress_.out_color_space = JCS_YCbCr;
-              decoder_->set_color_space(ColorScheme::kYUV);
+              frame->set_color_scheme(ColorScheme::kYUV);
             } else {
               decompress_.out_color_space = JCS_RGB;
-              decoder_->set_color_space(ColorScheme::kRGB);
+              frame->set_color_scheme(ColorScheme::kRGB);
             }
           case JCS_RGB:
             decompress_.out_color_space = JCS_RGB;
-            decoder_->set_color_space(ColorScheme::kRGB);
+            frame->set_color_scheme(ColorScheme::kRGB);
             break;
           case JCS_GRAYSCALE:
             if (decoder_->params_.color_scheme_allowed(
                     ColorScheme::kGrayScale)) {
               decompress_.out_color_space = JCS_GRAYSCALE;
-              decoder_->set_color_space(ColorScheme::kGrayScale);
+              frame->set_color_scheme(ColorScheme::kGrayScale);
             } else {
               decompress_.out_color_space = JCS_RGB;
-              decoder_->set_color_space(ColorScheme::kRGB);
+              frame->set_color_scheme(ColorScheme::kRGB);
             }
             break;
           case JCS_CMYK:
@@ -130,7 +131,7 @@ class JpegDecoder::Impl {
             decompress_.out_color_space = JCS_CMYK;
           // FALLTHROUGH. CMYK/YCCK not supported yet.
           default:
-            decoder_->set_color_space(ColorScheme::kUnknown);
+            frame->set_color_scheme(ColorScheme::kUnknown);
             decoder_->Fail(Result::Error(Result::Code::kDecodeError,
                                          "Unsupported color scheme"));
             return false;
@@ -138,12 +139,16 @@ class JpegDecoder::Impl {
 
         state_ = State::kStartDecompress;
 
-        decoder_->set_size(decompress_.image_width, decompress_.image_height);
-        decoder_->set_is_progressive(decompress_.progressive_mode);
+        frame->set_size(decompress_.image_width, decompress_.image_height);
+        decoder_->image_info_.width = decompress_.image_width;
+        decoder_->image_info_.height = decompress_.image_height;
+        frame->set_is_progressive(decompress_.progressive_mode);
         for (auto marker = decompress_.marker_list; marker;
              marker = marker->next) {
           // TODO: get metadata.
         }
+
+        frame->set_status(ImageFrame::Status::kHeaderComplete);
 
         if (header_only) {
           restart_needed_ = true;
@@ -152,20 +157,18 @@ class JpegDecoder::Impl {
           return true;
         }
 
-      // TODO: Optional rescaling when targeting low-end clients:
-      //
-      // decompress_.scale_num = ....;
-      // decompress_.scale_denom = scaleDenominator;
-      // jpeg_calc_output_dimensions(&decoder_);
-
+        // TODO: Optional rescaling when targeting low-end clients:
+        //
+        // decompress_.scale_num = ....;
+        // decompress_.scale_denom = scaleDenominator;
+        // jpeg_calc_output_dimensions(&decoder_);
+      }
       // Fall through:
       case State::kStartDecompress:
         if (!jpeg_start_decompress(&decompress_))
           return false;  // I/O suspension.
 
-        decoder_->image_frame_.Init(decoder_->GetWidth(), decoder_->GetHeight(),
-                                    decoder_->GetColorScheme());
-
+        decoder_->frame()->Init();
         state_ = decompress_.buffered_image ? State::kDecompressSequential
                                             : State::kDecompressProgressive;
 
@@ -372,65 +375,34 @@ class JpegDecoder::Impl {
 JpegDecoder::JpegDecoder(Params params, std::unique_ptr<io::BufReader> source)
     : source_(std::move(source)), params_(params) {
   impl_ = base::make_unique<Impl>(this);
+  image_info_.type = ImageType::kJpeg;
 }
 
 JpegDecoder::~JpegDecoder() {}
-
-uint32_t JpegDecoder::GetWidth() const {
-  return width_;
-}
-
-uint32_t JpegDecoder::GetHeight() const {
-  return height_;
-}
-
-uint64_t JpegDecoder::GetSize() const {
-  // TODO:
-  return 0;
-}
-
-ImageType JpegDecoder::GetImageType() const {
-  return ImageType::kJpeg;
-}
-
-ColorScheme JpegDecoder::GetColorScheme() const {
-  return color_scheme_;
-}
-
-bool JpegDecoder::IsProgressive() const {
-  return is_progressive_;
-}
 
 bool JpegDecoder::IsImageInfoComplete() const {
   return impl_->HeaderComplete();
 }
 
-size_t JpegDecoder::GetFrameCount() const {
-  if (!impl_->DecodingComplete())
-    return 0;
-
-  return 1;
+const ImageInfo& JpegDecoder::GetImageInfo() const {
+  return image_info_;
 }
 
-bool JpegDecoder::IsMultiFrame() const {
-  return false;
-}
-
-uint32_t JpegDecoder::GetEstimatedQuality() const {
-  // TODO:
-  return 0;
+bool JpegDecoder::IsFrameHeaderCompleteAtIndex(size_t index) const {
+  return index == 0 && impl_->HeaderComplete();
 }
 
 bool JpegDecoder::IsFrameCompleteAtIndex(size_t index) const {
-  if (index != 0)
-    return false;
-
-  return impl_->DecodingComplete();
+  return index == 0 && impl_->DecodingComplete();
 }
 
 ImageFrame* JpegDecoder::GetFrameAtIndex(size_t index) {
   CHECK_EQ(0, index);
   return &image_frame_;
+}
+
+size_t JpegDecoder::GetFrameCount() const {
+  return impl_->DecodingComplete() ? 1 : 0;
 }
 
 ImageMetadata* JpegDecoder::GetMetadata() {

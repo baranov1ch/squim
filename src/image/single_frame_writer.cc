@@ -25,6 +25,10 @@ SingleFrameWriter::SingleFrameWriter(std::unique_ptr<ImageEncoder> encoder)
 
 SingleFrameWriter::~SingleFrameWriter() {}
 
+Result SingleFrameWriter::Initialize(const ImageInfo* image_info) {
+  return encoder_->Initialize(image_info);
+}
+
 void SingleFrameWriter::SetMetadata(const ImageMetadata* metadata) {
   encoder_->SetMetadata(metadata);
 }
@@ -39,8 +43,8 @@ Result SingleFrameWriter::WriteFrame(ImageFrame* frame) {
   return encoder_->EncodeFrame(frame, true);
 }
 
-Result SingleFrameWriter::FinishWrite() {
-  return encoder_->FinishWrite();
+Result SingleFrameWriter::FinishWrite(Stats* stats) {
+  return encoder_->FinishWrite(stats);
 }
 
 }  // namespace image

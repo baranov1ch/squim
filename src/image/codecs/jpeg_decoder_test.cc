@@ -51,7 +51,6 @@ std::unique_ptr<ImageDecoder> CreateDecoder(
     std::unique_ptr<io::BufReader> source) {
   auto decoder = base::make_unique<JpegDecoder>(JpegDecoder::Params::Default(),
                                                 std::move(source));
-  EXPECT_EQ(ImageType::kJpeg, decoder->GetImageType());
   return std::move(decoder);
 }
 
@@ -156,7 +155,6 @@ TEST_F(JpegDecoderTest, ReadExpandGrayScale) {
     params.allowed_color_schemes.insert(ColorScheme::kRGB);
     params.allowed_color_schemes.insert(ColorScheme::kRGBA);
     auto decoder = base::make_unique<JpegDecoder>(params, std::move(source));
-    EXPECT_EQ(ImageType::kJpeg, decoder->GetImageType());
     return std::move(decoder);
   };
   std::string filename("testgray");
