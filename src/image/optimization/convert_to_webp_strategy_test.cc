@@ -132,20 +132,15 @@ TEST_F(ConvertToWebPStrategyTest, ShouldReturnErrorIfNoEncoder) {
   EXPECT_EQ(Result::Code::kDunnoHowToEncode, result.code());
 }
 
-TEST_F(ConvertToWebPStrategyTest, ShouldReturnErrorIfGifOrWebP) {
+TEST_F(ConvertToWebPStrategyTest, ShouldReturnErrorIfWebP) {
   auto dest = base::make_unique<io::DevNull>();
   MockImageReader reader;
+  std::unique_ptr<ImageWriter> writer;
   EXPECT_CALL(reader, GetImageInfo(_))
       .WillRepeatedly(Invoke(&reader, &MockImageReader::GetFakeImageInfo));
-  reader.image_info.type = ImageType::kGif;
-  std::unique_ptr<ImageWriter> writer;
-  EXPECT_CALL(*codec_factory_, CreateEncoderImpl(_, _)).Times(0);
-  auto result = testee_->CreateImageWriter(std::move(dest), &reader, &writer);
-  EXPECT_FALSE(writer);
-  EXPECT_EQ(Result::Code::kDunnoHowToEncode, result.code());
 
   reader.image_info.type = ImageType::kWebP;
-  result = testee_->CreateImageWriter(std::move(dest), &reader, &writer);
+  auto result = testee_->CreateImageWriter(std::move(dest), &reader, &writer);
   EXPECT_FALSE(writer);
   EXPECT_EQ(Result::Code::kDunnoHowToEncode, result.code());
 }
