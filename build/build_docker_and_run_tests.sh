@@ -46,3 +46,8 @@ docker run \
   bash -l /var/local/ci/squim/build/docker_run_tests.sh || DOCKER_FAILED="true"
 
 docker rm -f $CONTAINER_NAME || true
+
+if [ "$DOCKER_FAILED" != "" ]
+then
+  exit 1
+fi
