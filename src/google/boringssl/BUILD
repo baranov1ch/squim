@@ -67,7 +67,6 @@ ssl_sources = [
     "src/ssl/ssl_rsa.c",
     "src/ssl/ssl_session.c",
     "src/ssl/ssl_stat.c",
-    "src/ssl/ssl_txt.c",
     "src/ssl/t1_enc.c",
     "src/ssl/t1_lib.c",
     "src/ssl/tls_record.c",
@@ -114,7 +113,6 @@ crypto_headers = [
     "src/include/openssl/md4.h",
     "src/include/openssl/md5.h",
     "src/include/openssl/mem.h",
-    "src/include/openssl/modes.h",
     "src/include/openssl/obj.h",
     "src/include/openssl/obj_mac.h",
     "src/include/openssl/objects.h",
@@ -160,6 +158,7 @@ crypto_internal_headers = [
     "src/crypto/directory.h",
     "src/crypto/dsa/internal.h",
     "src/crypto/ec/internal.h",
+    "src/crypto/ec/p256-x86_64-table.h",
     "src/crypto/evp/internal.h",
     "src/crypto/header_removed.h",
     "src/crypto/internal.h",
@@ -170,7 +169,6 @@ crypto_internal_headers = [
     "src/crypto/rand/internal.h",
     "src/crypto/rsa/internal.h",
     "src/crypto/test/scoped_types.h",
-    "src/crypto/test/stl_compat.h",
     "src/crypto/test/test_util.h",
     "src/crypto/x509/charmap.h",
     "src/crypto/x509/vpm_int.h",
@@ -277,7 +275,6 @@ crypto_sources = [
     "src/crypto/dh/check.c",
     "src/crypto/dh/dh.c",
     "src/crypto/dh/dh_asn1.c",
-    "src/crypto/dh/dh_impl.c",
     "src/crypto/dh/params.c",
     "src/crypto/digest/digest.c",
     "src/crypto/digest/digests.c",
@@ -285,13 +282,14 @@ crypto_sources = [
     "src/crypto/directory_win.c",
     "src/crypto/dsa/dsa.c",
     "src/crypto/dsa/dsa_asn1.c",
-    "src/crypto/dsa/dsa_impl.c",
     "src/crypto/ec/ec.c",
     "src/crypto/ec/ec_asn1.c",
     "src/crypto/ec/ec_key.c",
     "src/crypto/ec/ec_montgomery.c",
     "src/crypto/ec/oct.c",
+    "src/crypto/ec/p224-64.c",
     "src/crypto/ec/p256-64.c",
+    "src/crypto/ec/p256-x86_64.c",
     "src/crypto/ec/simple.c",
     "src/crypto/ec/util-64.c",
     "src/crypto/ec/wnaf.c",
@@ -341,7 +339,6 @@ crypto_sources = [
     "src/crypto/poly1305/poly1305.c",
     "src/crypto/poly1305/poly1305_arm.c",
     "src/crypto/poly1305/poly1305_vec.c",
-    "src/crypto/rand/hwrand.c",
     "src/crypto/rand/rand.c",
     "src/crypto/rand/urandom.c",
     "src/crypto/rand/windows.c",
@@ -447,27 +444,31 @@ crypto_sources = [
 
 tool_sources = [
     "src/tool/args.cc",
+    "src/tool/ciphers.cc",
     "src/tool/client.cc",
     "src/tool/const.cc",
     "src/tool/digest.cc",
     "src/tool/genrsa.cc",
+    "src/tool/internal.h",
     "src/tool/pkcs12.cc",
     "src/tool/rand.cc",
     "src/tool/server.cc",
     "src/tool/speed.cc",
     "src/tool/tool.cc",
     "src/tool/transport_common.cc",
+    "src/tool/transport_common.h",
 ]
 
-crypto_sources_aarch64 = [
+crypto_sources_linux_aarch64 = [
     "linux-aarch64/crypto/aes/aesv8-armx64.S",
+    "linux-aarch64/crypto/bn/armv8-mont.S",
     "linux-aarch64/crypto/modes/ghashv8-armx64.S",
     "linux-aarch64/crypto/sha/sha1-armv8.S",
     "linux-aarch64/crypto/sha/sha256-armv8.S",
     "linux-aarch64/crypto/sha/sha512-armv8.S",
 ]
 
-crypto_sources_arm = [
+crypto_sources_linux_arm = [
     "linux-arm/crypto/aes/aes-armv4.S",
     "linux-arm/crypto/aes/aesv8-armx32.S",
     "linux-arm/crypto/aes/bsaes-armv7.S",
@@ -482,7 +483,7 @@ crypto_sources_arm = [
     "src/crypto/poly1305/poly1305_arm_asm.S",
 ]
 
-crypto_sources_x86 = [
+crypto_sources_linux_x86 = [
     "linux-x86/crypto/aes/aes-586.S",
     "linux-x86/crypto/aes/aesni-x86.S",
     "linux-x86/crypto/aes/vpaes-x86.S",
@@ -497,7 +498,7 @@ crypto_sources_x86 = [
     "linux-x86/crypto/sha/sha512-586.S",
 ]
 
-crypto_sources_x86_64 = [
+crypto_sources_linux_x86_64 = [
     "linux-x86_64/crypto/aes/aes-x86_64.S",
     "linux-x86_64/crypto/aes/aesni-x86_64.S",
     "linux-x86_64/crypto/aes/bsaes-x86_64.S",
@@ -506,6 +507,7 @@ crypto_sources_x86_64 = [
     "linux-x86_64/crypto/bn/rsaz-x86_64.S",
     "linux-x86_64/crypto/bn/x86_64-mont.S",
     "linux-x86_64/crypto/bn/x86_64-mont5.S",
+    "linux-x86_64/crypto/ec/p256-x86_64-asm.S",
     "linux-x86_64/crypto/md5/md5-x86_64.S",
     "linux-x86_64/crypto/modes/aesni-gcm-x86_64.S",
     "linux-x86_64/crypto/modes/ghash-x86_64.S",
@@ -522,11 +524,11 @@ cc_library(
   visibility = ["//visibility:public"],
   hdrs = crypto_headers,
   srcs = crypto_internal_headers + crypto_sources + select({
-    ":linux_x32": crypto_sources_x86,
-    ":linux_x64": crypto_sources_x86_64,
-    ":linux_arm": crypto_sources_arm,
-    ":linux_aarch64": crypto_sources_aarch64,
-    "//conditions:default": crypto_sources_x86_64,
+    ":linux_x32": crypto_sources_linux_x86,
+    ":linux_x64": crypto_sources_linux_x86_64,
+    ":linux_arm": crypto_sources_linux_arm,
+    ":linux_aarch64": crypto_sources_linux_aarch64,
+    "//conditions:default": crypto_sources_linux_x86_64,
   }),
   defines = [
     'BORINGSSL_IMPLEMENTATION',
@@ -570,646 +572,665 @@ cc_binary(
     ':ssl',
   ]
 )
+
 test_support_sources = [
     "src/crypto/test/file_test.cc",
     "src/crypto/test/test_util.cc",
-] + glob(["src/crypto/test/*.h"])
+]
+
+test_support_sources_complete = test_support_sources + \
+    glob(["src/crypto/test/*.h"])
 
 cc_test(
-    name = "aes_test",
-    size = "small",
-    srcs = ["src/crypto/aes/aes_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "aes_test",
+  size = "small",
+  srcs = ["src/crypto/aes/aes_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "base64_test",
-    size = "small",
-    srcs = ["src/crypto/base64/base64_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "base64_test",
+  size = "small",
+  srcs = ["src/crypto/base64/base64_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "bio_test",
-    size = "small",
-    srcs = ["src/crypto/bio/bio_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "bio_test",
+  size = "small",
+  srcs = ["src/crypto/bio/bio_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "bn_test",
-    size = "small",
-    srcs = ["src/crypto/bn/bn_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "bn_test",
+  size = "small",
+  srcs = ["src/crypto/bn/bn_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "bytestring_test",
-    size = "small",
-    srcs = ["src/crypto/bytestring/bytestring_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "bytestring_test",
+  size = "small",
+  srcs = ["src/crypto/bytestring/bytestring_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_128_gcm",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-128-gcm",
-        "$(location src/crypto/cipher/test/aes_128_gcm_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_128_gcm_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_128_gcm",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-128-gcm",
+      "$(location src/crypto/cipher/test/aes_128_gcm_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_128_gcm_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_128_key_wrap",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-128-key-wrap",
-        "$(location src/crypto/cipher/test/aes_128_key_wrap_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_128_key_wrap_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_128_key_wrap",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-128-key-wrap",
+      "$(location src/crypto/cipher/test/aes_128_key_wrap_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_128_key_wrap_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_256_gcm",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-256-gcm",
-        "$(location src/crypto/cipher/test/aes_256_gcm_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_256_gcm_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_256_gcm",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-256-gcm",
+      "$(location src/crypto/cipher/test/aes_256_gcm_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_256_gcm_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_256_key_wrap",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-256-key-wrap",
-        "$(location src/crypto/cipher/test/aes_256_key_wrap_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_256_key_wrap_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_256_key_wrap",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-256-key-wrap",
+      "$(location src/crypto/cipher/test/aes_256_key_wrap_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_256_key_wrap_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_chacha20_poly1305",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "chacha20-poly1305",
-        "$(location src/crypto/cipher/test/chacha20_poly1305_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/chacha20_poly1305_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_chacha20_poly1305",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "chacha20-poly1305",
+      "$(location src/crypto/cipher/test/chacha20_poly1305_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/chacha20_poly1305_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_rc4_md5_tls",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "rc4-md5-tls",
-        "$(location src/crypto/cipher/test/rc4_md5_tls_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/rc4_md5_tls_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_chacha20_poly1305_old",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "chacha20-poly1305-old",
+      "$(location src/crypto/cipher/test/chacha20_poly1305_old_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/chacha20_poly1305_old_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_rc4_sha1_tls",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "rc4-sha1-tls",
-        "$(location src/crypto/cipher/test/rc4_sha1_tls_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/rc4_sha1_tls_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_rc4_md5_tls",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "rc4-md5-tls",
+      "$(location src/crypto/cipher/test/rc4_md5_tls_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/rc4_md5_tls_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_128_cbc_sha1_tls",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-128-cbc-sha1-tls",
-        "$(location src/crypto/cipher/test/aes_128_cbc_sha1_tls_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_128_cbc_sha1_tls_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_rc4_sha1_tls",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "rc4-sha1-tls",
+      "$(location src/crypto/cipher/test/rc4_sha1_tls_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/rc4_sha1_tls_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_128_cbc_sha1_tls_implicit_iv",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-128-cbc-sha1-tls-implicit-iv",
-        "$(location src/crypto/cipher/test/aes_128_cbc_sha1_tls_implicit_iv_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_128_cbc_sha1_tls_implicit_iv_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_128_cbc_sha1_tls",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-128-cbc-sha1-tls",
+      "$(location src/crypto/cipher/test/aes_128_cbc_sha1_tls_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_128_cbc_sha1_tls_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_128_cbc_sha256_tls",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-128-cbc-sha256-tls",
-        "$(location src/crypto/cipher/test/aes_128_cbc_sha256_tls_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_128_cbc_sha256_tls_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_128_cbc_sha1_tls_implicit_iv",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-128-cbc-sha1-tls-implicit-iv",
+      "$(location src/crypto/cipher/test/aes_128_cbc_sha1_tls_implicit_iv_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_128_cbc_sha1_tls_implicit_iv_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_256_cbc_sha1_tls",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-256-cbc-sha1-tls",
-        "$(location src/crypto/cipher/test/aes_256_cbc_sha1_tls_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_256_cbc_sha1_tls_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_128_cbc_sha256_tls",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-128-cbc-sha256-tls",
+      "$(location src/crypto/cipher/test/aes_128_cbc_sha256_tls_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_128_cbc_sha256_tls_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_256_cbc_sha1_tls_implicit_iv",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-256-cbc-sha1-tls-implicit-iv",
-        "$(location src/crypto/cipher/test/aes_256_cbc_sha1_tls_implicit_iv_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_256_cbc_sha1_tls_implicit_iv_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_256_cbc_sha1_tls",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-256-cbc-sha1-tls",
+      "$(location src/crypto/cipher/test/aes_256_cbc_sha1_tls_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_256_cbc_sha1_tls_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_256_cbc_sha256_tls",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-256-cbc-sha256-tls",
-        "$(location src/crypto/cipher/test/aes_256_cbc_sha256_tls_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_256_cbc_sha256_tls_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_256_cbc_sha1_tls_implicit_iv",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-256-cbc-sha1-tls-implicit-iv",
+      "$(location src/crypto/cipher/test/aes_256_cbc_sha1_tls_implicit_iv_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_256_cbc_sha1_tls_implicit_iv_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_256_cbc_sha384_tls",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-256-cbc-sha384-tls",
-        "$(location src/crypto/cipher/test/aes_256_cbc_sha384_tls_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_256_cbc_sha384_tls_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_256_cbc_sha256_tls",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-256-cbc-sha256-tls",
+      "$(location src/crypto/cipher/test/aes_256_cbc_sha256_tls_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_256_cbc_sha256_tls_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_des_ede3_cbc_sha1_tls",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "des-ede3-cbc-sha1-tls",
-        "$(location src/crypto/cipher/test/des_ede3_cbc_sha1_tls_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/des_ede3_cbc_sha1_tls_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_256_cbc_sha384_tls",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-256-cbc-sha384-tls",
+      "$(location src/crypto/cipher/test/aes_256_cbc_sha384_tls_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_256_cbc_sha384_tls_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_des_ede3_cbc_sha1_tls_implicit_iv",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "des-ede3-cbc-sha1-tls-implicit-iv",
-        "$(location src/crypto/cipher/test/des_ede3_cbc_sha1_tls_implicit_iv_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/des_ede3_cbc_sha1_tls_implicit_iv_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_des_ede3_cbc_sha1_tls",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "des-ede3-cbc-sha1-tls",
+      "$(location src/crypto/cipher/test/des_ede3_cbc_sha1_tls_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/des_ede3_cbc_sha1_tls_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_rc4_md5_ssl3",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "rc4-md5-ssl3",
-        "$(location src/crypto/cipher/test/rc4_md5_ssl3_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/rc4_md5_ssl3_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_des_ede3_cbc_sha1_tls_implicit_iv",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "des-ede3-cbc-sha1-tls-implicit-iv",
+      "$(location src/crypto/cipher/test/des_ede3_cbc_sha1_tls_implicit_iv_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/des_ede3_cbc_sha1_tls_implicit_iv_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_rc4_sha1_ssl3",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "rc4-sha1-ssl3",
-        "$(location src/crypto/cipher/test/rc4_sha1_ssl3_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/rc4_sha1_ssl3_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_rc4_md5_ssl3",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "rc4-md5-ssl3",
+      "$(location src/crypto/cipher/test/rc4_md5_ssl3_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/rc4_md5_ssl3_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_128_cbc_sha1_ssl3",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-128-cbc-sha1-ssl3",
-        "$(location src/crypto/cipher/test/aes_128_cbc_sha1_ssl3_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_128_cbc_sha1_ssl3_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_rc4_sha1_ssl3",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "rc4-sha1-ssl3",
+      "$(location src/crypto/cipher/test/rc4_sha1_ssl3_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/rc4_sha1_ssl3_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_256_cbc_sha1_ssl3",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-256-cbc-sha1-ssl3",
-        "$(location src/crypto/cipher/test/aes_256_cbc_sha1_ssl3_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_256_cbc_sha1_ssl3_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_128_cbc_sha1_ssl3",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-128-cbc-sha1-ssl3",
+      "$(location src/crypto/cipher/test/aes_128_cbc_sha1_ssl3_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_128_cbc_sha1_ssl3_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_des_ede3_cbc_sha1_ssl3",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "des-ede3-cbc-sha1-ssl3",
-        "$(location src/crypto/cipher/test/des_ede3_cbc_sha1_ssl3_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/des_ede3_cbc_sha1_ssl3_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_256_cbc_sha1_ssl3",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-256-cbc-sha1-ssl3",
+      "$(location src/crypto/cipher/test/aes_256_cbc_sha1_ssl3_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_256_cbc_sha1_ssl3_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_128_ctr_hmac_sha256",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-128-ctr-hmac-sha256",
-        "$(location src/crypto/cipher/test/aes_128_ctr_hmac_sha256.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_128_ctr_hmac_sha256.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_des_ede3_cbc_sha1_ssl3",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "des-ede3-cbc-sha1-ssl3",
+      "$(location src/crypto/cipher/test/des_ede3_cbc_sha1_ssl3_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/des_ede3_cbc_sha1_ssl3_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "aead_test_aes_256_ctr_hmac_sha256",
-    size = "small",
-    srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources,
-    args = [
-        "aes-256-ctr-hmac-sha256",
-        "$(location src/crypto/cipher/test/aes_256_ctr_hmac_sha256.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/aes_256_ctr_hmac_sha256.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_128_ctr_hmac_sha256",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-128-ctr-hmac-sha256",
+      "$(location src/crypto/cipher/test/aes_128_ctr_hmac_sha256.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_128_ctr_hmac_sha256.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "cipher_test",
-    size = "small",
-    srcs = ["src/crypto/cipher/cipher_test.cc"] + test_support_sources,
-    args = [
-        "$(location src/crypto/cipher/test/cipher_test.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/cipher/test/cipher_test.txt",
-    ],
-    deps = [":crypto"],
+  name = "aead_test_aes_256_ctr_hmac_sha256",
+  size = "small",
+  srcs = ["src/crypto/cipher/aead_test.cc"] + test_support_sources_complete,
+  args = [
+      "aes-256-ctr-hmac-sha256",
+      "$(location src/crypto/cipher/test/aes_256_ctr_hmac_sha256.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/aes_256_ctr_hmac_sha256.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "cmac_test",
-    size = "small",
-    srcs = ["src/crypto/cmac/cmac_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "cipher_test",
+  size = "small",
+  srcs = ["src/crypto/cipher/cipher_test.cc"] + test_support_sources_complete,
+  args = [
+      "$(location src/crypto/cipher/test/cipher_test.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/cipher/test/cipher_test.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "constant_time_test",
-    size = "small",
-    srcs = ["src/crypto/constant_time_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "cmac_test",
+  size = "small",
+  srcs = ["src/crypto/cmac/cmac_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "dh_test",
-    size = "small",
-    srcs = ["src/crypto/dh/dh_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "constant_time_test",
+  size = "small",
+  srcs = ["src/crypto/constant_time_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "digest_test",
-    size = "small",
-    srcs = ["src/crypto/digest/digest_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "dh_test",
+  size = "small",
+  srcs = ["src/crypto/dh/dh_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "dsa_test",
-    size = "small",
-    srcs = ["src/crypto/dsa/dsa_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "digest_test",
+  size = "small",
+  srcs = ["src/crypto/digest/digest_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "ec_test",
-    size = "small",
-    srcs = ["src/crypto/ec/ec_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "dsa_test",
+  size = "small",
+  srcs = ["src/crypto/dsa/dsa_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "example_mul",
-    size = "small",
-    srcs = ["src/crypto/ec/example_mul.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "ec_test",
+  size = "small",
+  srcs = ["src/crypto/ec/ec_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "ecdsa_test",
-    size = "small",
-    srcs = ["src/crypto/ecdsa/ecdsa_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "example_mul",
+  size = "small",
+  srcs = ["src/crypto/ec/example_mul.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "err_test",
-    size = "small",
-    srcs = ["src/crypto/err/err_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "ecdsa_test",
+  size = "small",
+  srcs = ["src/crypto/ecdsa/ecdsa_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "evp_extra_test",
-    size = "small",
-    srcs = ["src/crypto/evp/evp_extra_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "err_test",
+  size = "small",
+  srcs = ["src/crypto/err/err_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "evp_test",
-    size = "small",
-    srcs = ["src/crypto/evp/evp_test.cc"] + test_support_sources,
-    args = [
-        "$(location src/crypto/evp/evp_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/evp/evp_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "evp_extra_test",
+  size = "small",
+  srcs = ["src/crypto/evp/evp_extra_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "pbkdf_test",
-    size = "small",
-    srcs = ["src/crypto/evp/pbkdf_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "evp_test",
+  size = "small",
+  srcs = ["src/crypto/evp/evp_test.cc"] + test_support_sources_complete,
+  args = [
+      "$(location src/crypto/evp/evp_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/evp/evp_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "hkdf_test",
-    size = "small",
-    srcs = ["src/crypto/hkdf/hkdf_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "pbkdf_test",
+  size = "small",
+  srcs = ["src/crypto/evp/pbkdf_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "hmac_test",
-    size = "small",
-    srcs = ["src/crypto/hmac/hmac_test.cc"] + test_support_sources,
-    args = [
-        "$(location src/crypto/hmac/hmac_tests.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/hmac/hmac_tests.txt",
-    ],
-    deps = [":crypto"],
+  name = "hkdf_test",
+  size = "small",
+  srcs = ["src/crypto/hkdf/hkdf_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "lhash_test",
-    size = "small",
-    srcs = ["src/crypto/lhash/lhash_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "hmac_test",
+  size = "small",
+  srcs = ["src/crypto/hmac/hmac_test.cc"] + test_support_sources_complete,
+  args = [
+      "$(location src/crypto/hmac/hmac_tests.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/hmac/hmac_tests.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "gcm_test",
-    size = "small",
-    srcs = ["src/crypto/modes/gcm_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "lhash_test",
+  size = "small",
+  srcs = ["src/crypto/lhash/lhash_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "pkcs8_test",
-    size = "small",
-    srcs = ["src/crypto/pkcs8/pkcs8_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "gcm_test",
+  size = "small",
+  srcs = ["src/crypto/modes/gcm_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "pkcs12_test",
-    size = "small",
-    srcs = ["src/crypto/pkcs8/pkcs12_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "pkcs8_test",
+  size = "small",
+  srcs = ["src/crypto/pkcs8/pkcs8_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "poly1305_test",
-    size = "small",
-    srcs = ["src/crypto/poly1305/poly1305_test.cc"] + test_support_sources,
-    args = [
-        "$(location src/crypto/poly1305/poly1305_test.txt)",
-    ],
-    copts = boringssl_copts,
-    data = [
-        "src/crypto/poly1305/poly1305_test.txt",
-    ],
-    deps = [":crypto"],
+  name = "pkcs12_test",
+  size = "small",
+  srcs = ["src/crypto/pkcs8/pkcs12_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "refcount_test",
-    size = "small",
-    srcs = ["src/crypto/refcount_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "poly1305_test",
+  size = "small",
+  srcs = ["src/crypto/poly1305/poly1305_test.cc"] + test_support_sources_complete,
+  args = [
+      "$(location src/crypto/poly1305/poly1305_test.txt)",
+  ],
+  copts = boringssl_copts,
+  data = [
+      "src/crypto/poly1305/poly1305_test.txt",
+  ],
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "rsa_test",
-    size = "small",
-    srcs = ["src/crypto/rsa/rsa_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "refcount_test",
+  size = "small",
+  srcs = ["src/crypto/refcount_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "thread_test",
-    size = "small",
-    srcs = ["src/crypto/thread_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "rsa_test",
+  size = "small",
+  srcs = ["src/crypto/rsa/rsa_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "pkcs7_test",
-    size = "small",
-    srcs = ["src/crypto/x509/pkcs7_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "thread_test",
+  size = "small",
+  srcs = ["src/crypto/thread_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "tab_test",
-    size = "small",
-    srcs = ["src/crypto/x509v3/tab_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "pkcs7_test",
+  size = "small",
+  srcs = ["src/crypto/x509/pkcs7_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "v3name_test",
-    size = "small",
-    srcs = ["src/crypto/x509v3/v3name_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [":crypto"],
+  name = "tab_test",
+  size = "small",
+  srcs = ["src/crypto/x509v3/tab_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "pqueue_test",
-    size = "small",
-    srcs = ["src/ssl/pqueue/pqueue_test.c"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [
-        ":crypto",
-        ":ssl",
-    ],
+  name = "v3name_test",
+  size = "small",
+  srcs = ["src/crypto/x509v3/v3name_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [":crypto"],
 )
 
 cc_test(
-    name = "ssl_test",
-    size = "small",
-    srcs = ["src/ssl/ssl_test.cc"] + test_support_sources,
-    copts = boringssl_copts,
-    deps = [
-        ":crypto",
-        ":ssl",
-    ],
+  name = "pqueue_test",
+  size = "small",
+  srcs = ["src/ssl/pqueue/pqueue_test.c"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [
+      ":crypto",
+      ":ssl",
+  ],
+)
+
+cc_test(
+  name = "ssl_test",
+  size = "small",
+  srcs = ["src/ssl/ssl_test.cc"] + test_support_sources_complete,
+  copts = boringssl_copts,
+  deps = [
+      ":crypto",
+      ":ssl",
+  ],
 )
