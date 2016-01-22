@@ -118,7 +118,7 @@ cc_library(
   name = "glog",
   linkstatic = 1,
   defines = [
-    "GOOGLE_GLOG_DLL_DECL="
+    "GOOGLE_GLOG_DLL_DECL=",
   ],
   hdrs = [
     ":upstream/src/config.h",
@@ -130,6 +130,7 @@ cc_library(
     "upstream/src/base/googleinit.h",
     "upstream/src/base/mutex.h",
     "upstream/src/demangle.h",
+    ":upstream/src/glog/log_severity.h",
     "upstream/src/mock-log.h",
     "upstream/src/stacktrace.h",
     "upstream/src/symbolize.h",

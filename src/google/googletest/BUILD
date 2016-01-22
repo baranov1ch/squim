@@ -24,7 +24,7 @@ cc_library(
       "upstream/googletest/src/gtest-all.cc",
       "upstream/googletest/src/gtest_main.cc",
     ]
-  ),
+  ) + ["upstream/googletest/src/gtest-internal-inl.h"],
   hdrs = glob(["upstream/googletest/include/**/*.h"]),
   linkopts = ["-pthread"],
   visibility = ["//visibility:public"],

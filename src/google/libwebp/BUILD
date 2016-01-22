@@ -12,14 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+webp_public_headers = [
+  "upstream/src/webp/decode.h",
+  "upstream/src/webp/demux.h",
+  "upstream/src/webp/encode.h",
+  "upstream/src/webp/format_constants.h",
+  "upstream/src/webp/mux.h",
+  "upstream/src/webp/mux_types.h",
+  "upstream/src/webp/types.h",
+]
+
+webp_headers = webp_public_headers + [
+  "upstream/src/dec/decode_vp8.h",
+  "upstream/src/dec/vp8i.h",
+  "upstream/src/dec/vp8li.h",
+  "upstream/src/dec/webpi.h",
+  "upstream/src/dsp/dsp.h",
+  "upstream/src/enc/backward_references.h",
+  "upstream/src/enc/cost.h",
+  "upstream/src/enc/histogram.h",
+  "upstream/src/enc/vp8enci.h",
+  "upstream/src/utils/bit_reader.h",
+  "upstream/src/utils/bit_writer.h",
+  "upstream/src/utils/color_cache.h",
+  "upstream/src/utils/endian_inl.h",
+  "upstream/src/utils/huffman.h",
+  "upstream/src/utils/random.h",
+  "upstream/src/utils/rescaler.h",
+  "upstream/src/utils/thread.h",
+  "upstream/src/utils/utils.h",
+]
+
 cc_library(
-  name = "libwebp_dec",
+  name = "webp_dec",
   hdrs = [
     "upstream/src/dec/alphai.h",
-    "upstream/src/dec/decode_vp8.h",
-    "upstream/src/dec/vp8i.h",
-    "upstream/src/dec/vp8li.h",
-    "upstream/src/dec/webpi.h",
   ],
   srcs = [
     "upstream/src/dec/alpha.c",
@@ -32,24 +59,23 @@ cc_library(
     "upstream/src/dec/vp8.c",
     "upstream/src/dec/vp8l.c",
     "upstream/src/dec/webp.c",
-  ],
+  ] + webp_headers,
   deps = [
-    ":libwebp_dsp",
-    ":libwebp_utils",
+    ":webp_dsp",
+    ":webp_utils",
   ],
 )
 
 cc_library(
-  name = "libwebp_demux",
+  name = "webp_demux",
   srcs = [
-    "upstream/src/demux/demux.c"
-  ],
+    "upstream/src/demux/demux.c",
+  ] + webp_headers,
 )
 
 cc_library(
-  name = "libwebp_dsp",
+  name = "webp_dsp",
   hdrs = [
-    "upstream/src/dsp/dsp.h",
     "upstream/src/dsp/lossless.h",
     "upstream/src/dsp/yuv.h",
     "upstream/src/dsp/yuv_tables_sse2.h",
@@ -60,26 +86,21 @@ cc_library(
     "upstream/src/dsp/cpu.c",
     "upstream/src/dsp/dec.c",
     "upstream/src/dsp/dec_clip_tables.c",
-    "upstream/src/dsp/dec_mips32.c",
     "upstream/src/dsp/dec_sse2.c",
     "upstream/src/dsp/enc.c",
-    "upstream/src/dsp/enc_avx2.c",
-    "upstream/src/dsp/enc_mips32.c",
     "upstream/src/dsp/enc_sse2.c",
     "upstream/src/dsp/lossless.c",
-    "upstream/src/dsp/lossless_mips32.c",
     "upstream/src/dsp/lossless_sse2.c",
     "upstream/src/dsp/upsampling.c",
     "upstream/src/dsp/upsampling_sse2.c",
     "upstream/src/dsp/yuv.c",
-    "upstream/src/dsp/yuv_mips32.c",
     "upstream/src/dsp/yuv_sse2.c",
-  ],
+  ] + webp_headers,
   linkopts = ["-lm"]
 )
 
 cc_library(
-  name = "libwebp_enc",
+  name = "webp_enc",
   hdrs = [
     "upstream/src/enc/backward_references.h",
     "upstream/src/enc/cost.h",
@@ -110,13 +131,13 @@ cc_library(
     "upstream/src/enc/webpenc.c",
   ],
   deps = [
-    ":libwebp_dsp",
-    ":libwebp_utils",
+    ":webp_dsp",
+    ":webp_utils",
   ],
 )
 
 cc_library(
-  name = "libwebp_mux",
+  name = "webp_mux",
   hdrs = [
     "upstream/src/mux/muxi.h",
   ],
@@ -126,45 +147,36 @@ cc_library(
     "upstream/src/mux/muxread.c",
   ],
   deps = [
-    ":libwebp_dec",
+    ":webp_dec",
   ],
 )
 
 cc_library(
-  name = "libwebp_enc_mux",
+  name = "webp_enc_mux",
   includes = ["upstream/src"],
-  hdrs = [
+   hdrs = [
     "upstream/examples/gif2webp_util.h"
   ],
   srcs = [
     "upstream/examples/gif2webp_util.c"
   ],
-  deps = [":libwebp_mux"],
+  deps = [":webp_mux"],
   visibility = ["//visibility:public"]
 )
 
 cc_library(
-  name = "libwebp_utils",
+  name = "webp_utils",
   hdrs = [
-    "upstream/src/utils/bit_reader.h",
-    "upstream/src/utils/bit_writer.h",
-    "upstream/src/utils/color_cache.h",
     "upstream/src/utils/filters.h",
-    "upstream/src/utils/huffman.h",
     "upstream/src/utils/huffman_encode.h",
     "upstream/src/utils/quant_levels.h",
     "upstream/src/utils/quant_levels_dec.h",
-    "upstream/src/utils/random.h",
-    "upstream/src/utils/rescaler.h",
-    "upstream/src/utils/thread.h",
-    "upstream/src/utils/utils.h",
-  ],
+  ] + webp_headers,
   srcs = [
     "upstream/src/utils/bit_reader.c",
     "upstream/src/utils/bit_reader_inl.h",
     "upstream/src/utils/bit_writer.c",
     "upstream/src/utils/color_cache.c",
-    "upstream/src/utils/endian_inl.h",
     "upstream/src/utils/filters.c",
     "upstream/src/utils/huffman.c",
     "upstream/src/utils/huffman_encode.c",
@@ -178,24 +190,16 @@ cc_library(
 )
 
 cc_library(
-  name = "libwebp",
+  name = "webp",
   deps = [
-    ":libwebp_dec",
-    ":libwebp_demux",
-    ":libwebp_dsp",
-    ":libwebp_enc",
-    ":libwebp_enc_mux",
-    ":libwebp_mux",
-    ":libwebp_utils",
+    ":webp_dec",
+    ":webp_demux",
+    ":webp_dsp",
+    ":webp_enc",
+    ":webp_enc_mux",
+    ":webp_mux",
+    ":webp_utils",
   ],
-  hdrs = [
-    "upstream/src/webp/decode.h",
-    "upstream/src/webp/demux.h",
-    "upstream/src/webp/encode.h",
-    "upstream/src/webp/format_constants.h",
-    "upstream/src/webp/mux.h",
-    "upstream/src/webp/mux_types.h",
-    "upstream/src/webp/types.h",
-  ],
+  hdrs = webp_public_headers,
   visibility = ["//visibility:public"]
 )

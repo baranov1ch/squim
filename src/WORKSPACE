@@ -84,7 +84,7 @@ bind(
 # WebP
 bind(
   name = "libwebp",
-  actual = "//google/libwebp:libwebp"
+  actual = "//google/libwebp:webp"
 )
 
 # Libpng
