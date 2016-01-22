@@ -32,7 +32,7 @@
 using grpc::ClientContext;
 using grpc::ClientReaderWriter;
 using grpc::CreateChannel;
-using grpc::InsecureCredentials;
+using grpc::InsecureChannelCredentials;
 using grpc::InsecureServerCredentials;
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -73,8 +73,6 @@ class OptimizerEndToEndTest : public testing::Test {
     builder.RegisterService(service_.get());
     server_ = builder.BuildAndStart();
     server_thread_ = std::thread([this]() { server_->Wait(); });
-
-    CreateChannel(kServerAddress, InsecureCredentials());
     return true;
   }
 
@@ -94,7 +92,7 @@ TEST_F(OptimizerEndToEndTest, SimpleTest) {
   std::vector<uint8_t> out;
   ASSERT_TRUE(ReadFile("app/testdata/test.jpg", &in));
   ImageOptimizerClient client(
-      CreateChannel(kServerAddress, InsecureCredentials()));
+      CreateChannel(kServerAddress, InsecureChannelCredentials()));
   EXPECT_TRUE(client.OptimizeImage(in, 512, &out));
   EXPECT_LT(out.size(), in.size());
 }
