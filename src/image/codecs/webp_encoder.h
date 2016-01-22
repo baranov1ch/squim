@@ -88,6 +88,7 @@ class WebPEncoder : public ImageEncoder {
   std::unique_ptr<io::VectorWriter> dst_;
   const ImageMetadata* metadata_;
   io::ChunkList output_;
+  Result error_ = Result::Ok();
 };
 
 }  // namespace image

@@ -18,6 +18,7 @@
 
 #include "image/decoding_reader.h"
 #include "image/image_codec_factory.h"
+#include "image/multi_frame_writer.h"
 #include "image/single_frame_writer.h"
 #include "io/buf_reader.h"
 #include "io/writer.h"
@@ -66,17 +67,20 @@ Result ConvertToWebPStrategy::CreateImageWriter(
   const ImageInfo* image_info;
   auto result = reader->GetImageInfo(&image_info);
   DCHECK(result.ok());
-  if (image_info->type == ImageType::kWebP ||
-      image_info->type == ImageType::kGif)
+  if (image_info->type == ImageType::kWebP)
     return Result::Error(Result::Code::kDunnoHowToEncode,
-                         "WebP/Gif are not supported yet");
+                         "WebP is not supported yet");
 
   auto encoder =
       codec_factory_->CreateEncoder(ImageType::kWebP, std::move(dest));
   if (!encoder)
     return Result::Error(Result::Code::kDunnoHowToEncode);
 
-  writer->reset(new SingleFrameWriter(std::move(encoder)));
+  if (image_info->type == ImageType::kGif) {
+    writer->reset(new MultiFrameWriter(std::move(encoder)));
+  } else {
+    writer->reset(new SingleFrameWriter(std::move(encoder)));
+  }
   return Result::Ok();
 }
 

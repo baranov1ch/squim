@@ -21,6 +21,7 @@
 
 #include "base/logging.h"
 #include "base/memory/make_unique.h"
+#include "image/codecs/gif_decoder.h"
 #include "image/image_frame.h"
 #include "image/image_info.h"
 #include "image/test/image_test_util.h"
@@ -122,20 +123,32 @@ TEST_F(WebPEncoderTest, Success) {
 }
 
 TEST_F(WebPEncoderTest, EncodeMultiframe) {
-  /*  std::vector<uint8_t> gif_image;
-    ASSERT_TRUE(ReadTestFile(kGifTestDir, "animated", "gif", &data));
-    auto source = base::make_unique<io::BufReader>(
-        base::make_unique<io::BufferedSource>());
-    source->source()->AddChunk(
-        base::make_unique<io::Chunk>(&data[0], data.size()));
-    source->source()->SendEof();
-    auto gif_decoder =
-    base::make_unique<GifDecoder>(GifDecoder::Params::Default(),
-                                                     std::move(source));
-    auto result = gif_decoder->Decode();
-    EXPECT_TRUE(result.ok());
-    auto writer = base::make_unique<TestWriter>();
-    auto* writer_raw = writer.get();*/
+  std::vector<uint8_t> gif_image;
+  ASSERT_TRUE(
+      ReadTestFile(kGifTestDir, "animated_interlaced", "gif", &gif_image));
+  auto source =
+      base::make_unique<io::BufReader>(base::make_unique<io::BufferedSource>());
+  source->source()->AddChunk(
+      base::make_unique<io::Chunk>(&gif_image[0], gif_image.size()));
+  source->source()->SendEof();
+  auto gif_decoder = base::make_unique<GifDecoder>(
+      GifDecoder::Params::Default(), std::move(source));
+  auto result = gif_decoder->Decode();
+  ASSERT_TRUE(result.ok());
+  auto writer = base::make_unique<TestWriter>();
+  auto* writer_raw = writer.get();
+
+  WebPEncoder::Params params;
+  params.quality = 50;
+  auto testee = base::make_unique<WebPEncoder>(params, std::move(writer));
+
+  ASSERT_TRUE(testee->Initialize(&gif_decoder->GetImageInfo()).ok());
+  for (size_t i = 0; i < gif_decoder->GetFrameCount(); ++i)
+    ASSERT_TRUE(
+        testee->EncodeFrame(gif_decoder->GetFrameAtIndex(i), false).ok());
+
+  ASSERT_TRUE(testee->EncodeFrame(nullptr, true).ok());
+  LOG(INFO) << writer_raw->data().size();
 }
 
 }  // namespace image

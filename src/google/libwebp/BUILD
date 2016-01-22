@@ -125,6 +125,9 @@ cc_library(
     "upstream/src/mux/muxinternal.c",
     "upstream/src/mux/muxread.c",
   ],
+  deps = [
+    ":libwebp_dec",
+  ],
 )
 
 cc_library(

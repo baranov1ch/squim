@@ -401,7 +401,7 @@ class WebPEncoder::Impl {
       RGBAPixel bg(const_cast<uint8_t*>(image_info_->bg_color->data()));
       // This was an animated image.
       WebPMuxAnimParams anim = {PackAsARGB(bg.r(), bg.g(), bg.b(), bg.a()),
-                                static_cast<int>(image_info_->loop_count - 1)};
+                                static_cast<int>(image_info_->loop_count)};
       if (WebPMuxSetAnimationParams(webp_mux_, &anim) != WEBP_MUX_OK)
         return Result::Error(Result::Code::kEncodeError);
     }
@@ -456,7 +456,7 @@ class WebPEncoder::Impl {
     if (!WebPValidateConfig(&webp_config_))
       return Result::Error(Result::Code::kEncodeError);
 
-    if (WebPPictureInit(&webp_image_))
+    if (!WebPPictureInit(&webp_image_))
       return Result::Error(Result::Code::kEncodeError);
 
     webp_image_.width = image_info_->width;
@@ -507,30 +507,43 @@ Result WebPEncoder::Initialize(const ImageInfo* image_info) {
 }
 
 Result WebPEncoder::EncodeFrame(ImageFrame* frame, bool last_frame) {
+  if (!error_.ok())
+    return error_;
+
   if (impl_->idle() && last_frame && frame) {
     // Single frame image - use simple API.
     auto result = impl_->EncodeSingle(frame);
-    if (!result.ok())
+    if (result.error()) {
+      error_ = result;
       return result;
+    }
   } else {
     // Otherwise, mess with WebP Muxer API.
     if (frame) {
       auto result = impl_->EncodeNextFrame(frame);
-      if (!result.ok())
+      if (result.error()) {
+        error_ = result;
         return result;
+      }
     }
 
     if (last_frame) {
       auto result = impl_->FinishEncoding();
-      if (!result.ok())
+      if (result.error()) {
+        error_ = result;
         return result;
+      }
     }
   }
 
   if (!output_.empty()) {
     auto io_result = dst_->WriteV(std::move(output_));
     output_ = io::ChunkList();
-    return Result::FromIoResult(io_result, false);
+    auto result = Result::FromIoResult(io_result, false);
+    if (result.error()) {
+      error_ = result;
+      return result;
+    }
   }
 
   return Result::Ok();
