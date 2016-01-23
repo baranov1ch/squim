@@ -280,6 +280,7 @@ class WebPEncoder::Impl {
     if (mode_ == Mode::kMultiFrame) {
       WebPFrameCacheDelete(webp_frame_cache_);
       WebPMuxDelete(webp_mux_);
+      WebPPictureFree(&webp_image_);
     }
   }
 
