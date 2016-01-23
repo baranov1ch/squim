@@ -28,7 +28,7 @@ CONTAINER_NAME="run_tests_$(uuidgen)"
 
 echo $CONTAINER_NAME
 
-opts="--copt=-Werror --copt=-fno-exceptions  --strip=never --verbose_failures  -c dbg"
+opts="--verbose_failures  -c dbg"
 
 tests=`cat ${git_root}/build/testsuites | tr "\n" " "`
 

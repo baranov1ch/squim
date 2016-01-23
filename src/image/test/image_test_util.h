@@ -30,7 +30,7 @@ namespace image {
 
 class ImageDecoder;
 class ImageFrame;
-class ImageInfo;
+struct ImageInfo;
 
 // Specifies how the image should be read.
 enum ReadType {

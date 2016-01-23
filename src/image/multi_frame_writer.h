@@ -40,7 +40,6 @@ class MultiFrameWriter : public ImageWriter {
 
  private:
   std::unique_ptr<ImageEncoder> encoder_;
-  bool last_frame_written_ = false;
 };
 
 }  // namespace image

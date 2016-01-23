@@ -22,7 +22,7 @@ gen_config_header(
   src = "upstream/src/config.h.cmake.in",
   out = "upstream/src/config.h",
   replacements = {
-    "#cmakedefine DISABLE_RTTI": "/* #undef DISABLE_RTTI */",
+    "#cmakedefine DISABLE_RTTI": "#define DISABLE_RTTI 1",
     "#cmakedefine GOOGLE_NAMESPACE ${GOOGLE_NAMESPACE}": "#define GOOGLE_NAMESPACE google",
     "#cmakedefine HAVE_DLADDR": "#define HAVE_DLADDR 1",
     "#cmakedefine HAVE_SNPRINTF": "#define HAVE_SNPRINTF 1",

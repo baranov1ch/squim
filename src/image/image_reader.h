@@ -21,7 +21,7 @@
 
 namespace image {
 
-class ImageInfo;
+struct ImageInfo;
 class ImageFrame;
 class ImageMetadata;
 

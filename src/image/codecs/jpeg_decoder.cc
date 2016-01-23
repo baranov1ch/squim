@@ -362,7 +362,6 @@ class JpegDecoder::Impl {
   DecoderErrorHandler error_handler_;
   DecoderSource jpeg_source_;
   State state_ = State::kHeader;
-  size_t num_read_ = 0;
   size_t wanted_offset_ = 0;
   JpegDecoder* decoder_;
   std::unique_ptr<uint8_t* []> rows_;

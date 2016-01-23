@@ -26,18 +26,6 @@
 
 namespace image {
 
-namespace {
-template <typename N>
-std::string PrintBits(N val) {
-  auto bits = sizeof(val) << 3;
-  std::stringstream ss;
-  for (size_t i = bits - 1; i >= 0; --i)
-    ss << static_cast<uint32_t>(((val & (1 << i)) >> i));
-
-  return ss.str();
-}
-}
-
 LZWWriter::CodeStream::CodeStream() {}
 
 void LZWWriter::CodeStream::Init(

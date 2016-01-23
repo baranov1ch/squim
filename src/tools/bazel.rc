@@ -1,0 +1,5 @@
+build --crosstool_top //tools/cpp:toolchain
+
+build:debug -c dbg
+build:debug --copt="-g"
+build:debug --strip="never"

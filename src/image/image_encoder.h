@@ -24,7 +24,7 @@
 namespace image {
 
 class ImageFrame;
-class ImageInfo;
+struct ImageInfo;
 class ImageMetadata;
 
 // General encoder interface.

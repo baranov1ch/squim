@@ -14,4 +14,6 @@
 
 set -e
 
+CLANG=/usr/bin/clang-3.6 ./setup_bazel.sh
+
 $RUN_TESTS_COMMAND

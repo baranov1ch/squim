@@ -22,7 +22,7 @@
 namespace image {
 
 class ImageFrame;
-class ImageInfo;
+struct ImageInfo;
 class ImageMetadata;
 
 class ImageWriter {
