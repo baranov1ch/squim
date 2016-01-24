@@ -31,12 +31,11 @@ enum ImageType {
   UNKNOWN = 4;
 }
 
-message ImageRequestPart {
-  enum MessageType {
-    META = 0;
-    IMAGE_DATA = 1;
-  }
+message ImageData {
+  bytes bytes = 1;
+}
 
+message ImageRequestPart {
   enum WebPCompressionType {
     LOSSY = 0;
     LOSSLESS = 1;
@@ -69,10 +68,10 @@ message ImageRequestPart {
     WebPOptimizationParams webp_params = 10;
   }
 
-  string name = 1;
-  MessageType type = 2;
-  Meta meta = 3;
-  bytes data = 4;
+  oneof payload {
+    Meta meta = 1;
+    ImageData image_data = 2;
+  }
 }
 
 message ImageResponsePart {
@@ -95,12 +94,6 @@ message ImageResponsePart {
     CMYK = 6;
   }
 
-  enum MessageType {
-    META = 0;
-    IMAGE_DATA = 1;
-    STATS = 2;
-  }
-
   message Meta {
     Result code = 1;
     string message = 2;
@@ -118,9 +111,9 @@ message ImageResponsePart {
     bool multiframe = 9;
   }
 
-  string message = 1;
-  MessageType type = 2;
-  Meta meta = 3;
-  bytes data = 4;
-  Stats stats = 5;
+  oneof payload {
+    Meta meta = 1;
+    ImageData image_data = 2;
+    Stats stats = 3;
+  }
 }

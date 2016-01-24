@@ -70,8 +70,8 @@ int main(int argc, char** argv) {
 
   LOG(INFO) << "Sending picture, size=" << in.size();
 
-  ImageOptimizerClient client(
-      grpc::CreateChannel("localhost:50051", grpc::InsecureCredentials()));
+  ImageOptimizerClient client(grpc::CreateChannel(
+      "localhost:50051", grpc::InsecureChannelCredentials()));
   if (!client.OptimizeImage(in, 1024, &out)) {
     LOG(ERROR) << "Optimization failed";
     return 1;

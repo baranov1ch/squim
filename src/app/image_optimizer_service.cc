@@ -181,7 +181,7 @@ class SyncRequestHandler {
         break;
 
       if (!optimizer_) {
-        if (request_part->type() != ImageRequestPart::META) {
+        if (!request_part->has_meta()) {
           stream_->Write(CreateError(ImageResponsePart::CONTRACT_ERROR));
           return Status::OK;
         }
@@ -191,7 +191,7 @@ class SyncRequestHandler {
           return Status::OK;
         }
       } else {
-        if (request_part->type() != ImageRequestPart::IMAGE_DATA) {
+        if (!request_part->has_image_data()) {
           stream_->Write(CreateError(ImageResponsePart::CONTRACT_ERROR));
           return Status::OK;
         }
@@ -214,10 +214,11 @@ class SyncRequestHandler {
     output_->Flush();
     DrainOutput();
 
-    ImageResponsePart stats;
-    stats.set_type(ImageResponsePart::STATS);
+    ImageResponsePart trailer;
+    auto* stats = trailer.mutable_stats();
+    stats->set_psnr(2);
     // TODO: send stats.
-    stream_->Write(stats);
+    stream_->Write(trailer);
 
     return Status::OK;
   }
@@ -227,18 +228,17 @@ class SyncRequestHandler {
     while (!output_->Empty()) {
       if (!response_started_) {
         response_started_ = true;
-        ImageResponsePart header;
-        header.set_type(ImageResponsePart::META);
-        auto* meta = header.mutable_meta();
+        ImageResponsePart response;
+        auto* meta = response.mutable_meta();
         meta->set_code(ImageResponsePart::OK);
-        stream_->Write(header);
+        stream_->Write(response);
       }
       auto chunk = output_->PopChunk();
-      ImageResponsePart data;
-      data.set_type(ImageResponsePart::IMAGE_DATA);
-      data.set_data(
+      ImageResponsePart response;
+      auto* image_data = response.mutable_image_data();
+      image_data->set_bytes(
           base::StringFromBytes(chunk->data(), chunk->size()).as_string());
-      stream_->Write(data);
+      stream_->Write(response);
     }
   }
 
@@ -262,14 +262,13 @@ class SyncRequestHandler {
   image::Result ProcessData(std::unique_ptr<ImageRequestPart> data) {
     DCHECK(optimizer_);
     DCHECK(input_);
-    std::string copy(data->data());
+    std::string copy(data->image_data().bytes());
     input_->source()->AddChunk(io::Chunk::FromString(std::move(copy)));
     return optimizer_->Process();
   }
 
   ImageResponsePart CreateError(ImageResponsePart::Result result) {
     ImageResponsePart error;
-    error.set_type(ImageResponsePart::META);
     auto* meta = error.mutable_meta();
     meta->set_code(result);
     return error;

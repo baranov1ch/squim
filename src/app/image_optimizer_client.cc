@@ -41,7 +41,6 @@ bool ImageOptimizerClient::OptimizeImage(const std::vector<uint8_t>& image_data,
 
   std::thread writer([stream, &image_data, chunk_size]() {
     ImageRequestPart header;
-    header.set_type(ImageRequestPart::META);
     auto* meta = header.mutable_meta();
     meta->set_target_type(squim::WEBP);
     auto* webp_params = meta->mutable_webp_params();
@@ -54,13 +53,13 @@ bool ImageOptimizerClient::OptimizeImage(const std::vector<uint8_t>& image_data,
     size_t rest = image_data.size();
     while (rest > 0) {
       auto effective_len = std::min(rest, chunk_size);
-      ImageRequestPart data;
-      data.set_type(ImageRequestPart::IMAGE_DATA);
-      data.set_data(base::StringFromBytes(&image_data[offset], effective_len)
-                        .as_string());
+      ImageRequestPart body;
+      auto* data = body.mutable_image_data();
+      data->set_bytes(base::StringFromBytes(&image_data[offset], effective_len)
+                          .as_string());
       rest -= effective_len;
       offset += effective_len;
-      stream->Write(data);
+      stream->Write(body);
     }
   });
 
@@ -68,17 +67,17 @@ bool ImageOptimizerClient::OptimizeImage(const std::vector<uint8_t>& image_data,
   webp_data->clear();
   ImageResponsePart response_part;
   while (stream->Read(&response_part)) {
-    if (response_part.type() == ImageResponsePart::META) {
+    if (response_part.has_meta()) {
       if (response_part.meta().code() != ImageResponsePart::OK) {
         result = false;
         LOG(ERROR) << "ImageOptimizer optimization failed";
         break;
       }
-    } else if (response_part.type() == ImageResponsePart::IMAGE_DATA) {
-      const uint8_t* data =
-          reinterpret_cast<const uint8_t*>(response_part.data().data());
+    } else if (response_part.has_image_data()) {
+      auto* data = reinterpret_cast<const uint8_t*>(
+          response_part.image_data().bytes().data());
       webp_data->insert(webp_data->end(), data,
-                        data + response_part.data().size());
+                        data + response_part.image_data().bytes().size());
     } else {
       // TODO: handle stats.
     }
