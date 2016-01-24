@@ -15,8 +15,23 @@
 cc_library(
   name = "os",
   hdrs = [
+    "file.h",
+    "file_info.h",
+    "file_mode.h",
+    "file_system.h",
+    "fs_result.h",
+    "os_error.h",
   ],
   srcs = [
+    "file.cc",
+    "file_posix.h",
+    "file_posix.cc",
+    "file_system_posix.cc",
+    "file_system_posix.h",
+    "fs_result.cc",
+    "os_error.cc",
+    "posix_util.cc",
+    "posix_util.h",
   ],
   deps = [
     "//base:base",
@@ -29,6 +44,7 @@ cc_test(
   name = "os_test",
   timeout = "short",
   srcs = [
+    "file_system_posix_test.cc",
   ],
   deps = [
     "//external:gtest",

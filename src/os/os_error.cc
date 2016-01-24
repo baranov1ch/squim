@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Alexey Baranov <me@kotiki.cc>. All rights reserved.
+ * Copyright 2016 Alexey Baranov <me@kotiki.cc>. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,28 @@
  * limitations under the License.
  */
 
-#ifndef OS_FILE_INFO_H_
-#define OS_FILE_INFO_H_
+#include "os/os_error.h"
 
-#include <chrono>
-#include <cstdint>
-#include <string>
-
-#include "os/file_mode.h"
+#include <cstring>
 
 namespace os {
 
-struct FileInfo {
- public:
-  std::string name;
-  size_t size;
-  FileMode mode;
-  std::chrono::system_clock::time_point mtime;
+// static
+OsError OsError::Ok() {
+  return OsError(0);
+}
 
-  bool is_dir() const { return mode.is_dir(); }
-};
+// static
+OsError OsError::Error(int error_code) {
+  return OsError(error_code);
+}
+
+OsError::OsError(int os_error_code) : os_error_code_(os_error_code) {}
+
+OsError::~OsError() {}
+
+const char* OsError::ToString() const {
+  return strerror(os_error_code_);
+}
 
 }  // namespace os
-
-#endif  // OS_FILE_INFO_H_

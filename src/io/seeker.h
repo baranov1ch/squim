@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Alexey Baranov <me@kotiki.cc>. All rights reserved.
+ * Copyright 2016 Alexey Baranov <me@kotiki.cc>. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,41 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef IO_WRITER_H_
-#define IO_WRITER_H_
+#ifndef IO_SEEKER_H_
+#define IO_SEEKER_H_
 
-#include "io/chunk.h"
 #include "io/io_result.h"
 
 namespace io {
 
-class Writer {
+class Seeker {
  public:
-  virtual IoResult Write(Chunk* chunk) = 0;
+  enum class Whence {
+    kSet = 0,
+    kCur = 1,
+    kEnd = 2,
+  };
 
-  virtual ~Writer() {}
-};
+  virtual IoResult Seek(size_t offset, Whence whence) = 0;
 
-class WriterAt {
- public:
-  virtual IoResult WriteAt(Chunk* chunk, size_t offset) = 0;
-
-  virtual ~WriterAt() {}
-};
-
-class VectorWriter {
- public:
-  virtual IoResult WriteV(ChunkList chunks) = 0;
-
-  virtual ~VectorWriter() {}
-};
-
-class DevNull : public Writer, public VectorWriter {
- public:
-  IoResult Write(Chunk* chunk) override;
-  IoResult WriteV(ChunkList chunks) override;
+  virtual ~Seeker() {}
 };
 
 }  // namespace io
 
-#endif  // IO_WRITER_H_
+#endif  // IO_SEEKER_H_

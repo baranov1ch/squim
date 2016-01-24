@@ -19,7 +19,11 @@ cc_library(
     "buffer_writer.h",
     "buffered_source.h",
     "chunk.h",
+    "closer.h",
+    "flusher.h",
     "io_result.h",
+    "reader.h",
+    "seeker.h",
     "writer.h",
   ],
   srcs = [

@@ -19,6 +19,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace io {
 
@@ -37,6 +38,7 @@ class IoResult {
   static IoResult Write(size_t n);
   static IoResult Eof();
   static IoResult Error();
+  static IoResult Error(const std::string& message);
 
   bool ok() const { return code_ == IoResultCode::kOk; }
   bool pending() const { return code_ == IoResultCode::kPending; }
@@ -44,13 +46,16 @@ class IoResult {
   bool eof() const { return code_ == IoResultCode::kEof; }
   bool error() const { return code_ == IoResultCode::kError; }
   IoResultCode code() const { return code_; }
+  const std::string& message() const { return message_; }
 
  private:
   IoResult(IoResultCode code);
+  IoResult(IoResultCode code, const std::string& message);
   IoResult(size_t nread);
 
   IoResultCode code_;
   size_t n_;
+  std::string message_;
 };
 
 }  // namespace io

@@ -17,22 +17,46 @@
 #ifndef OS_FS_RESULT_H_
 #define OS_FS_RESULT_H_
 
+#include <string>
+
+#include "base/strings/string_piece.h"
+#include "io/io_result.h"
+#include "os/os_error.h"
+
 namespace os {
 
 class FsResult {
  public:
   static FsResult Ok();
-  static io::IoResult FromFsResult(const FsResult& result);
   static FsResult Error(OsError os_error,
-                        const std::string& op,
-                        const std::string& path);
+                        base::StringPiece op,
+                        base::StringPiece path);
+  static FsResult Eof();
+  static FsResult Read(size_t n);
+  static FsResult Write(size_t n);
 
-  const char* ToString() const;
+  ~FsResult();
+
+  std::string ToString() const;
+  io::IoResult ToIoResult() const;
+
+  const std::string& path() const { return path_; }
+  const std::string& op() const { return op_; }
+
+  size_t n() const { return n_; }
+  bool ok() const { return os_error_.ok(); }
+  bool eof() const { return eof_; }
+
+  OsError os_error() const { return os_error_; }
 
  private:
-  OsError os_error_;
+  FsResult();
+
+  OsError os_error_ = OsError::Ok();
   std::string op_;
   std::string path_;
+  size_t n_ = 0;
+  bool eof_ = false;
 };
 
 }  // namespace os

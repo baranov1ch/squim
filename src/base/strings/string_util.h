@@ -18,6 +18,7 @@
 #define BASE_STRINGS_STRING_UTIL_H_
 
 #include <cstdint>
+#include <string>
 
 #include "base/strings/string_piece.h"
 
@@ -31,6 +32,16 @@ base::StringPiece StringFromBytes(const uint8_t(&bytes)[N]) {
 }
 
 uint8_t* BytesFromConstChar(const char* data);
+
+inline bool EndsInSlash(const StringPiece& path) {
+  return path.ends_with("/");
+}
+
+inline void EnsureEndsInSlash(std::string* dir) {
+  if (!EndsInSlash(*dir)) {
+    dir->append("/");
+  }
+}
 
 }  // namespace base
 

@@ -17,7 +17,21 @@
 #ifndef OS_FILE_MODE_H_
 #define OS_FILE_MODE_H_
 
+#include <cstdint>
+#include <fcntl.h>
+
 namespace os {
+
+enum FileFlags : int {
+  kReadOnly = O_RDONLY,
+  kWriteOnly = O_WRONLY,
+  kReadWrite = O_RDWR,
+  kAppend = O_APPEND,
+  kCreate = O_CREAT,
+  kExcl = O_EXCL,
+  kSync = O_SYNC,
+  kTruncate = O_TRUNC,
+};
 
 class FileMode {
  public:
@@ -37,14 +51,17 @@ class FileMode {
     kType = kDir | kSymlink | kNamedPipe | kSocket | kDevice,
     kPerm = 0777,
   };
-  explicit FileMode(uint32_t os_perm) os_perm_(os_perm) {}
 
-  bool is_dir() const { return os_perm_ & kDir != 0; }
-  bool is_regular() const { os_perm_& kType == 0; }
-  FileMode perm() const { return FileMode(os_perm_ & kPerm); }
+  FileMode() {}
+  explicit FileMode(uint32_t os_mode) : os_mode_(os_mode) {}
+
+  bool is_dir() const { return (os_mode_ & kDir) != 0; }
+  bool is_regular() const { return (os_mode_ & kType) == 0; }
+  FileMode perm() const { return FileMode(os_mode_ & kPerm); }
+  uint32_t mode() const { return os_mode_; }
 
  private:
-  uint32_t os_perm_;
+  uint32_t os_mode_ = 0;
 };
 
 }  // namespace os

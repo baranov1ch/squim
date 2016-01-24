@@ -42,7 +42,15 @@ IoResult IoResult::Error() {
   return IoResult(IoResultCode::kError);
 }
 
-IoResult::IoResult(IoResultCode code) : code_(code), n_(0u) {}
+// static
+IoResult IoResult::Error(const std::string& message) {
+  return IoResult(IoResultCode::kError, message);
+}
+
+IoResult::IoResult(IoResultCode code) : code_(code), n_(0) {}
+
+IoResult::IoResult(IoResultCode code, const std::string& message)
+    : code_(code), n_(0), message_(message) {}
 
 IoResult::IoResult(size_t n) : code_(IoResultCode::kOk), n_(n) {}
 

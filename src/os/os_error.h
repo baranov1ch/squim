@@ -24,11 +24,16 @@ class OsError {
   static OsError Ok();
   static OsError Error(int error_code);
 
+  ~OsError();
+
   const char* ToString() const;
+  bool ok() const { return os_error_code_ == 0; }
+  int code() const { return os_error_code_; }
 
  private:
-  int os_error_code_;
-  std::string message_;
+  OsError(int os_error_code);
+
+  int os_error_code_ = 0;
 };
 
 }  // namespace os

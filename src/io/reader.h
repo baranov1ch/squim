@@ -30,6 +30,13 @@ class Reader {
   virtual ~Reader() {}
 };
 
+class ReaderAt {
+ public:
+  virtual IoResult ReadAt(Chunk* chunk, size_t offset) = 0;
+
+  virtual ~ReaderAt() {}
+};
+
 }  // namespace io
 
 #endif  // IO_READER_H_
