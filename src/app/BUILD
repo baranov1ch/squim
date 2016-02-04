@@ -41,6 +41,7 @@ cc_library(
     "//base:base",
     "//external:grpc++",
     "//io:io",
+    "//ioutil:ioutil",
     "//proto:image_optimizer_cc",
   ],
 )

@@ -16,6 +16,8 @@
 
 #include "app/image_optimizer_service.h"
 
+#include <iterator>
+#include <fstream>
 #include <memory>
 #include <thread>
 
@@ -25,9 +27,9 @@
 #include "base/memory/make_unique.h"
 #include "grpc++/grpc++.h"
 #include "io/chunk.h"
+#include "ioutil/file_util.h"
 #include "ioutil/chunk_reader.h"
 #include "ioutil/chunk_writer.h"
-#include "ioutil/file_util.h"
 
 #include "gtest/gtest.h"
 
@@ -44,7 +46,7 @@ using squim::ImageResponsePart;
 
 namespace {
 const char kServerAddress[] = "0.0.0.0:50051";
-}
+}  // namespace
 
 class OptimizerEndToEndTest : public testing::Test {
  protected:
@@ -73,17 +75,15 @@ class OptimizerEndToEndTest : public testing::Test {
 
 TEST_F(OptimizerEndToEndTest, SimpleTest) {
   ASSERT_TRUE(StartServer());
-  io::ChunkList original_image;
-  io::ChunkList webp_image;
-  auto result =
-      ioutil::ReadFileChunks("app/testdata/test.jpg", &original_image);
-  ASSERT_TRUE(result.ok());
-  ioutil::ChunkListReader in(original_image);
-  ioutil::ChunkListWriter out(&webp_image);
   ImageOptimizerClient client(
       CreateChannel(kServerAddress, InsecureChannelCredentials()));
+  io::ChunkList jpeg;
+  ASSERT_TRUE(ioutil::ReadFile("app/testdata/test.jpg", &jpeg).ok());
+  io::ChunkList webp;
+  ioutil::ChunkListReader in(&jpeg);
+  ioutil::ChunkListWriter out(&webp);
   EXPECT_TRUE(client.OptimizeImage(&in, 512, &out));
-  auto merged_input = io::Chunk::Merge(original_image);
-  auto merged_output = io::Chunk::Merge(webp_image);
-  EXPECT_GT(merged_input->size(), merged_output->size());
+  auto merged_in = io::Chunk::Merge(jpeg);
+  auto merged_out = io::Chunk::Merge(webp);
+  EXPECT_LT(merged_out->size(), merged_in->size());
 }

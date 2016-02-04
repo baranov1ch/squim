@@ -14,37 +14,25 @@
  * limitations under the License.
  */
 
-#ifndef IOUTIL_CHUNK_READER_H_
-#define IOUTIL_CHUNK_READER_H_
+#ifndef IOUTIL_READ_UTIL_H_
+#define IOUTIL_READ_UTIL_H_
 
 #include "io/chunk.h"
-#include "io/reader.h"
+#include "io/io_result.h"
+
+namespace io {
+class Reader;
+class Writer;
+}
 
 namespace ioutil {
 
-class ChunkReader : public io::Reader {
- public:
-  explicit ChunkReader(const io::Chunk* source);
+io::IoResult Copy(io::Writer* dst, io::Reader* src);
 
-  io::IoResult Read(io::Chunk* chunk) override;
+io::IoResult ReadFull(io::Reader* reader, io::ChunkList* out);
 
- private:
-  const io::Chunk* source_;
-  size_t offset_ = 0;
-};
-
-class ChunkListReader : public io::Reader {
- public:
-  explicit ChunkListReader(const io::ChunkList* source);
-
-  io::IoResult Read(io::Chunk* chunk) override;
-
- private:
-  const io::ChunkList* source_;
-  size_t offset_in_chunk_ = 0;
-  io::ChunkList::const_iterator current_chunk_;
-};
+io::IoResult ReadFull(io::Reader* reader, io::ChunkPtr* out);
 
 }  // namespace ioutil
 
-#endif  // IOUTIL_CHUNK_READER_H_
+#endif  // IOUTIL_READ_UTIL_H_

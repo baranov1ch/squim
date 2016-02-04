@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 
-#ifndef IOUTIL_FILE_UTIL_H_
-#define IOUTIL_FILE_UTIL_H_
-
 #include "ioutil/file_util.h"
 
 #include "base/logging.h"
 #include "ioutil/chunk_reader.h"
 #include "ioutil/chunk_writer.h"
+#include "ioutil/read_util.h"
 #include "ioutil/string_reader.h"
 #include "ioutil/string_writer.h"
 #include "os/file.h"
 #include "os/file_system.h"
 
 namespace ioutil {
-
-namespace {
-const size_t kStackBufferSize = 10000;
-}
 
 os::FsResult ReadDir(const std::string& path,
                      std::vector<os::FileInfo>* contents) {
@@ -51,45 +45,24 @@ io::IoResult ReadFile(const std::string& path, io::Writer* writer) {
   if (!result.ok())
     return result.ToIoResult();
 
-  auto chunk = io::Chunk::New(kStackBufferSize);
-  auto io_result = io::IoResult::Read(0);
-  size_t nread = 0;
-  while (io_result.ok() && !io_result.eof()) {
-    io_result = file->Read(chunk.get());
-    DCHECK(!io_result.pending());
-    if (!io_result.ok())
-      break;
-
-    auto slice = chunk->Slice(0, io_result.n());
-    io_result = writer->Write(slice.get());
-    DCHECK(!io_result.pending());
-    if (!io_result.ok())
-      break;
-
-    nread += io_result.n();
-  }
-
-  if (nread > 0)
-    return io::IoResult::Read(nread);
-
-  return io_result;
+  return Copy(writer, file.get());
 }
 
-io::IoResult ReadFileChunk(const std::string& path, io::ChunkPtr* chunk) {
+io::IoResult ReadFile(const std::string& path, io::ChunkPtr* chunk) {
   // TODO: make some space reservation after Stat.
   io::ChunkList chunks;
   ChunkListWriter writer(&chunks);
   auto result = ReadFile(path, &writer);
-  *chunk = std::move(io::Chunk::Merge(chunks));
+  *chunk = io::Chunk::Merge(chunks);
   return result;
 }
 
-io::IoResult ReadFileChunks(const std::string& path, io::ChunkList* chunks) {
+io::IoResult ReadFile(const std::string& path, io::ChunkList* chunks) {
   ChunkListWriter writer(chunks);
   return ReadFile(path, &writer);
 }
 
-io::IoResult ReadFileToString(const std::string& path, std::string* contents) {
+io::IoResult ReadFile(const std::string& path, std::string* contents) {
   StringWriter writer(contents);
   return ReadFile(path, &writer);
 }
@@ -105,54 +78,28 @@ io::IoResult WriteFile(const std::string& path,
     return result.ToIoResult();
 
   // TODO: inefficient stuff!
-  auto chunk = io::Chunk::New(kStackBufferSize);
-  auto io_result = io::IoResult::Read(0);
-  size_t nwrite = 0;
-  while (io_result.ok() && !io_result.eof()) {
-    io_result = reader->Read(chunk.get());
-    DCHECK(!io_result.pending());
-    if (!io_result.ok())
-      break;
-
-    auto slice = chunk->Slice(0, io_result.n());
-    io_result = file->Write(slice.get());
-    DCHECK(!io_result.pending());
-    if (!io_result.ok())
-      break;
-
-    if (io_result.n() < slice->size())
-      return io::IoResult::Error("Short write");
-
-    nwrite += io_result.n();
-  }
-
-  if (nwrite > 0)
-    return io::IoResult::Write(nwrite);
-
-  return io_result;
+  return Copy(file.get(), reader);
 }
 
-io::IoResult WriteFileFromChunk(const std::string& path,
-                                io::Chunk* chunk,
-                                os::FileMode perm) {
+io::IoResult WriteFile(const std::string& path,
+                       const io::Chunk* chunk,
+                       os::FileMode perm) {
   ChunkReader reader(chunk);
   return WriteFile(path, &reader, perm);
 }
 
-io::IoResult WriteFileFromChunks(const std::string& path,
-                                 const io::ChunkList& chunks,
-                                 os::FileMode perm) {
+io::IoResult WriteFile(const std::string& path,
+                       const io::ChunkList* chunks,
+                       os::FileMode perm) {
   ChunkListReader reader(chunks);
   return WriteFile(path, &reader, perm);
 }
 
-io::IoResult WriteFileFromString(const std::string& path,
-                                 const std::string& contents,
-                                 os::FileMode perm) {
+io::IoResult WriteFile(const std::string& path,
+                       const std::string& contents,
+                       os::FileMode perm) {
   StringReader reader(contents);
   return WriteFile(path, &reader, perm);
 }
 
 }  // namespace ioutil
-
-#endif  // IOUTIL_FILE_UTIL_H_

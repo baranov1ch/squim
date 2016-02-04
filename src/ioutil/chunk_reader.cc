@@ -24,7 +24,7 @@
 
 namespace ioutil {
 
-ChunkReader::ChunkReader(io::Chunk* source) : source_(source) {
+ChunkReader::ChunkReader(const io::Chunk* source) : source_(source) {
   DCHECK(source_);
 }
 
@@ -38,18 +38,18 @@ io::IoResult ChunkReader::Read(io::Chunk* chunk) {
   return io::IoResult::Read(eff_len);
 }
 
-ChunkListReader::ChunkListReader(const io::ChunkList& source)
+ChunkListReader::ChunkListReader(const io::ChunkList* source)
     : source_(source) {
-  current_chunk_ = source_.begin();
+  current_chunk_ = source_->begin();
 }
 
 io::IoResult ChunkListReader::Read(io::Chunk* chunk) {
-  if (current_chunk_ == source_.end())
+  if (current_chunk_ == source_->end())
     return io::IoResult::Eof();
 
   size_t nread = 0;
   size_t offset = 0;
-  while (offset < chunk->size() && current_chunk_ != source_.end()) {
+  while (offset < chunk->size() && current_chunk_ != source_->end()) {
     auto& chunk_to_read = *current_chunk_;
     auto eff_len = std::min(chunk->size() - offset,
                             chunk_to_read->size() - offset_in_chunk_);

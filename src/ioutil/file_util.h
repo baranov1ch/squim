@@ -38,27 +38,27 @@ os::FsResult ReadDir(const std::string& path,
 
 io::IoResult ReadFile(const std::string& path, io::Writer* writer);
 
-io::IoResult ReadFileChunk(const std::string& path, io::ChunkPtr* chunk);
+io::IoResult ReadFile(const std::string& path, io::ChunkPtr* chunk);
 
-io::IoResult ReadFileChunks(const std::string& path, io::ChunkList* chunks);
+io::IoResult ReadFile(const std::string& path, io::ChunkList* chunks);
 
-io::IoResult ReadFileToString(const std::string& path, std::string* contents);
+io::IoResult ReadFile(const std::string& path, std::string* contents);
 
 io::IoResult WriteFile(const std::string& path,
                        io::Reader* reader,
                        os::FileMode perm);
 
-io::IoResult WriteFileFromChunk(const std::string& path,
-                                io::Chunk* chunk,
-                                os::FileMode perm);
+io::IoResult WriteFile(const std::string& path,
+                       const io::Chunk* chunk,
+                       os::FileMode perm);
 
-io::IoResult WriteFileFromChunks(const std::string& path,
-                                 const io::ChunkList& chunks,
-                                 os::FileMode perm);
+io::IoResult WriteFile(const std::string& path,
+                       const io::ChunkList* chunks,
+                       os::FileMode perm);
 
-io::IoResult WriteFileFromString(const std::string& path,
-                                 const std::string& contents,
-                                 os::FileMode perm);
+io::IoResult WriteFile(const std::string& path,
+                       const std::string& contents,
+                       os::FileMode perm);
 
 }  // namespace ioutil
 

@@ -24,6 +24,7 @@
 #include "io/chunk.h"
 #include "io/reader.h"
 #include "io/writer.h"
+#include "ioutil/read_util.h"
 #include "proto/image_optimizer.pb.h"
 
 using squim::ImageOptimizer;
@@ -42,7 +43,7 @@ bool ImageOptimizerClient::OptimizeImage(io::Reader* image_reader,
   std::shared_ptr<grpc::ClientReaderWriter<ImageRequestPart, ImageResponsePart>>
       stream(stub_->OptimizeImage(&context));
 
-  std::thread writer([stream, chunk_size, image_reader]() {
+  std::thread writer([stream, &image_reader, chunk_size]() {
     ImageRequestPart header;
     auto* meta = header.mutable_meta();
     meta->set_target_type(squim::WEBP);
@@ -52,20 +53,24 @@ bool ImageOptimizerClient::OptimizeImage(io::Reader* image_reader,
     webp_params->set_compression_type(ImageRequestPart::LOSSY);
     stream->Write(header);
 
-    auto result = io::IoResult::Read(0);
-    auto chunk = io::Chunk::New(chunk_size);
-    // Relying on sync IO.
-    while (result.ok()) {
-      result = image_reader->Read(chunk.get());
-      DCHECK(!result.pending());
-      if (result.error()) {
-        LOG(ERROR) << "Image read error: " << result.message();
-        break;
-      }
+    io::ChunkPtr image_data;
+    auto result = ioutil::ReadFull(image_reader, &image_data);
+    if (!result.ok()) {
+      LOG(ERROR) << "Image read error: " << result.message();
+      return;
+    }
+
+    size_t offset = 0;
+    size_t rest = image_data->size();
+    while (rest > 0) {
+      auto effective_len = std::min(rest, chunk_size);
       ImageRequestPart body;
       auto* data = body.mutable_image_data();
+      auto slice = image_data->Slice(offset, effective_len);
       data->set_bytes(
-          base::StringFromBytes(chunk->data(), result.n()).as_string());
+          base::StringFromBytes(slice->data(), slice->size()).as_string());
+      rest -= effective_len;
+      offset += effective_len;
       stream->Write(body);
     }
   });
