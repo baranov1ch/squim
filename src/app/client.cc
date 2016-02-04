@@ -23,62 +23,39 @@
 #include "base/logging.h"
 #include "gflags/gflags.h"
 #include "grpc++/grpc++.h"
-
-namespace {
-
-bool ReadFile(const std::string& path, std::vector<uint8_t>* contents) {
-  DCHECK(contents);
-  contents->clear();
-  std::fstream file(path, std::ios::in | std::ios::binary);
-  if (!file.good())
-    return false;
-
-  std::vector<char> tmp((std::istreambuf_iterator<char>(file)),
-                        std::istreambuf_iterator<char>());
-  contents->reserve(tmp.size());
-  for (const auto& c : tmp)
-    contents->push_back(static_cast<uint8_t>(c));
-  return true;
-}
-
-bool WriteFile(const std::string& path, const std::vector<uint8_t>& data) {
-  std::vector<char> hack;
-  hack.reserve(data.size());
-  for (auto c : data)
-    hack.push_back(static_cast<char>(c));
-  std::ofstream output_file(path);
-  std::ostreambuf_iterator<char> out(output_file);
-  std::copy(hack.begin(), hack.end(), out);
-  return true;
-}
+#include "io/chunk.h"
+#include "os/file_system.h"
+#include "os/file.h"
 
 DEFINE_string(in, "test.png", "input image file");
 DEFINE_string(out, "test.webp", "output file");
-
-}  // namespace
+DEFINE_string(service, "localhost:50051", "service endpoint");
 
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
-  std::vector<uint8_t> in;
-  std::vector<uint8_t> out;
-  if (!ReadFile(FLAGS_in, &in)) {
-    LOG(ERROR) << "Cannot read input file " << FLAGS_in;
+  auto fs = os::FileSystem::CreateDefault();
+  std::unique_ptr<os::File> in;
+  std::unique_ptr<os::File> out;
+  auto result = fs->Open(FLAGS_in, &in);
+  if (!result.ok()) {
+    LOG(ERROR) << "Cannot open input file " << result.ToString();
     return 1;
   }
 
-  LOG(INFO) << "Sending picture, size=" << in.size();
+  result = fs->Create(FLAGS_out, &out);
+  if (!result.ok()) {
+    LOG(ERROR) << "Cannot open output file " << result.ToString();
+    return 1;
+  }
 
-  ImageOptimizerClient client(grpc::CreateChannel(
-      "localhost:50051", grpc::InsecureChannelCredentials()));
-  if (!client.OptimizeImage(in, 1024, &out)) {
+  ImageOptimizerClient client(
+      grpc::CreateChannel(FLAGS_service, grpc::InsecureChannelCredentials()));
+  if (!client.OptimizeImage(in.get(), 1024, out.get())) {
     LOG(ERROR) << "Optimization failed";
     return 1;
   }
 
-  LOG(INFO) << "Optimized picture received, size=" << out.size();
-
-  WriteFile(FLAGS_out, out);
   return 0;
 }

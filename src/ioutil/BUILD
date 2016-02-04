@@ -1,4 +1,4 @@
-# Copyright 2015 Alexey Baranov <me@kotiki.cc>. All rights reserved.
+# Copyright 2016 Alexey Baranov <me@kotiki.cc>. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,44 +13,36 @@
 # limitations under the License.
 
 cc_library(
-  name = "os",
+  name = "ioutil",
   hdrs = [
-    "file.h",
-    "file_info.h",
-    "file_mode.h",
-    "file_system.h",
-    "fs_result.h",
-    "os_error.h",
-    "path_util.h",
+    "chunk_reader.h",
+    "chunk_writer.h",
+    "file_util.h",
+    "string_reader.h",
+    "string_writer.h",
   ],
   srcs = [
-    "file.cc",
-    "file_posix.h",
-    "file_posix.cc",
-    "file_system.cc",
-    "file_system_posix.cc",
-    "file_system_posix.h",
-    "fs_result.cc",
-    "os_error.cc",
-    "posix_util.cc",
-    "posix_util.h",
+    "chunk_reader.cc",
+    "chunk_writer.cc",
+    "file_util.cc",
+    "string_reader.cc",
+    "string_writer.cc",
   ],
   deps = [
-    "//base:base",
+    "//os:os",
     "//io:io",
   ],
   visibility = ["//visibility:public"]
 )
 
 cc_test(
-  name = "os_test",
+  name = "ioutil_test",
   timeout = "short",
   srcs = [
-    "file_system_posix_test.cc",
   ],
   deps = [
     "//external:gtest",
     "//test:test_main",
-    ":os",
+    ":ioutil",
   ],
 )

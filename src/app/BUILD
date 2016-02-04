@@ -27,7 +27,6 @@ cc_library(
     "//image:image",
     "//proto:image_optimizer_cc",
   ],
-  visibility = ["//visibility:public"]
 )
 
 cc_library(
@@ -41,9 +40,9 @@ cc_library(
   deps = [
     "//base:base",
     "//external:grpc++",
+    "//io:io",
     "//proto:image_optimizer_cc",
   ],
-  visibility = ["//visibility:public"]
 )
 
 cc_binary(
@@ -58,6 +57,7 @@ cc_binary(
     "//external:gflags",
     ":image_optimizer_service",
   ],
+  visibility = ["//visibility:public"]
 )
 
 cc_binary(
@@ -67,8 +67,10 @@ cc_binary(
   ],
   deps = [
     "//external:gflags",
+    "//os:os",
     ":image_optimizer_client",
   ],
+  visibility = ["//visibility:public"]
 )
 
 cc_test(
@@ -79,6 +81,7 @@ cc_test(
   ],
   deps = [
     "//external:gtest",
+    "//ioutil:ioutil",
     "//test:test_main",
     ":image_optimizer_client",
     ":image_optimizer_service",

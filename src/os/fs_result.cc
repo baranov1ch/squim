@@ -80,7 +80,19 @@ std::string FsResult::ToString() const {
   if (ok())
     return std::string();
 
-  return path_ + ": " + op_ + " returned error: " + os_error_.ToString();
+  return path_ + ": '" + op_ + "' returned error: " + os_error_.ToString();
+}
+
+bool FsResult::IsNotExist() const {
+  return os_error_.code() == ENOENT;
+}
+
+bool FsResult::IsExist() const {
+  return os_error_.code() == EEXIST;
+}
+
+bool FsResult::IsPermission() const {
+  return os_error_.code() == EACCES || os_error_.code() == EPERM;
 }
 
 }  // namespace os

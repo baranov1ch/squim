@@ -23,15 +23,20 @@
 #include "grpc++/grpc++.h"
 #include "proto/image_optimizer.grpc.pb.h"
 
+namespace io {
+class Reader;
+class Writer;
+}
+
 class ImageOptimizerClient {
   MAKE_NONCOPYABLE(ImageOptimizerClient);
 
  public:
   ImageOptimizerClient(std::shared_ptr<grpc::Channel> channel);
 
-  bool OptimizeImage(const std::vector<uint8_t>& image_data,
+  bool OptimizeImage(io::Reader* image_reader,
                      size_t chunk_size,
-                     std::vector<uint8_t>* webp_data);
+                     io::Writer* webp_writer);
 
  private:
   std::unique_ptr<squim::ImageOptimizer::Stub> stub_;

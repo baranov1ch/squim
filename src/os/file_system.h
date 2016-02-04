@@ -30,19 +30,19 @@ struct FileInfo;
 
 class FileSystem {
  public:
-  virtual FsResult Open(const std::string& path,
-                        std::unique_ptr<File>* file) = 0;
-  virtual FsResult Create(const std::string& path,
-                          std::unique_ptr<File>* file) = 0;
+  static std::unique_ptr<FileSystem> CreateDefault();
+  FsResult Open(const std::string& path, std::unique_ptr<File>* file);
+  FsResult Create(const std::string& path, std::unique_ptr<File>* file);
   virtual FsResult OpenFile(const std::string& path,
                             int flags,
                             FileMode permission_bits,
                             std::unique_ptr<File>* file) = 0;
+  virtual FsResult CreateTempFile(const std::string& prefix,
+                                  std::unique_ptr<File>* file) = 0;
   virtual FsResult MkDir(const std::string& path, FileMode permission_bits) = 0;
-  virtual FsResult MkDirP(const std::string& path,
-                          FileMode permission_bits) = 0;
+  FsResult MkDirP(const std::string& path, FileMode permission_bits);
   virtual FsResult Remove(const std::string& path) = 0;
-  virtual FsResult RemoveAll(const std::string& path) = 0;
+  FsResult RemoveAll(const std::string& path);
   virtual FsResult Rename(const std::string& old_path,
                           const std::string& new_path) = 0;
   virtual FsResult Symlink(const std::string& old_path,

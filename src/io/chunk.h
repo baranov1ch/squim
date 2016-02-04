@@ -50,6 +50,7 @@ class Chunk {
   static ChunkPtr Own(std::unique_ptr<uint8_t[]> data, size_t size);
   static ChunkPtr New(size_t size);
   static ChunkPtr Wrap(ChunkPtr to_wrap, size_t start, size_t size);
+  static ChunkPtr Merge(const ChunkList& chunks);
 
  private:
   uint8_t* data_;

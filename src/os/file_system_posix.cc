@@ -26,16 +26,6 @@ FileSystemPosix::FileSystemPosix() {}
 
 FileSystemPosix::~FileSystemPosix() {}
 
-FsResult FileSystemPosix::Open(const std::string& path,
-                               std::unique_ptr<File>* file) {
-  return OpenFile(path, kReadOnly, FileMode(0), file);
-}
-
-FsResult FileSystemPosix::Create(const std::string& path,
-                                 std::unique_ptr<File>* file) {
-  return OpenFile(path, kReadWrite | kCreate | kTruncate, FileMode(0666), file);
-}
-
 FsResult FileSystemPosix::OpenFile(const std::string& path,
                                    int flags,
                                    FileMode permission_bits,
@@ -49,18 +39,17 @@ FsResult FileSystemPosix::OpenFile(const std::string& path,
   return FsResult::Ok();
 }
 
+FsResult FileSystemPosix::CreateTempFile(const std::string& prefix,
+                                         std::unique_ptr<File>* file) {
+  NOTIMPLEMENTED();
+  return FsResult::Ok();
+}
+
 FsResult FileSystemPosix::MkDir(const std::string& path,
                                 FileMode permission_bits) {
   if (mkdir(path.c_str(), FileModeToUnixModeT(permission_bits)) != 0)
     return FsResult::Error(OsError::Error(errno), "mkdir", path);
 
-  return FsResult::Ok();
-}
-
-FsResult FileSystemPosix::MkDirP(const std::string& path,
-                                 FileMode permission_bits) {
-  NOTIMPLEMENTED();
-  // TODO
   return FsResult::Ok();
 }
 
@@ -72,12 +61,6 @@ FsResult FileSystemPosix::Remove(const std::string& path) {
     return FsResult::Error(OsError::Error(errno), "rmdir", path);
 
   return FsResult::Error(OsError::Error(errno), "unlink", path);
-}
-
-FsResult FileSystemPosix::RemoveAll(const std::string& path) {
-  NOTIMPLEMENTED();
-  // TODO
-  return FsResult::Ok();
 }
 
 FsResult FileSystemPosix::Rename(const std::string& old_path,

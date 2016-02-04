@@ -23,17 +23,19 @@
 #include "gflags/gflags.h"
 #include "grpc++/grpc++.h"
 
+DEFINE_string(listen, "0.0.0.0:50051", "address to listen on");
+
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
-  std::string server_address("0.0.0.0:50051");
+  google::InitGoogleLogging(argv[0]);
+
   ImageOptimizerService service(base::make_unique<WebPOptimization>());
   grpc::ServerBuilder builder;
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.AddListeningPort(FLAGS_listen, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
-  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-  LOG(INFO) << "Server listening on " << server_address;
+  auto server = builder.BuildAndStart();
+  LOG(INFO) << "Server listening on " << FLAGS_listen;
   server->Wait();
   return 0;
 }

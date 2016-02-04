@@ -21,6 +21,9 @@
 
 #include "base/logging.h"
 #include "base/strings/string_util.h"
+#include "io/chunk.h"
+#include "io/reader.h"
+#include "io/writer.h"
 #include "proto/image_optimizer.pb.h"
 
 using squim::ImageOptimizer;
@@ -31,15 +34,15 @@ ImageOptimizerClient::ImageOptimizerClient(
     std::shared_ptr<grpc::Channel> channel)
     : stub_(squim::ImageOptimizer::NewStub(channel)) {}
 
-bool ImageOptimizerClient::OptimizeImage(const std::vector<uint8_t>& image_data,
+bool ImageOptimizerClient::OptimizeImage(io::Reader* image_reader,
                                          size_t chunk_size,
-                                         std::vector<uint8_t>* webp_data) {
+                                         io::Writer* webp_writer) {
   grpc::ClientContext context;
 
   std::shared_ptr<grpc::ClientReaderWriter<ImageRequestPart, ImageResponsePart>>
       stream(stub_->OptimizeImage(&context));
 
-  std::thread writer([stream, &image_data, chunk_size]() {
+  std::thread writer([stream, chunk_size, image_reader]() {
     ImageRequestPart header;
     auto* meta = header.mutable_meta();
     meta->set_target_type(squim::WEBP);
@@ -49,22 +52,25 @@ bool ImageOptimizerClient::OptimizeImage(const std::vector<uint8_t>& image_data,
     webp_params->set_compression_type(ImageRequestPart::LOSSY);
     stream->Write(header);
 
-    size_t offset = 0;
-    size_t rest = image_data.size();
-    while (rest > 0) {
-      auto effective_len = std::min(rest, chunk_size);
+    auto result = io::IoResult::Read(0);
+    auto chunk = io::Chunk::New(chunk_size);
+    // Relying on sync IO.
+    while (result.ok()) {
+      result = image_reader->Read(chunk.get());
+      DCHECK(!result.pending());
+      if (result.error()) {
+        LOG(ERROR) << "Image read error: " << result.message();
+        break;
+      }
       ImageRequestPart body;
       auto* data = body.mutable_image_data();
-      data->set_bytes(base::StringFromBytes(&image_data[offset], effective_len)
-                          .as_string());
-      rest -= effective_len;
-      offset += effective_len;
+      data->set_bytes(
+          base::StringFromBytes(chunk->data(), result.n()).as_string());
       stream->Write(body);
     }
   });
 
   bool result = true;
-  webp_data->clear();
   ImageResponsePart response_part;
   while (stream->Read(&response_part)) {
     if (response_part.has_meta()) {
@@ -74,10 +80,16 @@ bool ImageOptimizerClient::OptimizeImage(const std::vector<uint8_t>& image_data,
         break;
       }
     } else if (response_part.has_image_data()) {
-      auto* data = reinterpret_cast<const uint8_t*>(
-          response_part.image_data().bytes().data());
-      webp_data->insert(webp_data->end(), data,
-                        data + response_part.image_data().bytes().size());
+      const auto& bytes = response_part.image_data().bytes();
+      auto* data =
+          const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(bytes.data()));
+      auto chunk = io::Chunk::View(data, bytes.size());
+      auto result = webp_writer->Write(chunk.get());
+      DCHECK(!result.pending());
+      if (!result.ok()) {
+        LOG(ERROR) << "Optimized image write error: " << result.message();
+        break;
+      }
     } else {
       // TODO: handle stats.
     }

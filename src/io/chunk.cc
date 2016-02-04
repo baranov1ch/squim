@@ -28,6 +28,9 @@ ChunkPtr Chunk::FromString(std::string data) {
 }
 
 ChunkPtr Chunk::Copy(const uint8_t* data, size_t size) {
+  if (size == 0)
+    return base::make_unique<Chunk>(nullptr, 0);
+
   std::unique_ptr<uint8_t[]> owned_data(new uint8_t[size]);
   std::memcpy(owned_data.get(), data, size);
   return Own(std::move(owned_data), size);
@@ -42,12 +45,29 @@ ChunkPtr Chunk::Own(std::unique_ptr<uint8_t[]> data, size_t size) {
 }
 
 ChunkPtr Chunk::New(size_t size) {
+  if (size == 0)
+    return base::make_unique<Chunk>(nullptr, 0);
+
   std::unique_ptr<uint8_t[]> owned_data(new uint8_t[size]);
   return Own(std::move(owned_data), size);
 }
 
 ChunkPtr Chunk::Wrap(ChunkPtr to_wrap, size_t start, size_t size) {
   return base::make_unique<WrappingChunk>(std::move(to_wrap), start, size);
+}
+
+ChunkPtr Chunk::Merge(const ChunkList& chunks) {
+  size_t total_size = 0;
+  for (const auto& chunk : chunks)
+    total_size += chunk->size();
+
+  auto result = Chunk::New(total_size);
+  size_t offset = 0;
+  for (const auto& chunk : chunks) {
+    std::memcpy(result->data() + offset, chunk->data(), chunk->size());
+    offset += chunk->size();
+  }
+  return std::move(result);
 }
 
 Chunk::Chunk(const uint8_t* data, size_t size)

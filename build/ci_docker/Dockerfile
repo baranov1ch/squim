@@ -30,6 +30,7 @@ RUN apt-get install -y --force-yes \
   zlib1g-dev \
   unzip \
   curl \
+  tree \
   g++ \
   clang-3.6 \
   yasm

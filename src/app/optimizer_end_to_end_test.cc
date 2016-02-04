@@ -16,8 +16,6 @@
 
 #include "app/image_optimizer_service.h"
 
-#include <iterator>
-#include <fstream>
 #include <memory>
 #include <thread>
 
@@ -26,6 +24,10 @@
 #include "base/logging.h"
 #include "base/memory/make_unique.h"
 #include "grpc++/grpc++.h"
+#include "io/chunk.h"
+#include "ioutil/chunk_reader.h"
+#include "ioutil/chunk_writer.h"
+#include "ioutil/file_util.h"
 
 #include "gtest/gtest.h"
 
@@ -41,25 +43,8 @@ using squim::ImageRequestPart;
 using squim::ImageResponsePart;
 
 namespace {
-
 const char kServerAddress[] = "0.0.0.0:50051";
-
-bool ReadFile(const std::string& path, std::vector<uint8_t>* contents) {
-  DCHECK(contents);
-  contents->clear();
-  std::fstream file(path, std::ios::in | std::ios::binary);
-  if (!file.good())
-    return false;
-
-  std::vector<char> tmp((std::istreambuf_iterator<char>(file)),
-                        std::istreambuf_iterator<char>());
-  contents->reserve(tmp.size());
-  for (const auto& c : tmp)
-    contents->push_back(static_cast<uint8_t>(c));
-  return true;
 }
-
-}  // namespace
 
 class OptimizerEndToEndTest : public testing::Test {
  protected:
@@ -88,11 +73,17 @@ class OptimizerEndToEndTest : public testing::Test {
 
 TEST_F(OptimizerEndToEndTest, SimpleTest) {
   ASSERT_TRUE(StartServer());
-  std::vector<uint8_t> in;
-  std::vector<uint8_t> out;
-  ASSERT_TRUE(ReadFile("app/testdata/test.jpg", &in));
+  io::ChunkList original_image;
+  io::ChunkList webp_image;
+  auto result =
+      ioutil::ReadFileChunks("app/testdata/test.jpg", &original_image);
+  ASSERT_TRUE(result.ok());
+  ioutil::ChunkListReader in(original_image);
+  ioutil::ChunkListWriter out(&webp_image);
   ImageOptimizerClient client(
       CreateChannel(kServerAddress, InsecureChannelCredentials()));
-  EXPECT_TRUE(client.OptimizeImage(in, 512, &out));
-  EXPECT_LT(out.size(), in.size());
+  EXPECT_TRUE(client.OptimizeImage(&in, 512, &out));
+  auto merged_input = io::Chunk::Merge(original_image);
+  auto merged_output = io::Chunk::Merge(webp_image);
+  EXPECT_GT(merged_input->size(), merged_output->size());
 }

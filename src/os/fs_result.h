@@ -46,6 +46,9 @@ class FsResult {
   size_t n() const { return n_; }
   bool ok() const { return os_error_.ok(); }
   bool eof() const { return eof_; }
+  bool IsNotExist() const;
+  bool IsExist() const;
+  bool IsPermission() const;
 
   OsError os_error() const { return os_error_; }
 

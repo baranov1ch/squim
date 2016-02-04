@@ -29,17 +29,14 @@ class FileSystemPosix : public FileSystem {
   FileSystemPosix();
   ~FileSystemPosix() override;
 
-  FsResult Open(const std::string& path, std::unique_ptr<File>* file) override;
-  FsResult Create(const std::string& path,
-                  std::unique_ptr<File>* file) override;
   FsResult OpenFile(const std::string& path,
                     int flags,
                     FileMode permission_bits,
                     std::unique_ptr<File>* file) override;
+  FsResult CreateTempFile(const std::string& prefix,
+                          std::unique_ptr<File>* file) override;
   FsResult MkDir(const std::string& path, FileMode permission_bits) override;
-  FsResult MkDirP(const std::string& path, FileMode permission_bits) override;
   FsResult Remove(const std::string& path) override;
-  FsResult RemoveAll(const std::string& path) override;
   FsResult Rename(const std::string& old_path,
                   const std::string& new_path) override;
   FsResult Symlink(const std::string& old_path,
