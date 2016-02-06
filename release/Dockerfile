@@ -14,7 +14,11 @@
 
 FROM ubuntu:trusty
 
+ADD squim/app/server /usr/bin/squimd
 
+COPY release/squim.sh /tmp/squim.sh
+RUN chmod +x /tmp/squim.sh
 
-ENTRYPOINT ["squim.sh"]
-CMD []
+RUN mkdir -p /var/log/squim
+
+CMD ["/tmp/squim.sh"]

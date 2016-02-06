@@ -68,6 +68,7 @@ class WebPEncoder : public ImageEncoder {
     Hint hint = Hint::kDefault;
     Preset preset = Preset::kDefault;
     Compression compression = Compression::kLossy;
+    bool write_stats = false;
 
     static Params Default();
   };

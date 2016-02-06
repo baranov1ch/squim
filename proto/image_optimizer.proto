@@ -47,6 +47,7 @@ message ImageRequestPart {
       double quality = 1;
       int32 strength = 2;
       WebPCompressionType compression_type = 3;
+      bool record_stats = 4;
     }
 
     // Expected type of image. Just for bookeeping, actual image type will be

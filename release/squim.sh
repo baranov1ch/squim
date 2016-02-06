@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-squimd --conf=/squim/conf/squim.conf
+squimd -listen 0.0.0.0:12345 -log_dir /var/log/squim
