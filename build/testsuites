@@ -1,4 +1,4 @@
-app:end_to_end_test
-image:image_test
-io:io_test
+squim/app:end_to_end_test
+squim/image:image_test
+squim/io:io_test
 google/boringssl/...

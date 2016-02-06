@@ -1,30 +1,30 @@
-[submodule "src/google/protobuf"]
-	path = src/google/protobuf
-	url = https://github.com/google/protobuf.git
-[submodule "src/google/grpc"]
-	path = src/google/grpc
+[submodule "google/grpc"]
+	path = google/grpc
 	url = https://github.com/grpc/grpc.git
-[submodule "src/google/boringssl/src"]
-	path = src/google/boringssl/src
+[submodule "google/protobuf"]
+	path = google/protobuf
+	url = https://github.com/google/protobuf.git
+[submodule "google/boringssl/src"]
+	path = google/boringssl/src
 	url = https://boringssl.googlesource.com/boringssl
-[submodule "src/third_party/zlib/upstream"]
-	path = src/third_party/zlib/upstream
-	url = https://github.com/madler/zlib.git
-[submodule "src/google/gflags/upstream"]
-	path = src/google/gflags/upstream
-	url = https://github.com/gflags/gflags.git
-[submodule "src/google/glog/upstream"]
-	path = src/google/glog/upstream
-	url = https://github.com/google/glog.git
-[submodule "src/google/googletest/upstream"]
-	path = src/google/googletest/upstream
-	url = https://github.com/google/googletest.git
-[submodule "src/google/libwebp/upstream"]
-	path = src/google/libwebp/upstream
+[submodule "google/libwebp/upstream"]
+	path = google/libwebp/upstream
 	url = https://github.com/webmproject/libwebp.git
-[submodule "src/third_party/libpng/upstream"]
-	path = src/third_party/libpng/upstream
+[submodule "google/gflags/upstream"]
+	path = google/gflags/upstream
+	url = https://github.com/gflags/gflags.git
+[submodule "google/glog/upstream"]
+	path = google/glog/upstream
+	url = https://github.com/google/glog.git
+[submodule "google/googletest/upstream"]
+	path = google/googletest/upstream
+	url = https://github.com/google/googletest.git
+[submodule "third_party/libpng/upstream"]
+	path = third_party/libpng/upstream
 	url = https://github.com/winlibs/libpng.git
-[submodule "src/third_party/libjpeg_turbo/upstream"]
-	path = src/third_party/libjpeg_turbo/upstream
+[submodule "third_party/libjpeg_turbo/upstream"]
+	path = third_party/libjpeg_turbo/upstream
 	url = https://github.com/libjpeg-turbo/libjpeg-turbo.git
+[submodule "third_party/zlib/upstream"]
+	path = third_party/zlib/upstream
+	url = https://github.com/madler/zlib.git

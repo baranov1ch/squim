@@ -1,2 +1,2 @@
-src/bazel-*
+bazel-*
 .DS_Store

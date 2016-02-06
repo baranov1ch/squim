@@ -21,7 +21,7 @@ RUN add-apt-repository ppa:webupd8team/java
 RUN echo "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.6 main" > /etc/apt/sources.list.d/llvm.list
 RUN echo "deb-src http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.6 main" >> /etc/apt/sources.list.d/llvm.list
 
-RUN apt-get update
+RUN apt-get update --fix-missing
 RUN echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
 RUN apt-get install -y --force-yes \
   oracle-java8-installer \

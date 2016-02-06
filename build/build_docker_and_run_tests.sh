@@ -40,7 +40,7 @@ docker run \
   -e "RUN_TESTS_COMMAND=$RUN_TESTS_COMMAND" \
   -i -t \
   -v "$git_root:/var/local/ci/squim" \
-  -w /var/local/ci/squim/src \
+  -w /var/local/ci/squim/ \
   --name=$CONTAINER_NAME \
   $DOCKER_IMAGE_NAME \
   bash -l /var/local/ci/squim/build/docker_run_tests.sh || DOCKER_FAILED="true"

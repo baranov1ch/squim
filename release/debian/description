@@ -1,0 +1,2 @@
+SquIm is gRPC service for cutomizable image compression.
+Can convert jpeg, png and gif (including animated) into WebP.
