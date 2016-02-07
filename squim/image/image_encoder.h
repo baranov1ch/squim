@@ -18,7 +18,6 @@
 #define SQUIM_IMAGE_IMAGE_ENCODER_H_
 
 #include "squim/image/image_constants.h"
-#include "squim/image/image_writer.h"
 #include "squim/image/result.h"
 
 namespace image {
@@ -26,6 +25,7 @@ namespace image {
 class ImageFrame;
 struct ImageInfo;
 class ImageMetadata;
+struct ImageOptimizationStats;
 
 // General encoder interface.
 class ImageEncoder {
@@ -41,7 +41,7 @@ class ImageEncoder {
   virtual void SetMetadata(const ImageMetadata* metadata) = 0;
 
   // Writes the rest of the stuff (metadata) or flushes output if necessary.
-  virtual Result FinishWrite(ImageWriter::Stats* stats) = 0;
+  virtual Result FinishWrite(ImageOptimizationStats* stats) = 0;
 
   virtual ~ImageEncoder() {}
 };

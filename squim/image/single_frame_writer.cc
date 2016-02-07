@@ -43,7 +43,7 @@ Result SingleFrameWriter::WriteFrame(ImageFrame* frame) {
   return encoder_->EncodeFrame(frame, true);
 }
 
-Result SingleFrameWriter::FinishWrite(Stats* stats) {
+Result SingleFrameWriter::FinishWrite(ImageOptimizationStats* stats) {
   return encoder_->FinishWrite(stats);
 }
 

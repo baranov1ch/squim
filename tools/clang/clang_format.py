@@ -92,7 +92,7 @@ def Format(parser, args):
 
   # Locate the clang-format binary in the checkout
   clang_format_tool = os.path.join(
-    top_dir, 'src/tools/clang/linux64/clang-format')
+    top_dir, 'tools/clang/linux64/clang-format')
   if not os.path.isfile(clang_format_tool):
     DieWithError('clang_format binary not found. Have someone deleted it? '
                  'Why on Earth?')

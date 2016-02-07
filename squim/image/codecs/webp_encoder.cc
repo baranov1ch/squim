@@ -22,12 +22,35 @@
 #include "google/libwebp/upstream/examples/gif2webp_util.h"
 #include "squim/image/image_frame.h"
 #include "squim/image/image_info.h"
+#include "squim/image/image_optimization_stats.h"
 #include "squim/image/pixel.h"
 #include "squim/io/writer.h"
 
 namespace image {
 
 namespace {
+
+static const char* const kErrorMessages[VP8_ENC_ERROR_LAST] = {
+    "OK", "OUT_OF_MEMORY: Out of memory allocating objects",
+    "BITSTREAM_OUT_OF_MEMORY: Out of memory re-allocating byte buffer",
+    "NULL_PARAMETER: NULL parameter passed to function",
+    "INVALID_CONFIGURATION: configuration is invalid",
+    "BAD_DIMENSION: Bad picture dimension. Maximum width and height "
+    "allowed is 16383 pixels.",
+    "PARTITION0_OVERFLOW: Partition #0 is too big to fit 512k.\n"
+    "To reduce the size of this partition, try using less segments "
+    "with the -segments option, and eventually reduce the number of "
+    "header bits using -partition_limit. More details are available "
+    "in the manual (`man cwebp`)",
+    "PARTITION_OVERFLOW: Partition is too big to fit 16M",
+    "BAD_WRITE: Picture writer returned an I/O error",
+    "FILE_TOO_BIG: File would be too big to fit in 4G",
+    "USER_ABORT: Timeout occured",
+};
+
+std::string WebPError(const std::string& prefix, WebPPicture* picture) {
+  return prefix + kErrorMessages[picture->error_code];
+}
 
 WebPImageHint HintToWebPImageHint(WebPEncoder::Hint hint) {
   switch (hint) {
@@ -215,9 +238,10 @@ class Picture {
       WebPPictureFree(&picture_);
   }
 
-  bool Init(ImageFrame* frame) {
+  Result Init(ImageFrame* frame) {
     if (!WebPPictureInit(&picture_))
-      return false;
+      return Result::Error(Result::Code::kEncodeError,
+                           "Webp picture init error");
 
     std::unique_ptr<ImageFrame> transformed_frame;
     if (frame->is_grayscale()) {
@@ -228,7 +252,8 @@ class Picture {
     }
 
     if (!frame->is_yuv() && !frame->is_rgb())
-      return false;
+      return Result::Error(Result::Code::kEncodeError,
+                           "Invalid color scheme for webp encoding");
 
     picture_.width = frame->width();
     picture_.height = frame->height();
@@ -254,9 +279,10 @@ class Picture {
     }
 
     if (!result)
-      return false;
+      return Result::Error(Result::Code::kEncodeError,
+                           WebPError("WebP picture import error: ", &picture_));
 
-    return true;
+    return Result::Ok();
   }
 
   WebPPicture* webp_picture() { return &picture_; }
@@ -291,28 +317,46 @@ class WebPEncoder::Impl {
     WebPConfig config;
     const auto& params = encoder_->params_;
 
+    auto frame_quality = frame->quality();
+    auto quality = params.quality;
+    if (frame_quality != ImageFrame::kUnknownQuality &&
+        quality > frame_quality) {
+      quality = frame_quality;
+    }
+
     auto preset = PresetToWebPPreset(params.preset);
-    if (!WebPConfigPreset(&config, preset, params.quality))
-      return Result::Error(Result::Code::kEncodeError);
+    if (!WebPConfigPreset(&config, preset, quality))
+      return Result::Error(Result::Code::kEncodeError,
+                           "WebP config preset error");
 
     config.method = params.method;
 
     if (!WebPValidateConfig(&config))
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError,
+                           "WebP config validation error");
 
     Picture picture;
-    if (!picture.Init(frame))
-      return Result::Error(Result::Code::kEncodeError);
+    auto init_result = picture.Init(frame);
+    if (!init_result.ok())
+      return init_result;
 
     picture.webp_picture()->writer = ChunkWriter;
     picture.webp_picture()->custom_ptr = this;
     picture.webp_picture()->progress_hook = ProgressHook;
     picture.webp_picture()->user_data = this;
 
+    if (params.write_stats) {
+      stats_ = base::make_unique<WebPAuxStats>();
+      picture.webp_picture()->stats = stats_.get();
+    }
+
     // Now take picture and WebP encode it.
     bool result = WebPEncode(&config, picture.webp_picture());
 
-    return result ? Result::Ok() : Result::Error(Result::Code::kEncodeError);
+    return result ? Result::Ok()
+                  : Result::Error(Result::Code::kEncodeError,
+                                  WebPError("WebP encode error: ",
+                                            picture.webp_picture()));
   }
 
   Result EncodeNextFrame(ImageFrame* frame) {
@@ -326,7 +370,8 @@ class WebPEncoder::Impl {
 
     if (!WebPPictureView(&webp_image_, frame->x_offset(), frame->y_offset(),
                          frame->width(), frame->height(), &webp_frame_))
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError,
+                           WebPError("WebPPictureView: ", &webp_image_));
 
     auto* where = webp_frame_.argb;
     Bitmap bitmap(frame);
@@ -364,7 +409,8 @@ class WebPEncoder::Impl {
         }
         break;
       default:
-        return Result::Error(Result::Code::kEncodeError);
+        return Result::Error(Result::Code::kEncodeError,
+                             "WebP encode: unsupported color scheme");
     }
 
     // We need to pass image to add frame.
@@ -378,12 +424,14 @@ class WebPEncoder::Impl {
     if (!WebPFrameCacheAddFrame(webp_frame_cache_, &webp_config_, &frame_rect,
                                 disposal_method, frame->duration(),
                                 &webp_image_)) {
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError,
+                           WebPError("WebPFrameCacheAddFrame: ", &webp_image_));
     }
 
     if (WebPFrameCacheFlush(webp_frame_cache_, false /*verbose*/, webp_mux_) !=
         WEBP_MUX_OK)
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError,
+                           "WebPFrameCacheFlush error");
 
     next_frame_idx_++;
 
@@ -396,7 +444,8 @@ class WebPEncoder::Impl {
 
     if (WebPFrameCacheFlushAll(webp_frame_cache_, false /*verbose*/,
                                webp_mux_) != WEBP_MUX_OK)
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError,
+                           "WebPFrameCacheFlushAll error");
 
     if (next_frame_idx_ > 1) {
       RGBAPixel bg(const_cast<uint8_t*>(image_info_->bg_color->data()));
@@ -404,12 +453,14 @@ class WebPEncoder::Impl {
       WebPMuxAnimParams anim = {PackAsARGB(bg.r(), bg.g(), bg.b(), bg.a()),
                                 static_cast<int>(image_info_->loop_count)};
       if (WebPMuxSetAnimationParams(webp_mux_, &anim) != WEBP_MUX_OK)
-        return Result::Error(Result::Code::kEncodeError);
+        return Result::Error(Result::Code::kEncodeError,
+                             "WebPMuxSetAnimationParams error");
     }
 
     WebPData webp_data = {NULL, 0};
     if (WebPMuxAssemble(webp_mux_, &webp_data) != WEBP_MUX_OK)
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError,
+                           WebPError("WebPMuxAssemble: ", &webp_image_));
 
     auto chunk = io::Chunk::Copy(webp_data.bytes, webp_data.size);
     encoder_->output_.push_back(std::move(chunk));
@@ -420,12 +471,16 @@ class WebPEncoder::Impl {
 
   bool idle() const { return mode_ == Mode::kNotDecidedYet; }
   void set_image_info(const ImageInfo* image_info) { image_info_ = image_info; }
+  const WebPAuxStats* stats() { return stats_.get(); }
 
  private:
   enum Mode { kNotDecidedYet, kSingleFrame, kMultiFrame };
 
   static int ProgressHook(int percent, const WebPPicture* picture) {
-    // TODO: handle timeouts.
+    auto* impl = static_cast<Impl*>(picture->user_data);
+    if (impl->encoder_->params_.progress_cb) {
+      return impl->encoder_->params_.progress_cb() ? 1 : 0;
+    }
     return 1;
   }
 
@@ -444,28 +499,32 @@ class WebPEncoder::Impl {
 
     webp_mux_ = WebPMuxNew();
     if (!webp_mux_)
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError, "WebP mux create error");
 
     const auto& params = encoder_->params_;
 
     auto preset = PresetToWebPPreset(params.preset);
     if (!WebPConfigPreset(&webp_config_, preset, params.quality))
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError,
+                           "WebP config preset error");
 
     webp_config_.method = params.method;
 
     if (!WebPValidateConfig(&webp_config_))
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError,
+                           "WebP config validation error");
 
     if (!WebPPictureInit(&webp_image_))
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError,
+                           "Webp picture init error");
 
     webp_image_.width = image_info_->width;
     webp_image_.height = image_info_->height;
     webp_image_.use_argb = true;
 
     if (!WebPPictureAlloc(&webp_image_))
-      return Result::Error(Result::Code::kEncodeError);
+      return Result::Error(Result::Code::kEncodeError,
+                           WebPError("WebPPictureAlloc: ", &webp_image_));
 
     WebPUtilClearPic(&webp_image_, nullptr);
 
@@ -493,6 +552,7 @@ class WebPEncoder::Impl {
   WebPFrameCache* webp_frame_cache_ = nullptr;
   WebPMux* webp_mux_ = nullptr;
   WebPConfig webp_config_;
+  std::unique_ptr<WebPAuxStats> stats_;
 };
 
 WebPEncoder::WebPEncoder(Params params, std::unique_ptr<io::VectorWriter> dst)
@@ -552,7 +612,12 @@ Result WebPEncoder::EncodeFrame(ImageFrame* frame, bool last_frame) {
 
 void WebPEncoder::SetMetadata(const ImageMetadata* metadata) {}
 
-Result WebPEncoder::FinishWrite(ImageWriter::Stats* stats) {
+Result WebPEncoder::FinishWrite(ImageOptimizationStats* stats) {
+  if (impl_->stats()) {
+    auto* webp_stats = impl_->stats();
+    stats->psnr = webp_stats->PSNR[3];
+    stats->coded_size = webp_stats->coded_size;
+  }
   return Result::Ok();
 }
 

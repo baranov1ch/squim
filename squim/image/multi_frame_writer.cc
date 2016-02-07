@@ -37,7 +37,7 @@ Result MultiFrameWriter::WriteFrame(ImageFrame* frame) {
   return encoder_->EncodeFrame(frame, false);
 }
 
-Result MultiFrameWriter::FinishWrite(Stats* stats) {
+Result MultiFrameWriter::FinishWrite(ImageOptimizationStats* stats) {
   auto result = encoder_->EncodeFrame(nullptr, true);
 
   // Normally pending should result in another call to this function but who

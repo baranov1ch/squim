@@ -25,6 +25,7 @@
 
 #include "squim/base/make_noncopyable.h"
 #include "squim/image/image_constants.h"
+#include "squim/image/image_optimization_stats.h"
 #include "squim/image/image_writer.h"
 #include "squim/image/result.h"
 
@@ -62,7 +63,7 @@ class ImageOptimizer {
 
   Result Process();
   bool Finished() const;
-  const ImageWriter::Stats& stats() const { return stats_; }
+  const ImageOptimizationStats& stats() const { return stats_; }
 
  private:
   enum class State {
@@ -102,7 +103,7 @@ class ImageOptimizer {
   std::unique_ptr<io::VectorWriter> dest_;
   ImageFrame* current_frame_ = nullptr;
   Result last_result_ = Result::Ok();
-  ImageWriter::Stats stats_;
+  ImageOptimizationStats stats_;
 };
 
 std::ostream& operator<<(std::ostream& os, ImageOptimizer::State state);

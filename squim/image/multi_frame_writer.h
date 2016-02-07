@@ -36,7 +36,7 @@ class MultiFrameWriter : public ImageWriter {
   Result Initialize(const ImageInfo* image_info) override;
   void SetMetadata(const ImageMetadata* metadata) override;
   Result WriteFrame(ImageFrame* frame) override;
-  Result FinishWrite(Stats* stats) override;
+  Result FinishWrite(ImageOptimizationStats* stats) override;
 
  private:
   std::unique_ptr<ImageEncoder> encoder_;

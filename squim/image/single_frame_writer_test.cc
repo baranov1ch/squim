@@ -19,6 +19,7 @@
 #include "squim/base/memory/make_unique.h"
 #include "squim/image/image_frame.h"
 #include "squim/image/image_metadata.h"
+#include "squim/image/image_optimization_stats.h"
 #include "squim/image/image_writer.h"
 #include "test/mock_encoder.h"
 
@@ -48,7 +49,7 @@ TEST_F(SingleFrameWriterTest, ShouldAskEncoderToSetMetadata) {
 }
 
 TEST_F(SingleFrameWriterTest, ShouldAskEncoderToFinish) {
-  ImageWriter::Stats stats;
+  ImageOptimizationStats stats;
   EXPECT_CALL(*encoder_, FinishWrite(&stats)).WillOnce(Return(Result::Ok()));
   auto result = testee_->FinishWrite(&stats);
   EXPECT_TRUE(result.ok());

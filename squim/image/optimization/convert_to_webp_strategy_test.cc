@@ -59,10 +59,6 @@ MockDecoder* CreateDecoder(ImageType type, io::BufReader* reader) {
   return new MockDecoder();
 }
 
-MockEncoder* CreateEncoder(ImageType type, io::VectorWriter* writer) {
-  return new MockEncoder();
-}
-
 }  // namespace
 
 class ConvertToWebPStrategyTest : public testing::Test {
@@ -118,20 +114,6 @@ TEST_F(ConvertToWebPStrategyTest, ShouldCreateDecoder) {
   EXPECT_TRUE(result.ok());
 }
 
-TEST_F(ConvertToWebPStrategyTest, ShouldReturnErrorIfNoEncoder) {
-  auto dest = base::make_unique<io::DevNull>();
-  MockImageReader reader;
-  reader.image_info.type = ImageType::kJpeg;
-  std::unique_ptr<ImageWriter> writer;
-  EXPECT_CALL(reader, GetImageInfo(_))
-      .WillOnce(Invoke(&reader, &MockImageReader::GetFakeImageInfo));
-  EXPECT_CALL(*codec_factory_, CreateEncoderImpl(ImageType::kWebP, dest.get()))
-      .WillOnce(Return(nullptr));
-  auto result = testee_->CreateImageWriter(std::move(dest), &reader, &writer);
-  EXPECT_FALSE(writer);
-  EXPECT_EQ(Result::Code::kDunnoHowToEncode, result.code());
-}
-
 TEST_F(ConvertToWebPStrategyTest, ShouldReturnErrorIfWebP) {
   auto dest = base::make_unique<io::DevNull>();
   MockImageReader reader;
@@ -145,15 +127,13 @@ TEST_F(ConvertToWebPStrategyTest, ShouldReturnErrorIfWebP) {
   EXPECT_EQ(Result::Code::kDunnoHowToEncode, result.code());
 }
 
-TEST_F(ConvertToWebPStrategyTest, ShouldCreateEncoder) {
+TEST_F(ConvertToWebPStrategyTest, ShouldCreateWriter) {
   auto dest = base::make_unique<io::DevNull>();
   MockImageReader reader;
   reader.image_info.type = ImageType::kJpeg;
   std::unique_ptr<ImageWriter> writer;
   EXPECT_CALL(reader, GetImageInfo(_))
       .WillOnce(Invoke(&reader, &MockImageReader::GetFakeImageInfo));
-  EXPECT_CALL(*codec_factory_, CreateEncoderImpl(ImageType::kWebP, dest.get()))
-      .WillOnce(Invoke(CreateEncoder));
   auto result = testee_->CreateImageWriter(std::move(dest), &reader, &writer);
   EXPECT_TRUE(writer);
   EXPECT_TRUE(result.ok());

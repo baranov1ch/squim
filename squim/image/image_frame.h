@@ -30,7 +30,8 @@ class ImageFrame {
   MAKE_NONCOPYABLE(ImageFrame);
 
  public:
-  const size_t kNoPreviousFrameIndex = 0xFFFFFFFF;
+  static const size_t kNoPreviousFrameIndex = 0xFFFFFFFF;
+  static const uint32_t kUnknownQuality = 0xFFFFFFFF;
 
   enum class Status {
     kEmpty,
@@ -43,10 +44,6 @@ class ImageFrame {
     kNone,
     kBackground,
     kRestorePrevious,
-  };
-
-  class Header {
-   public:
   };
 
   ImageFrame();

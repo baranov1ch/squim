@@ -32,7 +32,9 @@ using squim::ImageOptimizer;
 using squim::ImageRequestPart;
 using squim::ImageResponsePart;
 
-typedef std::shared_ptr<grpc::ClientReaderWriter<ImageRequestPart, ImageResponsePart>> ImageStreamPtr;
+typedef std::shared_ptr<
+    grpc::ClientReaderWriter<ImageRequestPart, ImageResponsePart>>
+    ImageStreamPtr;
 
 namespace {
 class GRPCStreamWriter : public io::Writer {
@@ -83,7 +85,7 @@ class GRPCStreamReader : public io::Reader {
 
     if (*offset_ == bytes.size())
       offset_.reset();
-    
+
     return io::IoResult::Read(effective_len);
   }
 
@@ -110,7 +112,7 @@ bool ImageOptimizerClient::OptimizeImage(io::Reader* image_reader,
     meta->set_target_type(squim::WEBP);
     auto* webp_params = meta->mutable_webp_params();
     webp_params->set_quality(40.0);
-    webp_params->set_strength(4);
+    webp_params->set_method(4);
     webp_params->set_compression_type(ImageRequestPart::LOSSY);
     stream->Write(header);
 

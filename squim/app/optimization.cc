@@ -16,6 +16,9 @@
 
 #include "squim/app/optimization.h"
 
+#include "squim/app/optimizers/check_is_photo.h"
+#include "squim/app/optimizers/squim_webp.h"
+#include "squim/app/optimizers/try_strip_alpha.h"
 #include "squim/image/optimization/convert_to_webp_strategy.h"
 #include "squim/image/optimization/strategy_builder.h"
 #include "squim/image/optimization/default_codec_factory.h"
@@ -27,11 +30,15 @@ WebPOptimization::~WebPOptimization() {}
 std::unique_ptr<image::OptimizationStrategy>
 WebPOptimization::CreateOptimizationStrategy(
     const squim::ImageRequestPart_Meta& request) {
-  return image::StrategyBuilder()
-      .SetBaseStrategy<image::ConvertToWebPStrategy>(
-          image::DefaultCodecFactory::Builder)
-      //.AddLayer<SquimWebP>(meta)
-      //.AddLayer<TryStripAlpha>(meta)
-      //.AddLayer<CheckIsPhoto>(meta)
-      .Build();
+  image::StrategyBuilder builder;
+  builder.SetBaseStrategy<image::ConvertToWebPStrategy>(
+             image::DefaultCodecFactory::Builder)
+      .AddLayer<SquimWebP>(request);
+  if (request.try_strip_alpha())
+    builder.AddLayer<TryStripAlpha>();
+
+  if (request.min_photo_metric() > 0)
+    builder.AddLayer<CheckIsPhoto>(request);
+
+  return builder.Build();
 }

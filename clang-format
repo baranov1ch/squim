@@ -16,4 +16,4 @@
 
 base_dir=$(dirname "$0")
 
-PYTHONDONTWRITEBYTECODE=1 exec python "$base_dir/src/tools/clang/clang_format.py" "$@"
+PYTHONDONTWRITEBYTECODE=1 exec python "$base_dir/tools/clang/clang_format.py" "$@"

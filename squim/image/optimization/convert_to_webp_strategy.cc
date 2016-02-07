@@ -16,14 +16,12 @@
 
 #include "squim/image/optimization/convert_to_webp_strategy.h"
 
+#include "squim/base/logging.h"
 #include "squim/image/decoding_reader.h"
 #include "squim/image/image_codec_factory.h"
-#include "squim/image/multi_frame_writer.h"
-#include "squim/image/single_frame_writer.h"
+#include "squim/image/optimization/lazy_webp_writer.h"
 #include "squim/io/buf_reader.h"
 #include "squim/io/writer.h"
-
-#include "squim/base/logging.h"
 
 namespace image {
 
@@ -71,16 +69,11 @@ Result ConvertToWebPStrategy::CreateImageWriter(
     return Result::Error(Result::Code::kDunnoHowToEncode,
                          "WebP is not supported yet");
 
-  auto encoder =
-      codec_factory_->CreateEncoder(ImageType::kWebP, std::move(dest));
-  if (!encoder)
-    return Result::Error(Result::Code::kDunnoHowToEncode);
+  if (image_info->type == ImageType::kGif)
+    allow_mixed_ = true;
 
-  if (image_info->type == ImageType::kGif) {
-    writer->reset(new MultiFrameWriter(std::move(encoder)));
-  } else {
-    writer->reset(new SingleFrameWriter(std::move(encoder)));
-  }
+  writer->reset(
+      new LazyWebPWriter(std::move(dest), codec_factory_.get(), image_info));
   return Result::Ok();
 }
 
@@ -116,7 +109,10 @@ WebPDecoder::Params ConvertToWebPStrategy::GetWebPDecoderParams() {
 }
 
 WebPEncoder::Params ConvertToWebPStrategy::GetWebPEncoderParams() {
-  return WebPEncoder::Params::Default();
+  auto params = WebPEncoder::Params::Default();
+  if (allow_mixed_)
+    params.compression = WebPEncoder::Compression::kMixed;
+  return params;
 }
 
 }  // namespace image

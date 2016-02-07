@@ -17,10 +17,16 @@ cc_library(
   hdrs = [
     "image_optimizer_service.h",
     "optimization.h",
+    "optimizers/check_is_photo.h",
+    "optimizers/squim_webp.h",
+    "optimizers/try_strip_alpha.h",
   ],
   srcs = [
     "image_optimizer_service.cc",
     "optimization.cc",
+    "optimizers/check_is_photo.cc",
+    "optimizers/squim_webp.cc",
+    "optimizers/try_strip_alpha.cc",
   ],
   deps = [
     "//external:grpc++",

@@ -52,6 +52,9 @@ class ConvertToWebPStrategy : public CodecAwareStrategy {
 
  private:
   std::unique_ptr<ImageCodecFactory> codec_factory_;
+
+  // Allow mixed lossy/lossless compression for multiframe images.
+  bool allow_mixed_ = false;
 };
 
 }  // namespace image

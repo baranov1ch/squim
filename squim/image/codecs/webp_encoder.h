@@ -69,6 +69,7 @@ class WebPEncoder : public ImageEncoder {
     Preset preset = Preset::kDefault;
     Compression compression = Compression::kLossy;
     bool write_stats = false;
+    std::function<bool()> progress_cb;
 
     static Params Default();
   };
@@ -80,7 +81,7 @@ class WebPEncoder : public ImageEncoder {
   Result Initialize(const ImageInfo* image_info) override;
   Result EncodeFrame(ImageFrame* frame, bool last_frame) override;
   void SetMetadata(const ImageMetadata* metadata) override;
-  Result FinishWrite(ImageWriter::Stats* stats) override;
+  Result FinishWrite(ImageOptimizationStats* stats) override;
 
  private:
   class Impl;

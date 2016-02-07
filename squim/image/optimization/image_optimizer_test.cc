@@ -76,7 +76,7 @@ class MockWriter : public ImageWriter {
   MOCK_METHOD1(Initialize, Result(const ImageInfo*));
   MOCK_METHOD1(SetMetadata, void(const ImageMetadata*));
   MOCK_METHOD1(WriteFrame, Result(ImageFrame*));
-  MOCK_METHOD1(FinishWrite, Result(ImageWriter::Stats*));
+  MOCK_METHOD1(FinishWrite, Result(ImageOptimizationStats*));
 };
 
 Result TestImageTypeSelector(io::BufReader* reader, ImageType* image_type) {

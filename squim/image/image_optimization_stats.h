@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Alexey Baranov <me@kotiki.cc>. All rights reserved.
+ * Copyright 2016 Alexey Baranov <me@kotiki.cc>. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef SQUIM_IMAGE_MOCK_ENCODER_H_
-#define SQUIM_IMAGE_MOCK_ENCODER_H_
-
-#include "squim/image/image_encoder.h"
-
-#include "gmock/gmock.h"
+#ifndef SQUIM_IMAGE_IMAGE_OPTIMIZATION_STATS_H_
+#define SQUIM_IMAGE_IMAGE_OPTIMIZATION_STATS_H_
 
 namespace image {
 
-class MockEncoder : public ImageEncoder {
- public:
-  MOCK_METHOD1(Initialize, Result(const ImageInfo*));
-  MOCK_METHOD2(EncodeFrame, Result(ImageFrame*, bool));
-  MOCK_METHOD1(SetMetadata, void(const ImageMetadata*));
-  MOCK_METHOD1(FinishWrite, Result(ImageOptimizationStats*));
+struct ImageOptimizationStats {
+  double psnr = 0;
+  size_t coded_size = 0;
 };
 
 }  // namespace image
 
-#endif  // SQUIM_IMAGE_MOCK_ENCODER_H_
+#endif  // SQUIM_IMAGE_IMAGE_OPTIMIZATION_STATS_H_

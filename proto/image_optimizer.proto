@@ -31,21 +31,20 @@ enum ImageType {
   UNKNOWN = 4;
 }
 
-message ImageData {
-  bytes bytes = 1;
-}
+message ImageData { bytes bytes = 1; }
 
 message ImageRequestPart {
   enum WebPCompressionType {
-    LOSSY = 0;
-    LOSSLESS = 1;
-    MIXED = 2;
+    AUTO = 0;
+    LOSSY = 1;
+    LOSSLESS = 2;
+    MIXED = 3;
   }
 
   message Meta {
     message WebPOptimizationParams {
       double quality = 1;
-      int32 strength = 2;
+      int32 method = 2;
       WebPCompressionType compression_type = 3;
       bool record_stats = 4;
     }
@@ -64,9 +63,10 @@ message ImageRequestPart {
     bool strip_iccp = 6;
     bool strip_exif = 7;
     bool strip_xmp = 8;
-    uint32 timeout_millis = 9;
+    double min_photo_metric = 9;
+    uint32 timeout_millis = 10;
 
-    WebPOptimizationParams webp_params = 10;
+    WebPOptimizationParams webp_params = 11;
   }
 
   oneof payload {
@@ -101,15 +101,20 @@ message ImageResponsePart {
   }
 
   message Stats {
-    ColorScheme color_scheme = 1;
-    uint32 iccp_size = 2;
-    uint32 exif_size = 3;
-    uint32 xmp_size = 4;
-    bool iccp_stripped = 5;
-    bool exif_stripped = 6;
-    bool xmp_stripped = 7;
-    double psnr = 8;
-    bool multiframe = 9;
+    ImageType original_image_type = 1;
+    ColorScheme original_color_scheme = 2;
+    uint32 iccp_size = 3;
+    uint32 exif_size = 4;
+    uint32 xmp_size = 5;
+    bool iccp_stripped = 6;
+    bool exif_stripped = 7;
+    bool xmp_stripped = 8;
+    double psnr = 9;
+    uint32 num_frames = 10;
+    ColorScheme output_color_scheme = 11;
+    uint32 width = 12;
+    uint32 height = 13;
+    bool is_photo = 14;
   }
 
   oneof payload {
