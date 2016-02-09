@@ -34,6 +34,12 @@ class StrategyBuilder {
         std::move(null_layer), std::unique_ptr<LayeredAdjuster>());
   }
 
+  StrategyBuilder& UseCodecFactoryBuilder(
+      RootStrategy::CodecFactoryBuilder codec_factory_builder) {
+    codec_factory_builder_ = codec_factory_builder;
+    return *this;
+  }
+
   template <typename Strategy, typename... Args>
   StrategyBuilder& SetBaseStrategy(Args&&... args) {
     base_strategy_ = base::make_unique<Strategy>(std::forward<Args>(args)...);
@@ -50,11 +56,12 @@ class StrategyBuilder {
 
   std::unique_ptr<OptimizationStrategy> Build() {
     CHECK(base_strategy_);
-    return base::make_unique<RootStrategy>(std::move(base_strategy_),
-                                           std::move(layers_));
+    return base::make_unique<RootStrategy>(
+        codec_factory_builder_, std::move(base_strategy_), std::move(layers_));
   }
 
  private:
+  RootStrategy::CodecFactoryBuilder codec_factory_builder_;
   std::unique_ptr<CodecAwareStrategy> base_strategy_;
   std::unique_ptr<LayeredAdjuster> layers_;
 };

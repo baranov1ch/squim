@@ -39,9 +39,11 @@ cc_library(
   name = "image_optimizer_client",
   hdrs = [
     "image_optimizer_client.h",
+    "request_builder.h",
   ],
   srcs = [
     "image_optimizer_client.cc",
+    "request_builder.cc",
   ],
   deps = [
     "//external:grpc++",

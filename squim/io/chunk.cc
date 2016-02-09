@@ -81,6 +81,10 @@ ChunkPtr Chunk::Clone() {
   return Chunk::Copy(data_, size_);
 }
 
+ChunkPtr Chunk::Slice(size_t start) {
+  return Slice(start, size() - start);
+}
+
 ChunkPtr Chunk::Slice(size_t start, size_t size) {
   return Chunk::View(data_ + start, size);
 }

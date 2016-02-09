@@ -22,8 +22,13 @@
 
 namespace image {
 
+class ImageCodecFactory;
+
 class CodecAwareStrategy : public OptimizationStrategy,
-                           public CodecConfigurator {};
+                           public CodecConfigurator {
+ public:
+  virtual void SetCodecFactory(ImageCodecFactory* factory) = 0;
+};
 
 }  // namespace image
 

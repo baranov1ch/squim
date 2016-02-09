@@ -20,6 +20,7 @@
 #include <algorithm>
 
 #include "proto/image_optimizer.pb.h"
+#include "squim/app/request_builder.h"
 #include "squim/base/logging.h"
 #include "squim/base/optional.h"
 #include "squim/base/strings/string_util.h"
@@ -31,6 +32,7 @@
 using squim::ImageOptimizer;
 using squim::ImageRequestPart;
 using squim::ImageResponsePart;
+using squim::ImageResponsePart_Stats;
 
 typedef std::shared_ptr<
     grpc::ClientReaderWriter<ImageRequestPart, ImageResponsePart>>
@@ -65,7 +67,7 @@ class GRPCStreamReader : public io::Reader {
           return io::IoResult::Eof();
 
         if (response_part_->has_stats()) {
-          // TODO: handle stats. Skip for now.
+          stats_ = response_part_->stats();
           continue;
         }
 
@@ -89,10 +91,13 @@ class GRPCStreamReader : public io::Reader {
     return io::IoResult::Read(effective_len);
   }
 
+  const ImageResponsePart_Stats& stats() const { return stats_; }
+
  private:
   ImageStreamPtr stream_;
   ImageResponsePart* response_part_;
   base::optional<size_t> offset_;
+  ImageResponsePart_Stats stats_;
 };
 }
 
@@ -100,20 +105,16 @@ ImageOptimizerClient::ImageOptimizerClient(
     std::shared_ptr<grpc::Channel> channel)
     : stub_(squim::ImageOptimizer::NewStub(channel)) {}
 
-bool ImageOptimizerClient::OptimizeImage(io::Reader* image_reader,
+bool ImageOptimizerClient::OptimizeImage(RequestBuilder* request_builder,
+                                         io::Reader* image_reader,
                                          size_t chunk_size,
-                                         io::Writer* webp_writer) {
+                                         io::Writer* webp_writer,
+                                         ImageResponsePart_Stats* stats) {
   grpc::ClientContext context;
   ImageStreamPtr stream(stub_->OptimizeImage(&context));
+  auto header = request_builder->Build();
 
-  std::thread writer([stream, &image_reader, chunk_size]() {
-    ImageRequestPart header;
-    auto* meta = header.mutable_meta();
-    meta->set_target_type(squim::WEBP);
-    auto* webp_params = meta->mutable_webp_params();
-    webp_params->set_quality(40.0);
-    webp_params->set_method(4);
-    webp_params->set_compression_type(ImageRequestPart::LOSSY);
+  std::thread writer([header, stream, &image_reader, chunk_size]() {
     stream->Write(header);
 
     GRPCStreamWriter writer(stream);
@@ -125,21 +126,25 @@ bool ImageOptimizerClient::OptimizeImage(io::Reader* image_reader,
   ImageResponsePart response_part;
   stream->Read(&response_part);
   if (!response_part.has_meta()) {
-    LOG(ERROR) << "Unexpected gRPC message";
+    LOG(ERROR) << "Unexpected gRPC message: No status part";
     return false;
   }
 
   if (response_part.meta().code() != ImageResponsePart::OK) {
-    LOG(ERROR) << "Optimization failed";
+    LOG(ERROR) << "Optimization failed: " << response_part.meta().message();
     return false;
   }
 
   GRPCStreamReader reader(stream, &response_part);
   auto result = ioutil::Copy(webp_writer, &reader);
+
+  if (stats)
+    *stats = reader.stats();
+
   writer.join();
   auto status = stream->Finish();
   if (!status.ok()) {
-    LOG(ERROR) << "ImageOptimizer rpc failed.";
+    LOG(ERROR) << "Final RPC failed, but optimization succeeded";
     return false;
   }
 

@@ -24,6 +24,7 @@
 #include "squim/image/codecs/gif_decoder.h"
 #include "squim/image/image_frame.h"
 #include "squim/image/image_info.h"
+#include "squim/image/image_optimization_stats.h"
 #include "squim/image/test/image_test_util.h"
 #include "squim/io/writer.h"
 #include "google/libwebp/upstream/src/webp/decode.h"
@@ -100,8 +101,12 @@ class WebPEncoderTest : public testing::Test {
         << filename;
     WebPEncoder::Params params;
     params.quality = 90;
+    params.write_stats = true;
     auto testee = base::make_unique<WebPEncoder>(params, std::move(writer));
     auto result = testee->EncodeFrame(&ref_frame, true);
+    EXPECT_EQ(Result::Code::kOk, result.code());
+    ImageOptimizationStats stats;
+    result = testee->FinishWrite(&stats);
     EXPECT_EQ(Result::Code::kOk, result.code());
     ImageFrame webp_frame;
     auto webp_color_scheme = ref_frame.color_scheme();
@@ -114,6 +119,8 @@ class WebPEncoderTest : public testing::Test {
                          webp_color_scheme, &webp_frame))
         << filename;
     CheckImageFrameByPSNR(filename, &ref_frame, &webp_frame, 33);
+    EXPECT_LT(stats.coded_size, png_data.size()) << filename;
+    EXPECT_LT(33, stats.psnr) << filename;
   }
 };
 

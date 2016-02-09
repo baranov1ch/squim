@@ -35,10 +35,7 @@ void AddSupportedColorSchemes(Params* params) {
 }
 }
 
-ConvertToWebPStrategy::ConvertToWebPStrategy(
-    CodecFactoryBuilder codec_factory_builder) {
-  codec_factory_ = codec_factory_builder(this);
-}
+ConvertToWebPStrategy::ConvertToWebPStrategy() {}
 
 ConvertToWebPStrategy::~ConvertToWebPStrategy() {}
 
@@ -62,6 +59,8 @@ Result ConvertToWebPStrategy::CreateImageWriter(
     std::unique_ptr<io::VectorWriter> dest,
     ImageReader* reader,
     std::unique_ptr<ImageWriter>* writer) {
+  if (!codec_factory_)
+    return Result::Error(Result::Code::kFailed, "Not yet configured");
   const ImageInfo* image_info;
   auto result = reader->GetImageInfo(&image_info);
   DCHECK(result.ok());
@@ -73,7 +72,7 @@ Result ConvertToWebPStrategy::CreateImageWriter(
     allow_mixed_ = true;
 
   writer->reset(
-      new LazyWebPWriter(std::move(dest), codec_factory_.get(), image_info));
+      new LazyWebPWriter(std::move(dest), codec_factory_, image_info));
   return Result::Ok();
 }
 
@@ -113,6 +112,10 @@ WebPEncoder::Params ConvertToWebPStrategy::GetWebPEncoderParams() {
   if (allow_mixed_)
     params.compression = WebPEncoder::Compression::kMixed;
   return params;
+}
+
+void ConvertToWebPStrategy::SetCodecFactory(ImageCodecFactory* factory) {
+  codec_factory_ = factory;
 }
 
 }  // namespace image

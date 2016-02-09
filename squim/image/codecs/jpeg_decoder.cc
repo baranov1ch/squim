@@ -109,6 +109,76 @@ uint32_t GetJpegQuality(jpeg_decompress_struct* decompress) {
   return ImageFrame::kUnknownQuality;
 }
 
+io::ChunkList ExtractICCP(j_decompress_ptr dinfo) {
+  static const char kICCPSignature[] = "ICC_PROFILE";
+  static const size_t kICCPSignatureLength = sizeof(kICCPSignature);
+  static const size_t kICCPSkipLength = kICCPSignatureLength + 2;
+  struct ICCPSegment {
+    const uint8_t* data;
+    size_t data_length;
+  };
+  size_t expected_count = 0;
+  // Key is segment's sequence number [1, 255] for use in reassembly.
+  std::map<size_t, ICCPSegment> iccp_segments;
+  for (jpeg_saved_marker_ptr marker = dinfo->marker_list; marker != NULL;
+       marker = marker->next) {
+    if (marker->marker != JPEG_APP0 + 2 ||
+        marker->data_length <= kICCPSignatureLength ||
+        std::memcmp(marker->data, kICCPSignature, kICCPSignatureLength) != 0)
+      continue;
+
+    // ICC_PROFILE\0<seq><count>; 'seq' starts at 1.
+    const size_t seq = marker->data[kICCPSignatureLength];
+    const size_t count = marker->data[kICCPSignatureLength + 1];
+    const size_t segment_size = marker->data_length - kICCPSkipLength;
+
+    if (segment_size == 0 || count == 0 || seq == 0) {
+      LOG(ERROR) << "[ICCP] size (" << segment_size << ") / count (" << seq
+                 << ") / sequence number (" << count << ") cannot be 0!";
+      return io::ChunkList();
+    }
+
+    if (expected_count == 0) {
+      expected_count = count;
+    } else if (count != expected_count) {
+      LOG(ERROR) << "[ICCP] Inconsistent segment count (" << expected_count
+                 << " / " << count << ")!";
+      return io::ChunkList();
+    }
+
+    if (iccp_segments.find(seq) != iccp_segments.end()) {
+      LOG(ERROR) << "[ICCP] Duplicate segment number (" << seq << ")!";
+      return io::ChunkList();
+    }
+
+    ICCPSegment segment{marker->data + kICCPSignatureLength, segment_size};
+    iccp_segments[seq] = segment;
+  }
+
+  if (iccp_segments.empty())
+    return io::ChunkList();
+
+  if (iccp_segments.size() != iccp_segments.rbegin()->first) {
+    LOG(ERROR) << "[ICCP] Discontinuous segments, expected: "
+               << iccp_segments.size()
+               << " actual: " << iccp_segments.rbegin()->first << "!";
+    return io::ChunkList();
+  }
+
+  if (iccp_segments.size() != expected_count) {
+    LOG(ERROR) << "[ICCP] Segment count: " << iccp_segments.size()
+               << " does not match expected: " << expected_count << "!";
+    return io::ChunkList();
+  }
+
+  io::ChunkList ret;
+  for (const auto& kv : iccp_segments) {
+    ret.push_back(io::Chunk::Copy(kv.second.data, kv.second.data_length));
+  }
+
+  return ret;
+}
+
 }  // namespace
 
 // static
@@ -279,6 +349,7 @@ class JpegDecoder::Impl {
         if (!jpeg_finish_decompress(&decompress_))
           return false;  // I/O suspension.
 
+        ExtractMetadata();
         state_ = State::kDone;
 
       // Fall through:
@@ -432,6 +503,61 @@ class JpegDecoder::Impl {
     decompress_.src->bytes_in_buffer = 0;
     decompress_.src->next_input_byte = nullptr;
     last_set_byte_ = nullptr;
+  }
+
+  void ExtractMetadata() {
+    static const struct Metadata {
+      int marker;
+      const char* signature;
+      size_t signature_length;
+      ImageMetadata::Type type;
+    } kJPEGMetadataMap[] = {
+        // Exif 2.2 Section 4.7.2 Interoperability Structure of APP1 ...
+        {JPEG_APP0 + 1, "Exif\0", 6, ImageMetadata::Type::kEXIF},
+        // XMP Specification Part 3 Section 3 Embedding XMP Metadata ... #JPEG
+        // TODO(jzern) Add support for 'ExtendedXMP'
+        {JPEG_APP0 + 1, "http://ns.adobe.com/xap/1.0/", 29,
+         ImageMetadata::Type::kXMP},
+    };
+
+    auto dinfo = reinterpret_cast<j_decompress_ptr>(&decompress_);
+
+    auto chunks = ExtractICCP(dinfo);
+    while (!chunks.empty()) {
+      auto chunk = std::move(chunks.front());
+      decoder_->metadata_.Append(ImageMetadata::Type::kICC, std::move(chunk));
+      chunks.pop_front();
+    }
+
+    for (jpeg_saved_marker_ptr marker = dinfo->marker_list; marker != nullptr;
+         marker = marker->next) {
+      auto meta_it =
+          std::find_if(std::begin(kJPEGMetadataMap), std::end(kJPEGMetadataMap),
+                       [marker](const Metadata& e) {
+                         return marker->marker == e.marker &&
+                                marker->data_length > e.signature_length &&
+                                std::memcmp(marker->data, e.signature,
+                                            e.signature_length) == 0;
+                       });
+
+      if (meta_it == std::end(kJPEGMetadataMap))
+        continue;
+
+      if (decoder_->metadata_.Has(meta_it->type)) {
+        LOG(WARNING) << "Ignoring additional '"
+                     << base::StringPiece(meta_it->signature,
+                                          meta_it->signature_length)
+                     << "'";
+        continue;
+      }
+
+      auto chunk = io::Chunk::View(marker->data, marker->data_length)
+                       ->Slice(meta_it->signature_length)
+                       ->Clone();
+      decoder_->metadata_.Append(meta_it->type, std::move(chunk));
+    }
+
+    decoder_->metadata_.FreezeAll();
   }
 
   jpeg_decompress_struct decompress_;

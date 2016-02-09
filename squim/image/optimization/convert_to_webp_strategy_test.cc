@@ -64,18 +64,13 @@ MockDecoder* CreateDecoder(ImageType type, io::BufReader* reader) {
 class ConvertToWebPStrategyTest : public testing::Test {
  protected:
   void SetUp() override {
-    testee_ = base::make_unique<ConvertToWebPStrategy>(
-        [this](CodecConfigurator* configurator)
-            -> std::unique_ptr<ImageCodecFactory> {
-              auto codec_factory = base::make_unique<MockCodecFactory>();
-              codec_factory_ = codec_factory.get();
-              return std::move(codec_factory);
-            });
+    testee_ = base::make_unique<ConvertToWebPStrategy>();
+    testee_->SetCodecFactory(&codec_factory_);
   }
 
   std::unique_ptr<ConvertToWebPStrategy> testee_;
   MockDecoder* decoder_;
-  MockCodecFactory* codec_factory_;
+  MockCodecFactory codec_factory_;
 };
 
 TEST_F(ConvertToWebPStrategyTest, ShouldAlwaysBother) {
@@ -95,7 +90,7 @@ TEST_F(ConvertToWebPStrategyTest, ShouldDoNothingOnAdjustment) {
 TEST_F(ConvertToWebPStrategyTest, ShouldReturnErrorIfNoDecoder) {
   auto src = io::BufReader::CreateEmpty();
   std::unique_ptr<ImageReader> reader;
-  EXPECT_CALL(*codec_factory_, CreateDecoderImpl(ImageType::kJpeg, src.get()))
+  EXPECT_CALL(codec_factory_, CreateDecoderImpl(ImageType::kJpeg, src.get()))
       .WillOnce(Return(nullptr));
   auto result =
       testee_->CreateImageReader(ImageType::kJpeg, std::move(src), &reader);
@@ -106,7 +101,7 @@ TEST_F(ConvertToWebPStrategyTest, ShouldReturnErrorIfNoDecoder) {
 TEST_F(ConvertToWebPStrategyTest, ShouldCreateDecoder) {
   auto src = io::BufReader::CreateEmpty();
   std::unique_ptr<ImageReader> reader;
-  EXPECT_CALL(*codec_factory_, CreateDecoderImpl(ImageType::kJpeg, src.get()))
+  EXPECT_CALL(codec_factory_, CreateDecoderImpl(ImageType::kJpeg, src.get()))
       .WillOnce(Invoke(CreateDecoder));
   auto result =
       testee_->CreateImageReader(ImageType::kJpeg, std::move(src), &reader);

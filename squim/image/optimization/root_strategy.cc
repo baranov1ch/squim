@@ -16,15 +16,19 @@
 
 #include "squim/image/optimization/root_strategy.h"
 
+#include "squim/image/image_codec_factory.h"
 #include "squim/io/buf_reader.h"
 #include "squim/io/writer.h"
 
 namespace image {
 
-RootStrategy::RootStrategy(std::unique_ptr<CodecAwareStrategy> base_strategy,
+RootStrategy::RootStrategy(CodecFactoryBuilder codec_factory_builder,
+                           std::unique_ptr<CodecAwareStrategy> base_strategy,
                            std::unique_ptr<Adjuster> adjuster)
-    : base_strategy_(std::move(base_strategy)),
-      adjuster_(std::move(adjuster)) {}
+    : base_strategy_(std::move(base_strategy)), adjuster_(std::move(adjuster)) {
+  codec_factory_ = codec_factory_builder(this);
+  base_strategy_->SetCodecFactory(codec_factory_.get());
+}
 
 RootStrategy::~RootStrategy() {}
 
@@ -102,6 +106,10 @@ WebPEncoder::Params RootStrategy::GetWebPEncoderParams() {
   auto params = base_strategy_->GetWebPEncoderParams();
   adjuster_->AdjustWebPEncoderParams(&params);
   return params;
+}
+
+void RootStrategy::SetCodecFactory(ImageCodecFactory* factory) {
+  NOTREACHED();
 }
 
 }  // namespace image

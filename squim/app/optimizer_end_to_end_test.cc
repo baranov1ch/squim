@@ -24,6 +24,7 @@
 #include "grpc++/grpc++.h"
 #include "squim/app/image_optimizer_client.h"
 #include "squim/app/optimization.h"
+#include "squim/app/request_builder.h"
 #include "squim/base/logging.h"
 #include "squim/base/memory/make_unique.h"
 #include "squim/io/chunk.h"
@@ -43,6 +44,7 @@ using grpc::ServerBuilder;
 using squim::ImageOptimizer;
 using squim::ImageRequestPart;
 using squim::ImageResponsePart;
+using squim::ImageResponsePart_Stats;
 
 namespace {
 const char kServerAddress[] = "0.0.0.0:50051";
@@ -82,7 +84,10 @@ TEST_F(OptimizerEndToEndTest, SimpleTest) {
   io::ChunkList webp;
   ioutil::ChunkListReader in(&jpeg);
   ioutil::ChunkListWriter out(&webp);
-  EXPECT_TRUE(client.OptimizeImage(&in, 512, &out));
+  auto request_builder = RequestBuilder().SetRecordStats(true).SetQuality(40);
+  ImageResponsePart_Stats stats;
+  EXPECT_TRUE(client.OptimizeImage(&request_builder, &in, 512, &out, &stats));
+  EXPECT_LT(30, stats.psnr());
   auto merged_in = io::Chunk::Merge(jpeg);
   auto merged_out = io::Chunk::Merge(webp);
   EXPECT_LT(merged_out->size(), merged_in->size());

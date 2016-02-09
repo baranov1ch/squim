@@ -115,6 +115,7 @@ message ImageResponsePart {
     uint32 width = 12;
     uint32 height = 13;
     bool is_photo = 14;
+    uint32 coded_size = 15;
   }
 
   oneof payload {

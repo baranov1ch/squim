@@ -49,7 +49,6 @@ void SquimWebP::AdjustWebPEncoderParams(image::WebPEncoder::Params* params) {
     const auto& webp_params = request_.webp_params();
     if (webp_params.quality() > 0)
       params->quality = webp_params.quality();
-
     if (webp_params.method() > 0)
       params->method = webp_params.method();
     params->write_stats = webp_params.record_stats();

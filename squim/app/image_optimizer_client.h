@@ -28,15 +28,19 @@ class Reader;
 class Writer;
 }
 
+class RequestBuilder;
+
 class ImageOptimizerClient {
   MAKE_NONCOPYABLE(ImageOptimizerClient);
 
  public:
   ImageOptimizerClient(std::shared_ptr<grpc::Channel> channel);
 
-  bool OptimizeImage(io::Reader* image_reader,
+  bool OptimizeImage(RequestBuilder* request_builder,
+                     io::Reader* image_reader,
                      size_t chunk_size,
-                     io::Writer* webp_writer);
+                     io::Writer* webp_writer,
+                     squim::ImageResponsePart_Stats* stats);
 
  private:
   std::unique_ptr<squim::ImageOptimizer::Stub> stub_;

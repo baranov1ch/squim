@@ -28,9 +28,7 @@ class ConvertToWebPStrategy : public CodecAwareStrategy {
   MAKE_NONCOPYABLE(ConvertToWebPStrategy);
 
  public:
-  using CodecFactoryBuilder =
-      std::function<std::unique_ptr<ImageCodecFactory>(CodecConfigurator*)>;
-  ConvertToWebPStrategy(CodecFactoryBuilder codec_factory_builder);
+  ConvertToWebPStrategy();
   ~ConvertToWebPStrategy() override;
 
   // CodecAwareStrategy implementation:
@@ -49,9 +47,10 @@ class ConvertToWebPStrategy : public CodecAwareStrategy {
   PngDecoder::Params GetPngDecoderParams() override;
   WebPDecoder::Params GetWebPDecoderParams() override;
   WebPEncoder::Params GetWebPEncoderParams() override;
+  void SetCodecFactory(ImageCodecFactory* factory) override;
 
  private:
-  std::unique_ptr<ImageCodecFactory> codec_factory_;
+  ImageCodecFactory* codec_factory_ = nullptr;
 
   // Allow mixed lossy/lossless compression for multiframe images.
   bool allow_mixed_ = false;

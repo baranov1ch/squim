@@ -135,8 +135,10 @@ class SyncRequestHandler {
     DrainOutput();
 
     ImageResponsePart trailer;
+    const auto& optimization_stats = optimizer_->stats();
     auto* stats = trailer.mutable_stats();
-    stats->set_psnr(2);
+    stats->set_psnr(optimization_stats.psnr);
+    stats->set_coded_size(optimization_stats.coded_size);
     // TODO: send stats.
     stream_->Write(trailer);
 

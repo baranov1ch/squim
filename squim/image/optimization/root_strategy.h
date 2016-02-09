@@ -23,8 +23,13 @@
 
 namespace image {
 
+class ImageCodecFactory;
+
 class RootStrategy : public CodecAwareStrategy {
  public:
+  using CodecFactoryBuilder =
+      std::function<std::unique_ptr<ImageCodecFactory>(CodecConfigurator*)>;
+
   class Adjuster {
    public:
     virtual Result ShouldEvenBother() = 0;
@@ -44,7 +49,8 @@ class RootStrategy : public CodecAwareStrategy {
     virtual ~Adjuster() {}
   };
 
-  RootStrategy(std::unique_ptr<CodecAwareStrategy> base_strategy,
+  RootStrategy(CodecFactoryBuilder codec_factory_builder,
+               std::unique_ptr<CodecAwareStrategy> base_strategy,
                std::unique_ptr<Adjuster> adjuster);
   ~RootStrategy() override;
 
@@ -64,8 +70,10 @@ class RootStrategy : public CodecAwareStrategy {
   PngDecoder::Params GetPngDecoderParams() override;
   WebPDecoder::Params GetWebPDecoderParams() override;
   WebPEncoder::Params GetWebPEncoderParams() override;
+  void SetCodecFactory(ImageCodecFactory* factory) override;
 
  private:
+  std::unique_ptr<ImageCodecFactory> codec_factory_;
   std::unique_ptr<CodecAwareStrategy> base_strategy_;
   std::unique_ptr<Adjuster> adjuster_;
 };

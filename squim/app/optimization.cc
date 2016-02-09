@@ -31,8 +31,8 @@ std::unique_ptr<image::OptimizationStrategy>
 WebPOptimization::CreateOptimizationStrategy(
     const squim::ImageRequestPart_Meta& request) {
   image::StrategyBuilder builder;
-  builder.SetBaseStrategy<image::ConvertToWebPStrategy>(
-             image::DefaultCodecFactory::Builder)
+  builder.UseCodecFactoryBuilder(image::DefaultCodecFactory::Builder)
+      .SetBaseStrategy<image::ConvertToWebPStrategy>()
       .AddLayer<SquimWebP>(request);
   if (request.try_strip_alpha())
     builder.AddLayer<TryStripAlpha>();

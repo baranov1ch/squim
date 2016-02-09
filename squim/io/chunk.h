@@ -43,6 +43,7 @@ class Chunk {
 
   ChunkPtr Clone();
   ChunkPtr Slice(size_t start, size_t size);
+  ChunkPtr Slice(size_t start);
 
   static ChunkPtr FromString(std::string data);
   static ChunkPtr Copy(const uint8_t* data, size_t size);

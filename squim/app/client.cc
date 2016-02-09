@@ -22,6 +22,7 @@
 #include "gflags/gflags.h"
 #include "grpc++/grpc++.h"
 #include "squim/app/image_optimizer_client.h"
+#include "squim/app/request_builder.h"
 #include "squim/base/logging.h"
 #include "squim/io/chunk.h"
 #include "squim/os/file_system.h"
@@ -50,9 +51,11 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  auto request_builder = RequestBuilder().SetRecordStats(true);
   ImageOptimizerClient client(
       grpc::CreateChannel(FLAGS_service, grpc::InsecureChannelCredentials()));
-  if (!client.OptimizeImage(in.get(), 1024, out.get())) {
+  if (!client.OptimizeImage(&request_builder, in.get(), 1024, out.get(),
+                            nullptr)) {
     LOG(ERROR) << "Optimization failed";
     return 1;
   }
