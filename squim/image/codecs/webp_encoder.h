@@ -74,6 +74,17 @@ class WebPEncoder : public ImageEncoder {
     static Params Default();
   };
 
+  class Impl {
+   public:
+    virtual void SetImageInfo(const ImageInfo* image_info) = 0;
+    virtual void SetMetadata(const ImageMetadata* metadata) = 0;
+    virtual Result EncodeFrame(ImageFrame* frame) = 0;
+    virtual Result FinishEncoding() = 0;
+    virtual void GetStats(ImageOptimizationStats* stats) = 0;
+
+    virtual ~Impl() {}
+  };
+
   WebPEncoder(Params params, std::unique_ptr<io::VectorWriter> dst);
   ~WebPEncoder() override;
 
@@ -84,12 +95,11 @@ class WebPEncoder : public ImageEncoder {
   Result FinishWrite(ImageOptimizationStats* stats) override;
 
  private:
-  class Impl;
   std::unique_ptr<Impl> impl_;
   Params params_;
   std::unique_ptr<io::VectorWriter> dst_;
-  const ImageMetadata* metadata_;
-  io::ChunkList output_;
+  const ImageMetadata* metadata_ = nullptr;
+  const ImageInfo* image_info_ = nullptr;
   Result error_ = Result::Ok();
 };
 
