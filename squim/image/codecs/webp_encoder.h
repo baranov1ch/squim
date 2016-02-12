@@ -70,6 +70,13 @@ class WebPEncoder : public ImageEncoder {
     Compression compression = Compression::kLossy;
     bool write_stats = false;
     std::function<bool()> progress_cb;
+    bool write_iccp = false;
+    bool write_exif = false;
+    bool write_xmp = false;
+
+    bool should_write_metadata() const {
+      return write_iccp || write_exif || write_xmp;
+    }
 
     static Params Default();
   };

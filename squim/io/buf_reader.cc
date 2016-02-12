@@ -101,6 +101,22 @@ size_t BufReader::UnreadN(size_t n) {
   return source_->UnreadN(n);
 }
 
+IoResult BufReader::SkipN(size_t n) {
+  if (source_->EofReached())
+    return IoResult::Eof();
+
+  if (!source_->HaveN(n))
+    return IoResult::Pending();
+
+  size_t left = n;
+  while (left > 0) {
+    uint8_t* tmp;
+    auto nread = source_->ReadAtMostN(&tmp, left);
+    left -= nread;
+  }
+  return IoResult::Read(n);
+}
+
 size_t BufReader::offset() const {
   return source_->offset();
 }

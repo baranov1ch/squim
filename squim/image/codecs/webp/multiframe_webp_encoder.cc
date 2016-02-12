@@ -142,6 +142,13 @@ Result MultiframeWebPEncoder::FinishEncoding() {
                            "WebPMuxSetAnimationParams error");
   }
 
+  if (params_->should_write_metadata() && !metadata_->Empty()) {
+    SetMetadataIfNeeded(params_->write_iccp, "ICCP", ImageMetadata::Type::kICC);
+    SetMetadataIfNeeded(params_->write_iccp, "EXIF",
+                        ImageMetadata::Type::kEXIF);
+    SetMetadataIfNeeded(params_->write_iccp, "XMP ", ImageMetadata::Type::kXMP);
+  }
+
   WebPData webp_data = {NULL, 0};
   if (WebPMuxAssemble(webp_mux_, &webp_data) != WEBP_MUX_OK)
     return Result::Error(Result::Code::kEncodeError,
@@ -190,6 +197,16 @@ Result MultiframeWebPEncoder::InitMuxer() {
       params_->compression == WebPEncoder::Compression::kMixed);
 
   return Result::Ok();
+}
+
+void MultiframeWebPEncoder::SetMetadataIfNeeded(bool needed,
+                                                const char fourcc[4],
+                                                ImageMetadata::Type type) {
+  if (needed && metadata_->IsCompleted(type)) {
+    auto chunk = io::Chunk::Merge(metadata_->Get(type));
+    WebPData meta{chunk->data(), chunk->size()};
+    WebPMuxSetChunk(webp_mux_, fourcc, &meta, 1);
+  }
 }
 
 }  // namespace image

@@ -41,6 +41,7 @@ class ImageMetadata {
   void Append(Type type, io::ChunkPtr data);
   void Freeze(Type type);
   void FreezeAll();
+  bool Empty() const;
 
  private:
   class Holder {

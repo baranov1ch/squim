@@ -25,8 +25,7 @@
 
 namespace io {
 
-class BufWriter : public Writer,
-                  public Flusher {
+class BufWriter : public Writer, public Flusher {
  public:
   BufWriter(size_t buf_size, std::unique_ptr<Writer> underlying);
   ~BufWriter() override;
@@ -40,7 +39,10 @@ class BufWriter : public Writer,
   size_t available() const { return buffer_->size() - offset_; }
   size_t buffered() const { return offset_; }
 
+  ChunkPtr ReleaseBuffer();
+
  private:
+  size_t buf_size_;
   ChunkPtr buffer_;
   size_t start_ = 0;
   size_t offset_ = 0;

@@ -16,16 +16,103 @@
 
 #include "squim/image/codecs/webp/simple_webp_encoder.h"
 
+#include <cstring>
+
 #include "squim/base/logging.h"
 #include "squim/base/memory/make_unique.h"
 #include "squim/image/codecs/webp/webp_util.h"
 #include "squim/image/image_frame.h"
 #include "squim/image/image_info.h"
+#include "squim/image/image_metadata.h"
 #include "squim/image/image_optimization_stats.h"
 #include "squim/image/pixel.h"
+#include "squim/io/buf_reader.h"
+#include "squim/io/buf_writer.h"
+#include "squim/io/buffered_source.h"
 #include "squim/io/writer.h"
+#include "squim/ioutil/chunk_writer.h"
 
 namespace image {
+
+namespace {
+
+const size_t kTagSize = 4;
+const size_t kChunkHeaderSize = 8;
+
+class LEWriter {
+ public:
+  LEWriter(io::Writer* underlying) : underlying_(underlying) {}
+
+  io::IoResult Write(io::Chunk* chunk) { return underlying_->Write(chunk); }
+
+  template <size_t N>
+  io::IoResult WriteBytes(const char(&bytes)[N]) {
+    return WriteBytes(bytes, N);
+  }
+
+  template <size_t N>
+  io::IoResult WriteBytes(const uint8_t(&bytes)[N]) {
+    return WriteBytes(bytes, N);
+  }
+
+  io::IoResult WriteBytes(const char* bytes, size_t len) {
+    return WriteBytes(reinterpret_cast<const uint8_t*>(bytes), len);
+  }
+
+  io::IoResult WriteBytes(const uint8_t* bytes, size_t len) {
+    io::Chunk chunk(const_cast<uint8_t*>(bytes), len);
+    return Write(&chunk);
+  }
+
+  io::IoResult WriteLE(uint32_t val, size_t num) {
+    uint8_t buf[4];
+    for (size_t i = 0; i < num; ++i) {
+      buf[i] = static_cast<uint8_t>(val & 0xFF);
+      val >>= 8;
+    }
+    return WriteBytes(buf, num);
+  }
+
+  io::IoResult WriteLE32(uint32_t val) { return WriteLE(val, 4); }
+
+  io::IoResult WriteLE24(uint32_t val) { return WriteLE(val, 3); }
+
+ private:
+  io::Writer* underlying_;
+};
+
+io::ChunkList CreateMetadataPayload(const char* fourcc, io::ChunkPtr data) {
+  io::ChunkList ret;
+  ioutil::ChunkListWriter underlying(&ret);
+  LEWriter le_writer(&underlying);
+  auto result = le_writer.WriteBytes(fourcc, 4);
+  DCHECK_EQ(kTagSize, result.n());
+  bool need_padding = data->size() & 1;
+  le_writer.WriteLE32(data->size());
+  ret.push_back(std::move(data));
+  if (need_padding) {
+    static const uint8_t kZero[1] = {0};
+    ret.push_back(io::Chunk::View(const_cast<uint8_t*>(kZero), 1));
+  }
+  return ret;
+}
+
+io::ChunkPtr PrepareMetdataChunk(bool needed,
+                                 const ImageMetadata* metadata,
+                                 ImageMetadata::Type type,
+                                 uint32_t flag,
+                                 uint32_t* out_flags,
+                                 size_t* size) {
+  if (!needed || !metadata->IsCompleted(type))
+    return io::ChunkPtr();
+
+  auto chunk = io::Chunk::Merge(metadata->Get(type));
+  *size += chunk->size();
+  *out_flags |= flag;
+  return chunk;
+}
+
+}  // namespace
 
 SimpleWebPEncoder::SimpleWebPEncoder(WebPEncoder::Params* params,
                                      io::VectorWriter* output)
@@ -107,17 +194,105 @@ Result SimpleWebPEncoder::EncodeFrame(ImageFrame* frame) {
   if (!result)
     return Result::Error(Result::Code::kEncodeError,
                          WebPError("WebP encode error: ", &picture_));
-  if (!chunks_.empty()) {
-    auto write_result = output_->WriteV(std::move(chunks_));
-    chunks_ = io::ChunkList();
-    return Result::FromIoResult(write_result, false);
-  }
 
   return Result::Ok();
 }
 
 Result SimpleWebPEncoder::FinishEncoding() {
-  return Result::Ok();
+  if (chunks_.empty())
+    return Result::Ok();
+
+  if (!params_->should_write_metadata() || metadata_->Empty()) {
+    auto io_result = output_->WriteV(std::move(chunks_));
+    chunks_ = io::ChunkList();
+    return Result::FromIoResult(io_result, false);
+  }
+
+  const uint32_t kAlphaFlag = 0x10;
+  const uint32_t kEXIFFlag = 0x08;
+  const uint32_t kICCPFlag = 0x20;
+  const uint32_t kXMPFlag = 0x04;
+  const size_t kVP8XChunkSize = 18;
+  const size_t kRiffHeaderSize = 12;
+  const char kVP8XHeader[] = "VP8X\x0a\x00\x00\x00";
+
+  size_t metadata_total_size = 0;
+  uint32_t flags = 0;
+
+  auto iccp = PrepareMetdataChunk(params_->write_iccp, metadata_,
+                                  ImageMetadata::Type::kICC, kICCPFlag, &flags,
+                                  &metadata_total_size);
+  auto exif = PrepareMetdataChunk(params_->write_exif, metadata_,
+                                  ImageMetadata::Type::kEXIF, kEXIFFlag, &flags,
+                                  &metadata_total_size);
+  auto xmp = PrepareMetdataChunk(params_->write_xmp, metadata_,
+                                 ImageMetadata::Type::kXMP, kXMPFlag, &flags,
+                                 &metadata_total_size);
+
+  auto source = base::make_unique<io::BufferedSource>(std::move(chunks_));
+  auto reader = base::make_unique<io::BufReader>(std::move(source));
+  chunks_ = io::ChunkList();
+
+  auto webp_size = reader->source()->size();
+  auto result = reader->SkipN(kRiffHeaderSize);
+  DCHECK(!result.pending());
+  uint8_t vp8_tag[kTagSize];
+  result = reader->PeekNInto(vp8_tag);
+  DCHECK(!result.pending());
+  bool has_vp8x = std::memcmp(vp8_tag, "VP8X", kTagSize) == 0;
+  auto riff_size = webp_size - kChunkHeaderSize + metadata_total_size;
+  if (!has_vp8x)
+    riff_size += kVP8XChunkSize;
+
+  io::BufWriter buf_writer(kRiffHeaderSize + kVP8XChunkSize + 1,
+                           std::unique_ptr<io::Writer>());
+  LEWriter writer(&buf_writer);
+  writer.WriteBytes("RIFF", kTagSize);
+  writer.WriteLE32(riff_size);
+  writer.WriteBytes("WEBP", kTagSize);
+  if (has_vp8x) {
+    uint8_t* vp8x;
+    result = reader->ReadN(&vp8x, kVP8XChunkSize);
+    DCHECK(!result.pending());
+    DCHECK_EQ(kVP8XChunkSize, result.n());
+    vp8x[kChunkHeaderSize] |= static_cast<uint8_t>(flags & 0xFF);
+    writer.WriteBytes(vp8x, kVP8XChunkSize);
+  } else {
+    bool is_lossless = std::memcmp(vp8_tag, "VP8L", kTagSize) == 0;
+    if (is_lossless) {
+      // Presence of alpha is stored in the 29th bit of VP8L data.
+      // Thus we read chunk header + 32 bits == 8 + 4 bytes.
+      uint8_t vp8l[kChunkHeaderSize + 4];
+      result = reader->PeekNInto(vp8l);
+      DCHECK(!result.pending());
+      if (vp8l[kChunkHeaderSize + 3] & (1 << 5))
+        flags |= kAlphaFlag;
+    }
+    writer.WriteBytes(kVP8XHeader);
+    writer.WriteLE32(flags);
+    writer.WriteLE24(picture_.width - 1);
+    writer.WriteLE24(picture_.height - 1);
+  }
+
+  io::ChunkList final_webp;
+  final_webp.push_back(buf_writer.ReleaseBuffer());
+  if (iccp) {
+    auto iccp_data = CreateMetadataPayload("ICCP", std::move(iccp));
+    final_webp.splice(final_webp.end(), iccp_data);
+  }
+  auto webp_body = reader->source()->ReleaseRest();
+  final_webp.splice(final_webp.end(), webp_body);
+  if (exif) {
+    auto exif_data = CreateMetadataPayload("EXIF", std::move(exif));
+    final_webp.splice(final_webp.end(), exif_data);
+  }
+  if (xmp) {
+    auto xmp_data = CreateMetadataPayload("XMP ", std::move(xmp));
+    final_webp.splice(final_webp.end(), xmp_data);
+  }
+
+  auto io_result = output_->WriteV(std::move(final_webp));
+  return Result::FromIoResult(io_result, false);
 }
 
 void SimpleWebPEncoder::GetStats(ImageOptimizationStats* stats) {

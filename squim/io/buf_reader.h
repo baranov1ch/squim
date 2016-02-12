@@ -70,6 +70,9 @@ class BufReader {
     return PeekNInto(out, N);
   }
 
+  // Skips |n| bytes from underlying source.
+  IoResult SkipN(size_t n);
+
   // Unreads n bytes from the buffer. Returns the number of bytes unread.
   size_t UnreadN(size_t n);
 

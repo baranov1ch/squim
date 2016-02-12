@@ -27,6 +27,7 @@ namespace io {
 class BufferedSource {
  public:
   BufferedSource();
+  BufferedSource(ChunkList chunks);
   ~BufferedSource();
 
   // Checks if there are some data.
@@ -69,6 +70,9 @@ class BufferedSource {
 
   // Closes the source. No data will be accepted after this call.
   void SendEof();
+
+  // Returns unread data. Read data is deleted.
+  ChunkList ReleaseRest();
 
   size_t offset() const { return total_offset_; }
   size_t size() const { return total_size_; }

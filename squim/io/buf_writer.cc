@@ -24,13 +24,16 @@
 namespace io {
 
 BufWriter::BufWriter(size_t buf_size, std::unique_ptr<Writer> underlying)
-      : buffer_(Chunk::New(buf_size)), underlying_(std::move(underlying)) {}
+    : buf_size_(buf_size), underlying_(std::move(underlying)) {}
 
 BufWriter::~BufWriter() {}
 
 IoResult BufWriter::Write(Chunk* chunk) {
   if (flushing_)
     return IoResult::Pending();
+
+  if (!buffer_)
+    buffer_ = Chunk::New(buf_size_);
 
   size_t nwrite = 0;
   for (;;) {
@@ -62,6 +65,11 @@ IoResult BufWriter::Write(Chunk* chunk) {
 }
 
 IoResult BufWriter::Flush() {
+  DCHECK(underlying_);
+
+  if (!buffer_)
+    return IoResult::Write(0);
+
   flushing_ = true;
 
   size_t nwrite = 0;
@@ -90,6 +98,14 @@ IoResult BufWriter::Flush() {
 
   NOTREACHED();
   return IoResult::Error();
+}
+
+ChunkPtr BufWriter::ReleaseBuffer() {
+  auto ret = Chunk::Wrap(std::move(buffer_), start_, offset_ - start_);
+  start_ = 0;
+  offset_ = 0;
+  flushing_ = false;
+  return ret;
 }
 
 }  // namespace io

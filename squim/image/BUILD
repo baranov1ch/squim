@@ -93,6 +93,7 @@ cc_library(
     "//external:libwebp",
     "//squim/base:base",
     "//squim/io:io",
+    "//squim/ioutil:ioutil",
   ],
   visibility = ["//visibility:public"]
 )

@@ -87,6 +87,7 @@ cc_test(
   ],
   deps = [
     "//external:gtest",
+    "//squim/ioutil:file_util",
     "//squim/ioutil:ioutil",
     "//squim/test:test_main",
     ":image_optimizer_client",

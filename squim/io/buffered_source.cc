@@ -25,6 +25,14 @@ namespace io {
 
 BufferedSource::BufferedSource() : current_chunk_(chunks_.end()) {}
 
+BufferedSource::BufferedSource(ChunkList chunks)
+    : chunks_(std::move(chunks)), current_chunk_(chunks_.begin()) {
+  for (const auto& chunk : chunks_) {
+    DCHECK(chunk);
+    total_size_ += chunk->size();
+  }
+}
+
 BufferedSource::~BufferedSource() {}
 
 bool BufferedSource::HaveSome() const {
@@ -228,6 +236,27 @@ size_t BufferedSource::FreeAtMostNBytes(size_t n) {
 
 size_t BufferedSource::FreeAsMuchAsPossible() {
   return FreeAtMostNBytes(size());
+}
+
+ChunkList BufferedSource::ReleaseRest() {
+  ChunkPtr head;
+  if (offset_in_chunk_ != 0) {
+    head = (*current_chunk_)->Slice(offset_in_chunk_)->Clone();
+    current_chunk_++;
+  }
+  chunks_.erase(chunks_.begin(), current_chunk_);
+  if (head)
+    chunks_.push_front(std::move(head));
+  auto ret = std::move(chunks_);
+
+  chunks_ = io::ChunkList();
+  current_chunk_ = chunks_.end();
+  eof_received_ = false;
+  total_offset_ = 0u;
+  offset_in_chunk_ = 0u;
+  total_size_ = 0u;
+
+  return ret;
 }
 
 }  // namespace io

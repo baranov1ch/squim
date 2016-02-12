@@ -20,6 +20,7 @@
 #include "google/libwebp/upstream/src/webp/encode.h"
 #include "google/libwebp/upstream/examples/gif2webp_util.h"
 #include "squim/image/codecs/webp_encoder.h"
+#include "squim/image/image_metadata.h"
 
 namespace image {
 
@@ -37,6 +38,9 @@ class MultiframeWebPEncoder : public WebPEncoder::Impl {
 
  private:
   Result InitMuxer();
+  void SetMetadataIfNeeded(bool needed,
+                           const char fourcc[4],
+                           ImageMetadata::Type type);
 
   WebPEncoder::Params* params_;
   io::VectorWriter* output_;

@@ -17,7 +17,6 @@ cc_library(
   hdrs = [
     "chunk_reader.h",
     "chunk_writer.h",
-    "file_util.h",
     "read_util.h",
     "string_reader.h",
     "string_writer.h",
@@ -25,13 +24,26 @@ cc_library(
   srcs = [
     "chunk_reader.cc",
     "chunk_writer.cc",
-    "file_util.cc",
     "read_util.cc",
     "string_reader.cc",
     "string_writer.cc",
   ],
   deps = [
     "//squim/io:io",
+  ],
+  visibility = ["//visibility:public"]
+)
+
+cc_library(
+  name = "file_util",
+  hdrs = [
+    "file_util.h",
+  ],
+  srcs = [
+    "file_util.cc",
+  ],
+  deps = [
+    ":ioutil",
     "//squim/os:os",
   ],
   visibility = ["//visibility:public"]

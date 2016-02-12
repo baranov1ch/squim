@@ -78,4 +78,8 @@ void ImageMetadata::FreezeAll() {
   Freeze(Type::kXMP);
 }
 
+bool ImageMetadata::Empty() const {
+  return !Has(Type::kICC) && !Has(Type::kEXIF) && !Has(Type::kXMP);
+}
+
 }  // namespace image
