@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef SQUIM_APP_OPTIMIZERS_CHECK_IS_PHOTO_H_
-#define SQUIM_APP_OPTIMIZERS_CHECK_IS_PHOTO_H_
+#ifndef SQUIM_APP_OPTIMIZERS_METADATA_HANDLER_H_
+#define SQUIM_APP_OPTIMIZERS_METADATA_HANDLER_H_
 
 #include "proto/image_optimizer.pb.h"
 #include "squim/image/optimization/layered_adjuster.h"
 
-// Checks photo-like metric for PNG images and sets up encoder to lossless
-// mode if image does not look like photo (since lossy webp does not handle)
-// well sharp-edged images.
-class CheckIsPhoto : public image::LayeredAdjuster::Layer {
+class MetadataHandler : public image::LayeredAdjuster::Layer {
  public:
-  CheckIsPhoto(const squim::ImageRequestPart_Meta& request);
+  MetadataHandler(const squim::ImageRequestPart_Meta& request);
 
-  image::Result AdjustReaderAfterInfoReady(
+  image::Result AdjustReader(
+      image::ImageType image_type,
       std::unique_ptr<image::ImageReader>* reader) override;
   void AdjustWebPEncoderParams(image::WebPEncoder::Params* params) override;
 };
 
-#endif  // SQUIM_APP_OPTIMIZERS_CHECK_IS_PHOTO_H_
+#endif  // SQUIM_APP_OPTIMIZERS_METADATA_HANDLER_H_

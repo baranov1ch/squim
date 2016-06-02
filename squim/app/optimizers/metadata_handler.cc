@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Alexey Baranov <me@kotiki.cc>. All rights reserved.
+ * Copyright 2016 Alexey Baranov <me@kotiki.cc>. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
-#include "squim/image/image_frame.h"
+#include "squim/app/optimizers/metadata_handler.h"
 
-namespace image {
+MetadataHandler::MetadataHandler(const squim::ImageRequestPart_Meta& request) {}
 
-ImageFrame::ImageFrame() {}
-
-ImageFrame::~ImageFrame() {}
-
-void ImageFrame::Init() {
-  DCHECK(!data_);
-  DCHECK(color_scheme_ != ColorScheme::kUnknown);
-  data_.reset(new uint8_t[height_ * stride()]);
+image::Result MetadataHandler::AdjustReader(
+    image::ImageType image_type,
+    std::unique_ptr<image::ImageReader>* reader) {
+  return image::Result::Ok();
 }
 
-}  // namespace image
+void MetadataHandler::AdjustWebPEncoderParams(
+    image::WebPEncoder::Params* params) {}

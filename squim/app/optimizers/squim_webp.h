@@ -18,7 +18,6 @@
 #define SQUIM_APP_OPTIMIZERS_SQUIM_WEBP_H_
 
 #include "proto/image_optimizer.pb.h"
-#include "squim/image/codecs/webp_encoder.h"
 #include "squim/image/optimization/layered_adjuster.h"
 
 class SquimWebP : public image::LayeredAdjuster::Layer {

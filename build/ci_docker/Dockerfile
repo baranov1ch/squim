@@ -35,7 +35,7 @@ RUN apt-get install -y --force-yes \
   clang-3.6 \
   yasm
 
-RUN curl -L https://github.com/bazelbuild/bazel/releases/download/0.1.4/bazel-0.1.4-installer-linux-x86_64.sh > /tmp/bazel-installer.sh
+RUN curl -L https://github.com/bazelbuild/bazel/releases/download/0.2.1/bazel-0.2.1-installer-linux-x86_64.sh > /tmp/bazel-installer.sh
 RUN chmod +x /tmp/bazel-installer.sh
 
 RUN /tmp/bazel-installer.sh
