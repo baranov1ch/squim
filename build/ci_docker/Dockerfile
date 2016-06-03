@@ -14,6 +14,7 @@
 
 FROM ubuntu:trusty
 
+RUN apt-get update --fix-missing
 RUN apt-get install -y software-properties-common
 
 RUN add-apt-repository ppa:webupd8team/java
