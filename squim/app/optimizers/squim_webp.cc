@@ -36,7 +36,9 @@ image::WebPEncoder::Compression ToWebPCompression(
 }
 
 SquimWebP::SquimWebP(const squim::ImageRequestPart_Meta& request)
-    : request_(request) {}
+    : request_(request) {
+  VLOG(1) << "Source content-length: " << request.content_length();
+}
 
 bool SquimWebP::ShouldWaitForMetadata() {
   // TODO: mess with metadata.

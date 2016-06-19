@@ -18,6 +18,9 @@
 
 #include <cstring>
 
+#include <chrono>
+#include <functional>
+
 #include "squim/base/logging.h"
 #include "squim/base/memory/make_unique.h"
 #include "squim/image/codecs/webp/webp_util.h"
@@ -112,6 +115,15 @@ io::ChunkPtr PrepareMetdataChunk(bool needed,
   return chunk;
 }
 
+class defer {
+ public:
+  defer(std::function<void()> fn) : fn_(fn) {}
+  ~defer() { fn_(); }
+
+ private:
+  std::function<void()> fn_;
+};
+
 }  // namespace
 
 SimpleWebPEncoder::SimpleWebPEncoder(WebPEncoder::Params* params,
@@ -134,6 +146,13 @@ void SimpleWebPEncoder::SetMetadata(const ImageMetadata* metadata) {
 }
 
 Result SimpleWebPEncoder::EncodeFrame(ImageFrame* frame) {
+  auto start = std::chrono::high_resolution_clock::now();
+  defer d([start]() {
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::high_resolution_clock::now() - start)
+                        .count();
+    VLOG(1) << "Encoding duration: " << duration << " us";
+  });
   auto conf_result =
       EncoderParamsToWebPConfig(*params_, &webp_config_, frame->quality());
   if (!conf_result.ok())

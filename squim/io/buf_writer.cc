@@ -37,8 +37,9 @@ IoResult BufWriter::Write(Chunk* chunk) {
 
   size_t nwrite = 0;
   for (;;) {
-    auto effective_len = std::min(available(), chunk->size());
-    auto to_copy = chunk->Slice(nwrite, effective_len);
+    auto slice = chunk->Slice(nwrite);
+    auto effective_len = std::min(available(), slice->size());
+    auto to_copy = slice->Slice(0, effective_len);
 
     std::memcpy(buffer_->data() + offset_, to_copy->data(), effective_len);
     offset_ += effective_len;

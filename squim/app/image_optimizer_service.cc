@@ -173,7 +173,7 @@ class SyncRequestHandler {
     auto strategy = optimization_->CreateOptimizationStrategy(meta);
     auto src = io::BufReader::CreateEmpty();
     input_ = src.get();
-    auto dst = base::make_unique<ChunkBuffer>(4096);
+    auto dst = base::make_unique<ChunkBuffer>(16384);
     output_ = dst.get();
     optimizer_.reset(new image::ImageOptimizer(
         image::ImageOptimizer::DefaultImageTypeSelector, std::move(strategy),

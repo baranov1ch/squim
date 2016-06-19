@@ -96,7 +96,7 @@ cc_library(
     "upstream/src/dsp/yuv.c",
     "upstream/src/dsp/yuv_sse2.c",
   ] + webp_headers,
-  linkopts = ["-lm"]
+  linkopts = ["-lm"],
 )
 
 cc_library(

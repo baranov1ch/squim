@@ -36,8 +36,15 @@ class BufWriter : public Writer, public Flusher {
   // Flusher implementation:
   IoResult Flush() override;
 
-  size_t available() const { return buffer_->size() - offset_; }
+  size_t available() const {
+    if (flushing_)
+      return 0;
+
+    return buffer_->size() - offset_;
+  }
   size_t buffered() const { return offset_; }
+  bool flushing() const { return flushing_; }
+  size_t buf_size() const { return buf_size_; }
 
   ChunkPtr ReleaseBuffer();
 

@@ -47,6 +47,7 @@ cc_test(
   timeout = "short",
   srcs = [
     "buf_reader_test.cc",
+    "buf_writer_test.cc",
     "buffer_writer_test.cc",
     "buffered_source_test.cc",
     "chunk_test.cc",
