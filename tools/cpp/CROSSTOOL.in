@@ -103,6 +103,7 @@ toolchain {
   # used by gcc. That works because bazel currently doesn't track files at
   # absolute locations and has no remote execution, yet. However, this will need
   # to be fixed, maybe with auto-detection?
+  cxx_builtin_include_directory: "/usr/lib/clang/3.4/include"
 ADD_CXX_BUILTIN_INCLUDE_DIRECTORIES
   tool_path { name: "gcov" path: "/usr/bin/gcov" }
 

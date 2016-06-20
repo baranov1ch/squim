@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Copyright 2016 Alexey Baranov <me@kotiki.cc>. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,4 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-squimd -listen 0.0.0.0:12345 -log_dir /var/log/squim
+squimd -listen 0.0.0.0:12345 -logtostderr

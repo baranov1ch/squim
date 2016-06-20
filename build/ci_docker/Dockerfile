@@ -19,8 +19,8 @@ RUN apt-get install -y software-properties-common
 
 RUN add-apt-repository ppa:webupd8team/java
 
-RUN echo "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.6 main" > /etc/apt/sources.list.d/llvm.list
-RUN echo "deb-src http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.6 main" >> /etc/apt/sources.list.d/llvm.list
+# RUN echo "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.6 main" > /etc/apt/sources.list.d/llvm.list
+# RUN echo "deb-src http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.6 main" >> /etc/apt/sources.list.d/llvm.list
 
 RUN apt-get update --fix-missing
 RUN echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
@@ -33,7 +33,7 @@ RUN apt-get install -y --force-yes \
   curl \
   tree \
   g++ \
-  clang-3.6 \
+  clang \
   yasm
 
 RUN curl -L https://github.com/bazelbuild/bazel/releases/download/0.2.1/bazel-0.2.1-installer-linux-x86_64.sh > /tmp/bazel-installer.sh
