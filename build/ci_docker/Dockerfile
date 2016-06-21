@@ -25,6 +25,7 @@ RUN add-apt-repository ppa:webupd8team/java
 RUN apt-get update --fix-missing
 RUN echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
 RUN apt-get install -y --force-yes \
+  realpath \
   oracle-java8-installer \
   pkg-config \
   zip \
