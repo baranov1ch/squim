@@ -38,7 +38,6 @@ echo $RUN_TESTS_COMMAND
 
 docker run \
   -e "RUN_TESTS_COMMAND=$RUN_TESTS_COMMAND" \
-  -i -t \
   -v "$git_root:/var/local/ci/squim" \
   -w /var/local/ci/squim/ \
   --name=$CONTAINER_NAME \
