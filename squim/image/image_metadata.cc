@@ -31,7 +31,16 @@ void ImageMetadata::Holder::Freeze() {
 ImageMetadata::ImageMetadata() {}
 
 const ImageMetadata::Holder& ImageMetadata::GetHolder(Type type) const {
-  return GetHolder(type);
+  switch (type) {
+    case Type::kICC:
+      return icc_;
+    case Type::kEXIF:
+      return exif_;
+    case Type::kXMP:
+      return xmp_;
+  }
+  NOTREACHED();
+  return xmp_;
 }
 
 ImageMetadata::Holder& ImageMetadata::GetHolder(Type type) {

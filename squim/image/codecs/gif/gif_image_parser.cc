@@ -436,9 +436,7 @@ Result GifImage::Parser::ParseNetscapeApplicationExtension() {
     // and doesn't do anything, as streaming/buffering takes care of it all...
     // See: http://semmix.pl/color/exgraf/eeg24.htm
   } else {
-    LOG(ERROR) << "Unknown netscape extension: " << netscape_extension;
-    return Result::Error(Result::Code::kDecodeError,
-                         "Unknown netscape extension");
+    LOG(INFO) << "Unknown netscape extension: " << netscape_extension;
   }
 
   return SkipSubBlockHandler(HANDLER(ParseNetscapeApplicationExtension));

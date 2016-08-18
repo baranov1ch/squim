@@ -44,8 +44,9 @@ ChunkListReader::ChunkListReader(const io::ChunkList* source)
 }
 
 io::IoResult ChunkListReader::Read(io::Chunk* chunk) {
-  if (current_chunk_ == source_->end())
+  if (current_chunk_ == source_->end()) {
     return io::IoResult::Eof();
+  }
 
   size_t nread = 0;
   size_t offset = 0;

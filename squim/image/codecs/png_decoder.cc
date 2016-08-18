@@ -230,7 +230,11 @@ class PngDecoder::Impl {
     if (color_type == PNG_COLOR_TYPE_GRAY) {
       if (!decoder_->params_.color_scheme_allowed(ColorScheme::kGrayScale)) {
         png_set_gray_to_rgb(png_);
-        frame->set_color_scheme(ColorScheme::kRGB);
+        if (!has_trns) {
+          frame->set_color_scheme(ColorScheme::kRGB);
+        } else {
+          frame->set_color_scheme(ColorScheme::kRGBA);
+        }
       } else {
         if (!has_trns) {
           frame->set_color_scheme(ColorScheme::kGrayScale);

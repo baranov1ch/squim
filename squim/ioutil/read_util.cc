@@ -29,31 +29,28 @@ const size_t kStackBufferSize = 10000;
 
 io::IoResult Copy(io::Writer* dst, io::Reader* src, size_t chunk_size) {
   auto chunk = io::Chunk::New(chunk_size);
-  auto io_result = io::IoResult::Read(0);
+  auto read_result = io::IoResult::Read(0);
+  auto write_result = io::IoResult::Write(0);
   size_t nread = 0;
-  while (io_result.ok() && !io_result.eof()) {
-    io_result = src->Read(chunk.get());
-    DCHECK(!io_result.pending());
-    if (!io_result.ok())
-      break;
+  while (!read_result.eof()) {
+    read_result = src->Read(chunk.get());
+    DCHECK(!read_result.pending());
+    if (!read_result.ok() && !read_result.eof())
+      return read_result;
 
-    auto slice = chunk->Slice(0, io_result.n());
-    io_result = dst->Write(slice.get());
-    DCHECK(!io_result.pending());
+    auto slice = chunk->Slice(0, read_result.n());
+    write_result = dst->Write(slice.get());
+    DCHECK(!write_result.pending());
 
-    if (io_result.n() < slice->size())
+    if (write_result.n() < slice->size())
       return io::IoResult::Error("Short write");
 
-    if (!io_result.ok())
-      break;
+    if (!write_result.ok())
+      return write_result;
 
-    nread += io_result.n();
+    nread += write_result.n();
   }
-
-  if (nread > 0)
-    return io::IoResult::Read(nread);
-
-  return io_result; 
+  return io::IoResult::Read(nread);
 }
 
 io::IoResult Copy(io::Writer* dst, io::Reader* src) {

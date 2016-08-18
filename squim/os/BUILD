@@ -15,6 +15,7 @@
 cc_library(
   name = "os",
   hdrs = [
+    "dir_util.h",
     "file.h",
     "file_info.h",
     "file_mode.h",
@@ -24,6 +25,7 @@ cc_library(
     "path_util.h",
   ],
   srcs = [
+    "dir_util.cc",
     "file.cc",
     "file_posix.h",
     "file_posix.cc",
@@ -46,6 +48,7 @@ cc_test(
   name = "os_test",
   timeout = "short",
   srcs = [
+    "dir_util_test.cc",
     "file_system_posix_test.cc",
   ],
   deps = [
@@ -53,4 +56,5 @@ cc_test(
     "//squim/test:test_main",
     ":os",
   ],
+  data = glob(["testdata/**"]),
 )

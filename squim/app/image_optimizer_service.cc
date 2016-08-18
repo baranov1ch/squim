@@ -17,6 +17,7 @@
 #include "squim/app/image_optimizer_service.h"
 
 #include "squim/app/optimization.h"
+#include "squim/base/defer.h"
 #include "squim/base/logging.h"
 #include "squim/base/memory/make_unique.h"
 #include "squim/base/strings/string_util.h"
@@ -95,42 +96,53 @@ class SyncRequestHandler {
       : optimization_(optimization), stream_(stream) {}
 
   Status Handle() {
-    while (true) {
-      auto request_part = base::make_unique<ImageRequestPart>();
-      if (!stream_->Read(request_part.get()))
+    base::defer d([this] {
+      ImageRequestPart dummy;
+      while (stream_->Read(&dummy))
+        ;
+    });
+
+    for (;;) {
+      ImageRequestPart request_part;
+      if (!stream_->Read(&request_part))
         break;
 
       if (!optimizer_) {
-        if (!request_part->has_meta()) {
+        if (!request_part.has_meta()) {
           stream_->Write(CreateError(ImageResponsePart::CONTRACT_ERROR));
           return Status::OK;
         }
 
-        if (!ProcessHeader(*request_part)) {
+        if (!ProcessHeader(request_part)) {
           stream_->Write(CreateError(ImageResponsePart::REJECTED));
           return Status::OK;
         }
       } else {
-        if (!request_part->has_image_data()) {
+        if (!request_part.has_image_data()) {
           stream_->Write(CreateError(ImageResponsePart::CONTRACT_ERROR));
           return Status::OK;
         }
 
-        auto result = ProcessData(std::move(request_part));
+        auto result = ProcessData(request_part);
         if (result.error()) {
           stream_->Write(CreateError(ImageResponsePart::ENCODE_ERROR));
           return Status::OK;
         }
 
-        if (result.finished())
+        if (result.finished()) {
           break;
+        }
 
         DrainOutput();
       }
     }
 
     auto result = optimizer_->Process();
-    DCHECK(result.finished());
+    if (!result.finished()) {
+      stream_->Write(CreateError(ImageResponsePart::ENCODE_ERROR));
+      return Status::OK;
+    }
+
     output_->Flush();
     DrainOutput();
 
@@ -181,10 +193,10 @@ class SyncRequestHandler {
     return true;
   }
 
-  image::Result ProcessData(std::unique_ptr<ImageRequestPart> data) {
+  image::Result ProcessData(const ImageRequestPart& data) {
     DCHECK(optimizer_);
     DCHECK(input_);
-    std::string copy(data->image_data().bytes());
+    std::string copy(data.image_data().bytes());
     input_->source()->AddChunk(io::Chunk::FromString(std::move(copy)));
     return optimizer_->Process();
   }

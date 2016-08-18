@@ -69,8 +69,9 @@ bool GifImage::Frame::Parser::InitDecoder(uint8_t minimum_code_size) {
 
 Result GifImage::Frame::Parser::ProcessImageData(uint8_t* data, size_t size) {
   auto result = lzw_reader_->Decode(data, size);
-  if (result.ok()) {
-    DCHECK_EQ(size, result.n());
+  if (result.ok() && result.n() != size) {
+    LOG(WARNING) << "Bad LZW block, junk left after read. nread=" << result.n()
+                 << ", size=" << size;
   }
 
   if (result.eof()) {

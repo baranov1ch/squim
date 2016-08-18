@@ -21,6 +21,7 @@
 
 #include "proto/image_optimizer.pb.h"
 #include "squim/app/request_builder.h"
+#include "squim/base/defer.h"
 #include "squim/base/logging.h"
 #include "squim/base/optional.h"
 #include "squim/base/strings/string_util.h"
@@ -81,7 +82,7 @@ class GRPCStreamReader : public io::Reader {
     }
 
     const auto& bytes = response_part_->image_data().bytes();
-    auto effective_len = std::min(bytes.size(), chunk->size());
+    auto effective_len = std::min(bytes.size() - *offset_, chunk->size());
     std::memcpy(chunk->data(), bytes.data() + *offset_, effective_len);
     *offset_ += effective_len;
 
@@ -121,9 +122,15 @@ bool ImageOptimizerClient::OptimizeImage(RequestBuilder* request_builder,
     auto result = ioutil::Copy(&writer, image_reader, chunk_size);
     if (!result.ok())
       LOG(ERROR) << "Image read/send error: " << result.message();
+
+    if (!stream->WritesDone()) {
+      LOG(ERROR) << "Client stream close error";
+    }
   });
 
   ImageResponsePart response_part;
+  base::defer d([&writer]() { writer.join(); });
+
   stream->Read(&response_part);
   if (!response_part.has_meta()) {
     LOG(ERROR) << "Unexpected gRPC message: No status part";
@@ -141,7 +148,6 @@ bool ImageOptimizerClient::OptimizeImage(RequestBuilder* request_builder,
   if (stats)
     *stats = reader.stats();
 
-  writer.join();
   auto status = stream->Finish();
   if (!status.ok()) {
     LOG(ERROR) << "Final RPC failed, but optimization succeeded";

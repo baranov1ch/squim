@@ -16,6 +16,7 @@
 
 #include "squim/app/image_optimizer_service.h"
 
+#include <atomic>
 #include <iterator>
 #include <fstream>
 #include <memory>
@@ -31,6 +32,9 @@
 #include "squim/ioutil/file_util.h"
 #include "squim/ioutil/chunk_reader.h"
 #include "squim/ioutil/chunk_writer.h"
+#include "squim/os/dir_util.h"
+#include "squim/os/file.h"
+#include "squim/os/file_system.h"
 
 #include "gtest/gtest.h"
 
@@ -73,12 +77,15 @@ class OptimizerEndToEndTest : public testing::Test {
   std::unique_ptr<Server> server_;
   std::unique_ptr<ImageOptimizerService> service_;
   std::thread server_thread_;
+  std::unique_ptr<ImageOptimizerClient> client_;
 };
 
 TEST_F(OptimizerEndToEndTest, SimpleTest) {
   ASSERT_TRUE(StartServer());
+
   ImageOptimizerClient client(
       CreateChannel(kServerAddress, InsecureChannelCredentials()));
+
   io::ChunkList jpeg;
   ASSERT_TRUE(ioutil::ReadFile("squim/app/testdata/test.jpg", &jpeg).ok());
   io::ChunkList webp;
@@ -91,4 +98,59 @@ TEST_F(OptimizerEndToEndTest, SimpleTest) {
   auto merged_in = io::Chunk::Merge(jpeg);
   auto merged_out = io::Chunk::Merge(webp);
   EXPECT_LT(merged_out->size(), merged_in->size());
+}
+
+TEST_F(OptimizerEndToEndTest, DISABLED_Regressions) {
+  ASSERT_TRUE(StartServer());
+  ImageOptimizerClient client(
+      CreateChannel(kServerAddress, InsecureChannelCredentials()));
+  io::ChunkList jpeg;
+  ASSERT_TRUE(ioutil::ReadFile("squim/app/testdata/gif/less_then_4096_bytes/"
+                               "88916b4bbc2afd4af9abc1dabb9484b0fafcd784a88d023"
+                               "4979e1e12427a55f1.gif",
+                               &jpeg)
+                  .ok());
+  io::ChunkList webp;
+  ioutil::ChunkListReader in(&jpeg);
+  ioutil::ChunkListWriter out(&webp);
+  auto request_builder = RequestBuilder().SetRecordStats(true).SetQuality(40);
+  ImageResponsePart_Stats stats;
+  EXPECT_TRUE(client.OptimizeImage(&request_builder, &in, 512, &out, &stats));
+}
+
+TEST_F(OptimizerEndToEndTest, DISABLED_BigIntegrationTest) {
+  ASSERT_TRUE(StartServer());
+
+  std::atomic_size_t idx(0u);
+  std::vector<std::string> images;
+
+  ASSERT_TRUE(
+      os::ReaddirnamesRecursively("squim/app/testdata", 10, &images).ok());
+
+  std::vector<std::thread> clients;
+  for (int i = 0; i < 24; ++i) {
+    clients.emplace_back(std::thread([&idx, &images]() {
+      ImageOptimizerClient client(
+          CreateChannel(kServerAddress, InsecureChannelCredentials()));
+      size_t thread_idx = idx++;
+      for (; thread_idx < images.size(); thread_idx = idx++) {
+        auto image = images[thread_idx];
+        LOG(INFO) << "Optimizing " << image;
+        io::ChunkList src_image;
+        ASSERT_TRUE(ioutil::ReadFile(image, &src_image).ok());
+        io::ChunkList webp;
+        ioutil::ChunkListReader in(&src_image);
+        ioutil::ChunkListWriter out(&webp);
+        auto request_builder =
+            RequestBuilder().SetRecordStats(true).SetQuality(40);
+        ImageResponsePart_Stats stats;
+        EXPECT_TRUE(
+            client.OptimizeImage(&request_builder, &in, 512, &out, &stats))
+            << image;
+      }
+    }));
+  }
+
+  for (auto& client_thread : clients)
+    client_thread.join();
 }

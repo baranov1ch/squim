@@ -55,6 +55,12 @@ bind(
   actual = "//google/grpc:grpc++"
 )
 
+# GRPC C++ reflection library
+bind(
+  name = "grpc++_reflection",
+  actual = "//google/grpc:grpc++_reflection"
+)
+
 # Logger
 bind(
   name = "glog",
@@ -95,6 +101,12 @@ bind(
 bind(
   name = "libjpeg",
   actual = "//third_party/libjpeg_turbo:jpeg_turbo"
+)
+
+# Nanopb
+bind(
+  name = "nanopb",
+  actual = "//third_party/nanopb:nanopb"
 )
 
 # Gtest main
