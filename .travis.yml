@@ -7,4 +7,4 @@ services:
   - docker
 
 script:
-  - build/build_docker_and_run_tests.sh
+  - build/travis/run_tests_in_docker.sh
